@@ -113,7 +113,7 @@
 
   // Also listen for postMessage as fallback
   window.addEventListener('message', function (event) {
-    if (event.origin !== 'https://atomix.guru' && event.origin !== window.location.origin) return;
+    if (!event.origin.includes('atomix.guru') && event.origin !== window.location.origin) return;
 
     if (event.data && event.data.type === 'XREPLY_AUTH_TOKEN') {
       console.log('[AUTH] Received token via postMessage');

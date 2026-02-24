@@ -59,7 +59,8 @@
     },
     {
       "matches": [
-        "https://atomix.guru/auth/extension-connected*"
+        "*://*.atomix.guru/*",
+        "https://atomix.guru/*"
       ],
       "js": [
         "extension-auth.js"
