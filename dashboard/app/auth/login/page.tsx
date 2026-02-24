@@ -91,7 +91,7 @@ function LoginForm() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+          redirectTo: `https://atomix.guru/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
         },
       })
       if (error) throw error
@@ -120,7 +120,7 @@ function LoginForm() {
                     <p className="text-xs opacity-90">Please sign in with email/password or configure Google OAuth in Supabase. See SETUP.md for details.</p>
                   </div>
                 )}
-                
+
                 <Button
                   variant="outline"
                   className="w-full bg-transparent"

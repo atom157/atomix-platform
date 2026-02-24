@@ -20,8 +20,7 @@ import { logger } from '@/lib/logger'
  */
 export async function GET(request: Request) {
   try {
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin
+    const appUrl = 'https://atomix.guru'
 
     // Send the user to the login page; the login page's Google OAuth button
     // already calls signInWithOAuth on the client side (where PKCE cookies
@@ -35,8 +34,7 @@ export async function GET(request: Request) {
     logger.exception('extension_auth.redirect_error', err, {
       route: '/api/extension/auth',
     })
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin
+    const appUrl = 'https://atomix.guru'
     return NextResponse.redirect(
       `${appUrl}/auth/error?message=${encodeURIComponent('Failed to start authentication')}`
     )
