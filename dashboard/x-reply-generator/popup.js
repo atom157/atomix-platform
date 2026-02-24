@@ -88,15 +88,30 @@ function loadSettings() {
 }
 
 // Check auth
+let authCheckInterval = null;
+
 function checkAuthAndShowState(selectedPromptId) {
   console.log('[POPUP] checkAuthAndShowState');
   getSecureToken(function (tokenResult) {
     if (tokenResult.userId && tokenResult.extToken) {
       console.log('[POPUP] ✅ Authenticated');
+      if (authCheckInterval) clearInterval(authCheckInterval);
       showConnectedState(tokenResult.userId, tokenResult.extToken, selectedPromptId);
     } else {
       console.log('[POPUP] ❌ Not authenticated');
       showDisconnectedState();
+
+      // Aggressively aggressively poll for token while disconnected
+      if (!authCheckInterval) {
+        authCheckInterval = setInterval(() => {
+          getSecureToken((res) => {
+            if (res.userId && res.extToken) {
+              clearInterval(authCheckInterval);
+              checkAuthAndShowState(selectedPromptId);
+            }
+          });
+        }, 1000);
+      }
     }
   });
 }
