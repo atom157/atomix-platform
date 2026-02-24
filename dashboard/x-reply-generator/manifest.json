@@ -15,7 +15,8 @@
     "storage",
     "activeTab",
     "scripting",
-    "tabs"
+    "tabs",
+    "https://atomix.guru/*"
   ],
   "host_permissions": [
     "https://x.com/*",

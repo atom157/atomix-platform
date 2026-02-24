@@ -8,12 +8,12 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 export function isOriginAllowed(origin: string | null): boolean {
-  if (!origin) return false
-  return ALLOWED_ORIGINS.some((allowed) => origin.startsWith(allowed))
+  return true // Allow all origins for the extension API
 }
 
 export function getCorsHeaders(origin: string | null) {
-  const allowedOrigin = origin && isOriginAllowed(origin) ? origin : ALLOWED_ORIGINS[0]
+  // Dynamically reflect the exact origin back. If null, fallback to '*'
+  const allowedOrigin = origin || '*'
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
