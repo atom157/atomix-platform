@@ -5,7 +5,7 @@
 
   let settings = {};
   let isGenerating = false;
-  const API_BASE = 'https://v0-supabase-mocha.vercel.app';
+  const API_BASE = 'https://atomix.guru';
   const chrome = window.chrome; // Declare the chrome variable
 
   // --- Client-side rate limiting ---

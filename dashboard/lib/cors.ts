@@ -1,5 +1,5 @@
 const ALLOWED_ORIGINS = [
-  'https://v0-supabase-mocha.vercel.app',
+  'https://atomix.guru',
   'chrome-extension://',
 ]
 

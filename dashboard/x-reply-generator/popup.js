@@ -28,7 +28,7 @@ var promptCard = document.getElementById('promptCard');
 var promptSelect = document.getElementById('promptSelect');
 
 // API base URL
-var API_BASE = 'https://v0-supabase-mocha.vercel.app';
+var API_BASE = 'https://atomix.guru';
 var chrome = window.chrome;
 
 console.log('[POPUP] Initializing...');
