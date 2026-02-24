@@ -48,7 +48,7 @@
           function () {
             if (chrome.runtime.lastError) {
               console.error('[AUTH] ❌ Error storing token:', chrome.runtime.lastError.message);
-              
+
               // Show error to user
               var statusEl = document.getElementById('extension-auth-status');
               if (statusEl) {
@@ -57,7 +57,7 @@
               }
               return;
             }
-            
+
             console.log('[AUTH] ✅ Token stored in local storage');
 
             // Store userId in sync for cross-device persistence
@@ -76,7 +76,7 @@
                 chrome.runtime.sendMessage({
                   type: 'AUTH_SUCCESS',
                   userId: userId
-                }, function(response) {
+                }, function (response) {
                   if (chrome.runtime.lastError) {
                     console.log('[AUTH] No popup listening (normal)');
                   } else {
@@ -112,8 +112,8 @@
   }
 
   // Also listen for postMessage as fallback
-  window.addEventListener('message', function(event) {
-    if (event.origin !== window.location.origin) return;
+  window.addEventListener('message', function (event) {
+    if (event.origin !== 'https://atomix.guru' && event.origin !== window.location.origin) return;
 
     if (event.data && event.data.type === 'XREPLY_AUTH_TOKEN') {
       console.log('[AUTH] Received token via postMessage');
