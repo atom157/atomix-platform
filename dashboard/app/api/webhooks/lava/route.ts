@@ -44,11 +44,16 @@ export async function POST(request: Request) {
                     return NextResponse.json({ received: true })
                 }
 
+                const now = new Date()
+                const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // +30 days
+
                 const updateData = {
                     plan: 'pro',
                     subscription_status: 'active',
                     generations_limit: 999999,
                     lava_contract_id: contractId,
+                    cancel_at_period_end: false,
+                    current_period_end: periodEnd.toISOString(),
                 }
 
                 let error
@@ -75,44 +80,55 @@ export async function POST(request: Request) {
                 break
             }
 
-            // ── Recurring payment success (subscription renewal) ──
             case 'subscription.recurring.payment.success': {
-                // Reset monthly usage count on successful renewal
+                // Successful renewal: reset usage, extend billing period, clear cancel flag
                 const contractToMatch = parentContractId || contractId
+                const renewalPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
                 const { error } = await supabase
                     .from('profiles')
                     .update({
                         generations_count: 0,
                         subscription_status: 'active',
+                        plan: 'pro',
+                        generations_limit: 999999,
+                        cancel_at_period_end: false,
+                        current_period_end: renewalPeriodEnd.toISOString(),
                     })
                     .eq('lava_contract_id', contractToMatch)
 
                 if (error) {
                     console.error('[LAVA-WH] Recurring reset failed:', error.message)
                 } else {
-                    console.log('[LAVA-WH] ✅ Monthly usage reset for contract:', contractToMatch)
+                    console.log('[LAVA-WH] ✅ Monthly usage reset + period extended for contract:', contractToMatch)
                 }
                 break
             }
 
-            // ── Subscription cancelled ──
             case 'subscription.cancelled': {
-                const contractToMatch = contractId
+                // DON'T downgrade immediately — user paid for the current period.
+                // Mark for downgrade at period end. willExpireAt comes from Lava.top.
+                const cancelContractId = contractId
+                const willExpireAt = body.willExpireAt || null
+
+                const cancelUpdate: Record<string, unknown> = {
+                    cancel_at_period_end: true,
+                    subscription_status: 'cancelled',
+                }
+                // If Lava.top provides the expiration date, store it
+                if (willExpireAt) {
+                    cancelUpdate.current_period_end = willExpireAt
+                }
 
                 const { error } = await supabase
                     .from('profiles')
-                    .update({
-                        plan: 'free',
-                        subscription_status: 'cancelled',
-                        generations_limit: 20,
-                    })
-                    .eq('lava_contract_id', contractToMatch)
+                    .update(cancelUpdate)
+                    .eq('lava_contract_id', cancelContractId)
 
                 if (error) {
                     console.error('[LAVA-WH] Cancellation update failed:', error.message)
                 } else {
-                    console.log('[LAVA-WH] ✅ Subscription cancelled for contract:', contractToMatch)
+                    console.log('[LAVA-WH] ✅ Subscription marked for cancellation at period end:', willExpireAt || 'unknown', '| Contract:', cancelContractId)
                 }
                 break
             }

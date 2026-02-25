@@ -117,6 +117,26 @@ export async function POST(request: Request) {
       )
     }
 
+    // ── Lazy expiration: downgrade if cancelled subscription period has ended ──
+    if (
+      profile.cancel_at_period_end &&
+      profile.current_period_end &&
+      new Date(profile.current_period_end) < new Date()
+    ) {
+      await supabase
+        .from('profiles')
+        .update({
+          plan: 'free',
+          subscription_status: 'expired',
+          generations_limit: 20,
+          cancel_at_period_end: false,
+        })
+        .eq('id', userId)
+
+      profile.plan = 'free'
+      profile.generations_limit = 20
+    }
+
     // Check usage limits
     const effectiveLimit = (profile.plan === 'free' || profile.plan === 'trial') ? 20 : profile.generations_limit;
     if (profile.generations_count >= effectiveLimit) {

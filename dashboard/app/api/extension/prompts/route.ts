@@ -57,9 +57,30 @@ export async function GET(request: Request) {
     // Get user profile for usage info
     const { data: profile } = await supabase
       .from('profiles')
-      .select('plan, generations_count, generations_limit')
+      .select('plan, generations_count, generations_limit, cancel_at_period_end, current_period_end')
       .eq('id', userId)
       .single()
+
+    // Lazy expiration: downgrade if cancelled subscription has expired
+    if (
+      profile &&
+      profile.cancel_at_period_end &&
+      profile.current_period_end &&
+      new Date(profile.current_period_end) < new Date()
+    ) {
+      await supabase
+        .from('profiles')
+        .update({
+          plan: 'free',
+          subscription_status: 'expired',
+          generations_limit: 20,
+          cancel_at_period_end: false,
+        })
+        .eq('id', userId)
+
+      profile.plan = 'free'
+      profile.generations_limit = 20
+    }
 
     return NextResponse.json(
       {
