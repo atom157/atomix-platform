@@ -33,7 +33,7 @@ export default async function DashboardPage() {
       <StatsCards
         plan={profile?.plan || 'trial'}
         used={profile?.generations_count || 0}
-        limit={profile?.generations_limit || 20}
+        limit={(profile?.plan === 'free' || profile?.plan === 'trial') ? 20 : (profile?.generations_limit || 20)}
       />
 
       <Tabs defaultValue="overview" className="flex flex-col gap-4">
