@@ -5,8 +5,6 @@
   'use strict';
 
   console.log('[AUTH] extension-auth.js: Script loaded');
-  console.log('DEBUG: extension-auth.js running on:', window.location.href);
-  console.log('DEBUG: Found cookies:', document.cookie);
 
   // Check if Chrome extension APIs are available
   if (typeof chrome === 'undefined' || !chrome.storage) {
@@ -45,7 +43,6 @@
 
       if (token && userId) {
         clearInterval(interval);
-        console.log('TOKEN_CAPTURED_ON_GURU');
         console.log('[AUTH] ✅ Token found! userId:', userId);
 
         // Clear legacy storage before saving
