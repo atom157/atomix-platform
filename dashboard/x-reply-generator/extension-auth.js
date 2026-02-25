@@ -40,63 +40,67 @@
 
       if (token && userId) {
         clearInterval(interval);
+        console.log('TOKEN_CAPTURED_ON_GURU');
         console.log('[AUTH] ✅ Token found! userId:', userId);
 
-        // Store in LOCAL storage (not session - not available in content scripts)
-        secureStorage.set(
-          { extToken: token, userId: userId },
-          function () {
-            if (chrome.runtime.lastError) {
-              console.error('[AUTH] ❌ Error storing token:', chrome.runtime.lastError.message);
-
-              // Show error to user
-              var statusEl = document.getElementById('extension-auth-status');
-              if (statusEl) {
-                statusEl.textContent = 'Storage error: ' + chrome.runtime.lastError.message;
-                statusEl.style.color = '#ef4444';
-              }
-              return;
-            }
-
-            console.log('[AUTH] ✅ Token stored in local storage');
-
-            // Store userId in sync for cross-device persistence
-            chrome.storage.sync.set({ userId: userId, isConnected: true }, function () {
+        // Clear legacy storage before saving
+        secureStorage.remove(['extToken', 'userId'], function () {
+          // Store in LOCAL storage (not session - not available in content scripts)
+          secureStorage.set(
+            { extToken: token, userId: userId },
+            function () {
               if (chrome.runtime.lastError) {
-                console.error('[AUTH] ⚠️ Error storing userId in sync (non-critical):', chrome.runtime.lastError.message);
-              } else {
-                console.log('[AUTH] ✅ UserId synced');
+                console.error('[AUTH] ❌ Error storing token:', chrome.runtime.lastError.message);
+
+                // Show error to user
+                var statusEl = document.getElementById('extension-auth-status');
+                if (statusEl) {
+                  statusEl.textContent = 'Storage error: ' + chrome.runtime.lastError.message;
+                  statusEl.style.color = '#ef4444';
+                }
+                return;
               }
 
-              // Remove token from DOM for security
-              authEl.removeAttribute('data-ext-token');
+              console.log('[AUTH] ✅ Token stored in local storage');
 
-              // Notify any open popup
-              try {
-                chrome.runtime.sendMessage({
-                  type: 'AUTH_SUCCESS',
-                  userId: userId
-                }, function (response) {
-                  if (chrome.runtime.lastError) {
-                    console.log('[AUTH] No popup listening (normal)');
-                  } else {
-                    console.log('[AUTH] ✅ Popup notified');
-                  }
-                });
-              } catch (e) {
-                console.log('[AUTH] Could not send message:', e.message);
-              }
+              // Store userId in sync for cross-device persistence
+              chrome.storage.sync.set({ userId: userId, isConnected: true }, function () {
+                if (chrome.runtime.lastError) {
+                  console.error('[AUTH] ⚠️ Error storing userId in sync (non-critical):', chrome.runtime.lastError.message);
+                } else {
+                  console.log('[AUTH] ✅ UserId synced');
+                }
 
-              // Update status on page
-              var statusEl = document.getElementById('extension-auth-status');
-              if (statusEl) {
-                statusEl.textContent = 'Connected successfully! You can close this tab.';
-                statusEl.style.color = '#22c55e';
-                statusEl.style.fontWeight = '600';
-              }
-            });
-          }
-        );
+                // Remove token from DOM for security
+                authEl.removeAttribute('data-ext-token');
+
+                // Notify any open popup
+                try {
+                  chrome.runtime.sendMessage({
+                    type: 'AUTH_SUCCESS',
+                    userId: userId
+                  }, function (response) {
+                    if (chrome.runtime.lastError) {
+                      console.log('[AUTH] No popup listening (normal)');
+                    } else {
+                      console.log('[AUTH] ✅ Popup notified');
+                    }
+                  });
+                } catch (e) {
+                  console.log('[AUTH] Could not send message:', e.message);
+                }
+
+                // Update status on page
+                var statusEl = document.getElementById('extension-auth-status');
+                if (statusEl) {
+                  statusEl.textContent = 'Connected successfully! You can close this tab.';
+                  statusEl.style.color = '#22c55e';
+                  statusEl.style.fontWeight = '600';
+                }
+              });
+            }
+          );
+        });
       } else if (attempts >= maxAttempts) {
         clearInterval(interval);
         console.error('[AUTH] ❌ Timeout after', attempts, 'attempts');
@@ -121,46 +125,48 @@
       var userId = event.data.userId;
 
       if (token && userId) {
-        // Explictly store in LOCAL storage and VERIFY it immediately
-        chrome.storage.local.set({ extToken: token, userId: userId }, function () {
-          if (chrome.runtime.lastError) {
-            console.error('[AUTH] ❌ Error storing token via postMessage:', chrome.runtime.lastError.message);
-            return;
-          }
-          console.log('[AUTH] ✅ Token saved to local storage via postMessage');
-
-          // Verify it wrote properly
-          chrome.storage.local.get(['extToken'], function (res) {
-            if (res.extToken) console.log('[AUTH] ✅ Verification passed. Token is resident in local context.');
-          });
-
-          chrome.storage.sync.set({ userId: userId, isConnected: true }, function () {
+        // Clear legacy storage before saving
+        chrome.storage.local.remove(['extToken', 'userId'], function () {
+          // Explictly store in LOCAL storage and VERIFY it immediately
+          chrome.storage.local.set({ extToken: token, userId: userId }, function () {
             if (chrome.runtime.lastError) {
-              console.error('[AUTH] ⚠️ Error syncing userId:', chrome.runtime.lastError.message);
-            } else {
-              console.log('[AUTH] ✅ UserId synced via postMessage');
+              console.error('[AUTH] ❌ Error storing token via postMessage:', chrome.runtime.lastError.message);
+              return;
             }
+            console.log('[AUTH] ✅ Token saved to local storage via postMessage');
 
-            try {
-              chrome.runtime.sendMessage({
-                type: 'AUTH_SUCCESS',
-                userId: userId
-              });
-            } catch (e) {
-              console.log('[AUTH] Could not send message to popup (this is fine if closed):', e.message);
-            }
+            // Verify it wrote properly
+            chrome.storage.local.get(['extToken'], function (res) {
+              if (res.extToken) console.log('[AUTH] ✅ Verification passed. Token is resident in local context.');
+            });
 
-            var statusEl = document.getElementById('extension-auth-status');
-            if (statusEl) {
-              statusEl.textContent = 'Connected successfully! You can close this tab.';
-              statusEl.style.color = '#22c55e';
-              statusEl.style.fontWeight = '600';
-            }
+            chrome.storage.sync.set({ userId: userId, isConnected: true }, function () {
+              if (chrome.runtime.lastError) {
+                console.error('[AUTH] ⚠️ Error syncing userId:', chrome.runtime.lastError.message);
+              } else {
+                console.log('[AUTH] ✅ UserId synced via postMessage');
+              }
+
+              try {
+                chrome.runtime.sendMessage({
+                  type: 'AUTH_SUCCESS',
+                  userId: userId
+                });
+              } catch (e) {
+                console.log('[AUTH] Could not send message to popup (this is fine if closed):', e.message);
+              }
+
+              var statusEl = document.getElementById('extension-auth-status');
+              if (statusEl) {
+                statusEl.textContent = 'Connected successfully! You can close this tab.';
+                statusEl.style.color = '#22c55e';
+                statusEl.style.fontWeight = '600';
+              }
+            });
           });
         });
       }
-    }
-  });
+    });
 
   // Start auth flow
   if (document.readyState === 'loading') {
