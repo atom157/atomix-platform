@@ -166,7 +166,8 @@
           });
         });
       }
-    });
+    }
+  });
 
   // Start auth flow
   if (document.readyState === 'loading') {
