@@ -28,7 +28,7 @@ var promptCard = document.getElementById('promptCard');
 var promptSelect = document.getElementById('promptSelect');
 
 // API base URL
-var API_BASE = 'https://atomix.guru';
+var API_BASE = 'https://www.atomix.guru';
 var chrome = window.chrome;
 
 console.log('DEBUG: Checking for token...');
@@ -125,6 +125,8 @@ function checkAuthAndShowState(selectedPromptId) {
 }
 
 // Show connected state
+var _retryCount = 0;
+
 function showConnectedState(userId, extToken, selectedPromptId) {
   console.log('[POPUP] showConnectedState - fetching data from:', API_BASE + '/api/extension/prompts');
 
@@ -135,22 +137,33 @@ function showConnectedState(userId, extToken, selectedPromptId) {
     .then(function (response) {
       console.log('[POPUP] API response:', response.status, response.url);
       if (response.status === 401) {
-        console.log('[POPUP] ❌ Token expired or invalid. Attempting re-sync via background...');
-        // Instead of immediately clearing, try to get a fresh token
-        chrome.runtime.sendMessage({ type: 'EXTRACT_TOKEN' }, function (bgResponse) {
-          if (bgResponse && bgResponse.ok) {
-            console.log('[POPUP] ✅ Token refreshed via background. Retrying...');
-            showConnectedState(bgResponse.userId, bgResponse.token, selectedPromptId);
-          } else {
-            console.log('[POPUP] ❌ Background refresh also failed. Clearing token.');
-            clearSecureToken(function () {
-              showDisconnectedState();
-              updateStatus('Session expired. Reconnect.', 'warning');
-            });
-          }
-        });
+        if (_retryCount < 1) {
+          _retryCount++;
+          console.log('[POPUP] ❌ Token expired. Attempting ONE re-sync via background...');
+          chrome.runtime.sendMessage({ type: 'EXTRACT_TOKEN' }, function (bgResponse) {
+            if (bgResponse && bgResponse.ok) {
+              console.log('[POPUP] ✅ Token refreshed via background. Retrying...');
+              showConnectedState(bgResponse.userId, bgResponse.token, selectedPromptId);
+            } else {
+              console.log('[POPUP] ❌ Background refresh also failed. Clearing token.');
+              _retryCount = 0;
+              clearSecureToken(function () {
+                showDisconnectedState();
+                updateStatus('Session expired. Reconnect.', 'warning');
+              });
+            }
+          });
+        } else {
+          console.log('[POPUP] ❌ Already retried. Clearing token.');
+          _retryCount = 0;
+          clearSecureToken(function () {
+            showDisconnectedState();
+            updateStatus('Session expired. Reconnect.', 'warning');
+          });
+        }
         throw new Error('Token expired');
       }
+      _retryCount = 0;
       if (!response.ok) throw new Error('API failed');
       return response.json();
     })

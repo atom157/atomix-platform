@@ -11,7 +11,7 @@
 //   is listed in host_permissions. That's why we proxy the API call here.
 // ---------------------------------------------------------------------------
 
-const API_BASE = 'https://atomix.guru';
+const API_BASE = 'https://www.atomix.guru';
 
 // ── Message router ──────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
