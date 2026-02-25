@@ -27,6 +27,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       handleFetchPrompts(message.payload, sendResponse);
       return true;
 
+    case 'EXTRACT_TOKEN':
+      handleExtractToken(sendResponse);
+      return true;
+
     default:
       sendResponse({ ok: false, error: 'Unknown message type' });
   }
@@ -87,6 +91,37 @@ async function handleFetchPrompts({ extToken }, sendResponse) {
     sendResponse({ ok: true, data });
   } catch (err) {
     console.error('[BG] fetchPrompts error:', err);
+    sendResponse({ ok: false, error: err.message || 'Network error' });
+  }
+}
+
+// ── Extract Token Directly via Background Fetch ──────────────────────────────
+async function handleExtractToken(sendResponse) {
+  try {
+    const response = await fetch(`${API_BASE}/api/extension/token`, {
+      method: 'POST',
+      credentials: 'include' // CRITICAL: This passes the HTTP-only Supabase auth cookies!
+    });
+
+    if (response.status === 401 || !response.ok) {
+      sendResponse({ ok: false, status: response.status, error: 'Not authenticated on atomix.guru' });
+      return;
+    }
+
+    const data = await response.json();
+
+    if (data && data.token && data.userId) {
+      // Background script stores it instantly
+      chrome.storage.local.set({ extToken: data.token, userId: data.userId }, () => {
+        chrome.storage.sync.set({ userId: data.userId, isConnected: true }, () => {
+          sendResponse({ ok: true, token: data.token, userId: data.userId });
+        });
+      });
+    } else {
+      sendResponse({ ok: false, error: 'Malformed token response' });
+    }
+  } catch (err) {
+    console.error('[BG] extractToken error:', err);
     sendResponse({ ok: false, error: err.message || 'Network error' });
   }
 }

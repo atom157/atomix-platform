@@ -104,15 +104,20 @@ function checkAuthAndShowState(selectedPromptId) {
       showDisconnectedState();
 
       // Aggressively aggressively poll for token while disconnected
+      // BUT route it directly through the background script to bypass CSP blocks!
       if (!authCheckInterval) {
         authCheckInterval = setInterval(() => {
-          getSecureToken((res) => {
-            if (res.userId && res.extToken) {
+          chrome.runtime.sendMessage({ type: 'EXTRACT_TOKEN' }, function (response) {
+            if (chrome.runtime.lastError) return;
+
+            if (response && response.ok && response.token && response.userId) {
+              console.log('[POPUP] ✅ Token extracted directly via background fetch API!');
               clearInterval(authCheckInterval);
+              // Background already stored it, so we just run the checker again
               checkAuthAndShowState(selectedPromptId);
             }
           });
-        }, 1000);
+        }, 1500);
       }
     }
   });
