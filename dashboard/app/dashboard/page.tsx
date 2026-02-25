@@ -22,10 +22,10 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-balance">
+        <h1 className="text-3xl font-bold tracking-tight text-balance bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
           Dashboard
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mt-1">
           Manage prompts, monitor usage, and track your AI reply generation.
         </p>
       </div>
@@ -37,9 +37,19 @@ export default async function DashboardPage() {
       />
 
       <Tabs defaultValue="overview" className="flex flex-col gap-4">
-        <TabsList className="w-fit">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="prompts">Prompts</TabsTrigger>
+        <TabsList className="w-fit bg-slate-100/80 backdrop-blur-sm rounded-2xl p-1 border border-slate-200/50 shadow-sm">
+          <TabsTrigger
+            value="overview"
+            className="rounded-xl px-5 py-2 text-sm font-semibold text-slate-500 transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-blue-500/20"
+          >
+            Overview
+          </TabsTrigger>
+          <TabsTrigger
+            value="prompts"
+            className="rounded-xl px-5 py-2 text-sm font-semibold text-slate-500 transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-blue-500/20"
+          >
+            Prompts
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-0">

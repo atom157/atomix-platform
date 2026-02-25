@@ -48,7 +48,7 @@ export function RecentActivity() {
   )
 
   return (
-    <Card className="rounded-3xl border border-slate-100 bg-white/60 shadow-sm backdrop-blur-md transition-all hover:shadow-xl hover:shadow-blue-500/5 hover:border-slate-200">
+    <Card className="rounded-3xl border border-white/60 bg-white/50 shadow-sm backdrop-blur-xl transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/5 hover:border-white/80 hover:-translate-y-0.5">
       <CardHeader>
         <CardTitle className="text-lg font-bold text-slate-900">Recent Activity</CardTitle>
         <CardDescription className="text-sm font-medium text-slate-500">Your latest generated replies</CardDescription>

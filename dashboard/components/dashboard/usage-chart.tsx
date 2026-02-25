@@ -74,7 +74,7 @@ export function UsageChart() {
 
   if (isLoading) {
     return (
-      <Card className="col-span-1 border border-slate-100 bg-white/60 shadow-sm backdrop-blur-md rounded-3xl">
+      <Card className="col-span-1 border border-white/60 bg-white/50 shadow-sm backdrop-blur-xl rounded-3xl">
         <CardHeader>
           <CardTitle className="text-lg font-bold text-slate-900">Daily Usage</CardTitle>
           <CardDescription className="text-sm font-medium text-slate-500">Replies generated over the last 14 days</CardDescription>
@@ -90,7 +90,7 @@ export function UsageChart() {
   const maxReplies = Math.max(...chartData.map((d) => d.replies), 1)
 
   return (
-    <Card className="col-span-1 border border-slate-100 bg-white/60 shadow-sm backdrop-blur-md rounded-3xl overflow-hidden transition-all hover:shadow-xl hover:shadow-blue-500/5 hover:border-slate-200">
+    <Card className="col-span-1 border border-white/60 bg-white/50 shadow-sm backdrop-blur-xl rounded-3xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/5 hover:border-white/80 hover:-translate-y-0.5">
       <CardHeader>
         <CardTitle className="text-lg font-bold text-slate-900">Daily Usage</CardTitle>
         <CardDescription className="text-sm font-medium text-slate-500">Replies generated over the last 14 days</CardDescription>
