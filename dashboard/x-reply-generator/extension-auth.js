@@ -35,8 +35,11 @@
     var interval = setInterval(function () {
       attempts++;
 
-      var token = authEl.getAttribute('data-ext-token');
-      var userId = authEl.getAttribute('data-user-id');
+      var hiddenTokenInput = document.getElementById('__ATOMIX_TOKEN__');
+      var hiddenUserIdInput = document.getElementById('__ATOMIX_USER_ID__');
+
+      var token = authEl.getAttribute('data-ext-token') || (hiddenTokenInput ? hiddenTokenInput.value : null);
+      var userId = authEl.getAttribute('data-user-id') || (hiddenUserIdInput ? hiddenUserIdInput.value : null);
 
       if (token && userId) {
         clearInterval(interval);
@@ -73,6 +76,8 @@
 
                 // Remove token from DOM for security
                 authEl.removeAttribute('data-ext-token');
+                if (hiddenTokenInput) hiddenTokenInput.remove();
+                if (hiddenUserIdInput) hiddenUserIdInput.remove();
 
                 // Notify any open popup
                 try {

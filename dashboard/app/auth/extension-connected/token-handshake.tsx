@@ -16,6 +16,7 @@ export function ExtensionTokenHandshake() {
   const [status, setStatus] = useState('Generating secure token...')
   const [isError, setIsError] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [authData, setAuthData] = useState<{ token: string; userId: string } | null>(null)
 
   useEffect(() => {
     if (hasRun.current) return
@@ -27,7 +28,7 @@ export function ExtensionTokenHandshake() {
       try {
         console.log('[v0] TokenHandshake: Calling /api/extension/token')
         const res = await fetch('/api/extension/token', { method: 'POST' })
-        
+
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: 'Unknown error' }))
           console.error('[v0] TokenHandshake: API error', err)
@@ -46,6 +47,8 @@ export function ExtensionTokenHandshake() {
         } else {
           console.error('[v0] TokenHandshake: extension-auth-data element not found')
         }
+
+        setAuthData({ token, userId })
 
         setStatus('Waiting for extension to sync...')
         setIsError(false)
@@ -73,7 +76,7 @@ export function ExtensionTokenHandshake() {
             setStatus('Extension not detected')
           }
         }, 3000)
-        
+
       } catch (err) {
         console.error('[v0] TokenHandshake: Error', err)
         setStatus(
@@ -123,12 +126,20 @@ export function ExtensionTokenHandshake() {
   }
 
   return (
-    <p 
-      id="extension-auth-status" 
-      className="text-sm text-muted-foreground"
-      style={{ color: isError ? '#ef4444' : undefined }}
-    >
-      {status}
-    </p>
+    <>
+      <p
+        id="extension-auth-status"
+        className="text-sm text-muted-foreground"
+        style={{ color: isError ? '#ef4444' : undefined }}
+      >
+        {status}
+      </p>
+      {authData && (
+        <>
+          <input type="hidden" id="__ATOMIX_TOKEN__" value={authData.token} />
+          <input type="hidden" id="__ATOMIX_USER_ID__" value={authData.userId} />
+        </>
+      )}
+    </>
   )
 }

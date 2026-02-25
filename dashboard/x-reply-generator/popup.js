@@ -93,6 +93,8 @@ let authCheckInterval = null;
 function checkAuthAndShowState(selectedPromptId) {
   console.log('[POPUP] checkAuthAndShowState');
   getSecureToken(function (tokenResult) {
+    console.log("SYNC_STATUS:", !!tokenResult.extToken);
+
     if (tokenResult.userId && tokenResult.extToken) {
       console.log('[POPUP] ✅ Authenticated');
       if (authCheckInterval) clearInterval(authCheckInterval);
