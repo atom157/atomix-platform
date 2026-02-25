@@ -45,6 +45,7 @@ async function handleGenerateReply({ tweetData, settings, extToken, promptId }, 
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${extToken}`,
       },
+      credentials: 'include',
       body: JSON.stringify({ tweetData, promptId: promptId || null, settings }),
     });
 
@@ -74,6 +75,7 @@ async function handleFetchPrompts({ extToken }, sendResponse) {
   try {
     const response = await fetch(`${API_BASE}/api/extension/prompts`, {
       headers: { 'Authorization': `Bearer ${extToken}` },
+      credentials: 'include',
     });
 
     if (response.status === 401) {

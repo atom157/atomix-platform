@@ -126,18 +126,28 @@ function checkAuthAndShowState(selectedPromptId) {
 
 // Show connected state
 function showConnectedState(userId, extToken, selectedPromptId) {
-  console.log('[POPUP] showConnectedState - fetching data');
+  console.log('[POPUP] showConnectedState - fetching data from:', API_BASE + '/api/extension/prompts');
 
   fetch(API_BASE + '/api/extension/prompts', {
-    headers: { 'Authorization': 'Bearer ' + extToken }
+    headers: { 'Authorization': 'Bearer ' + extToken },
+    credentials: 'include'
   })
     .then(function (response) {
-      console.log('[POPUP] API response:', response.status);
+      console.log('[POPUP] API response:', response.status, response.url);
       if (response.status === 401) {
-        console.log('[POPUP] ❌ Token expired');
-        clearSecureToken(function () {
-          showDisconnectedState();
-          updateStatus('Session expired. Reconnect.', 'warning');
+        console.log('[POPUP] ❌ Token expired or invalid. Attempting re-sync via background...');
+        // Instead of immediately clearing, try to get a fresh token
+        chrome.runtime.sendMessage({ type: 'EXTRACT_TOKEN' }, function (bgResponse) {
+          if (bgResponse && bgResponse.ok) {
+            console.log('[POPUP] ✅ Token refreshed via background. Retrying...');
+            showConnectedState(bgResponse.userId, bgResponse.token, selectedPromptId);
+          } else {
+            console.log('[POPUP] ❌ Background refresh also failed. Clearing token.');
+            clearSecureToken(function () {
+              showDisconnectedState();
+              updateStatus('Session expired. Reconnect.', 'warning');
+            });
+          }
         });
         throw new Error('Token expired');
       }
@@ -311,6 +321,7 @@ saveCustomPromptBtn.addEventListener('click', function () {
         'Authorization': 'Bearer ' + tokenResult.extToken,
         'Content-Type': 'application/json'
       },
+      credentials: 'include',
       body: JSON.stringify({ name: name, content: content })
     })
       .then(function (response) {
