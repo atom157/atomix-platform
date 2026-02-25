@@ -5,6 +5,8 @@
   'use strict';
 
   console.log('[AUTH] extension-auth.js: Script loaded');
+  console.log('DEBUG: extension-auth.js running on:', window.location.href);
+  console.log('DEBUG: Found cookies:', document.cookie);
 
   // Check if Chrome extension APIs are available
   if (typeof chrome === 'undefined' || !chrome.storage) {

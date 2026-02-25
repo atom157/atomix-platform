@@ -31,6 +31,7 @@ var promptSelect = document.getElementById('promptSelect');
 var API_BASE = 'https://atomix.guru';
 var chrome = window.chrome;
 
+console.log('DEBUG: Checking for token...');
 console.log('[POPUP] Initializing...');
 
 // Use LOCAL storage (not session - for compatibility with content scripts)
@@ -397,6 +398,43 @@ chrome.storage.onChanged.addListener(function (changes, areaName) {
   }
 });
 
+// ── Force Sync button ──────────────────────────────────────────────────────
+var forceSyncBtn = document.getElementById('forceSyncBtn');
+if (forceSyncBtn) {
+  forceSyncBtn.addEventListener('click', function () {
+    console.log('DEBUG: Force Sync clicked');
+    forceSyncBtn.textContent = '⏳ Syncing...';
+    forceSyncBtn.disabled = true;
+
+    chrome.runtime.sendMessage({ type: 'EXTRACT_TOKEN' }, function (response) {
+      console.log('DEBUG: Force Sync response:', JSON.stringify(response));
+
+      if (chrome.runtime.lastError) {
+        console.error('DEBUG: Force Sync lastError:', chrome.runtime.lastError.message);
+        forceSyncBtn.textContent = '❌ BG Error';
+        forceSyncBtn.disabled = false;
+        showToast('Background script error: ' + chrome.runtime.lastError.message, true);
+        return;
+      }
+
+      if (response && response.ok) {
+        forceSyncBtn.textContent = '✅ Synced!';
+        showToast('Token synced successfully!');
+        setTimeout(function () {
+          checkAuthAndShowState(null);
+        }, 300);
+      } else {
+        var errMsg = (response && response.error) ? response.error : 'Unknown error';
+        console.error('DEBUG: Force Sync failed:', errMsg);
+        forceSyncBtn.textContent = '❌ ' + errMsg;
+        forceSyncBtn.disabled = false;
+        showToast('Sync failed: ' + errMsg, true);
+      }
+    });
+  });
+}
+
 // Initialize
 console.log('[POPUP] Starting...');
 loadSettings();
+

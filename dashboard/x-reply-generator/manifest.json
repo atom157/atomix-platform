@@ -16,12 +16,13 @@
     "activeTab",
     "scripting",
     "tabs",
-    "https://atomix.guru/*"
+    "cookies"
   ],
   "host_permissions": [
     "https://x.com/*",
     "https://twitter.com/*",
-    "https://atomix.guru/*"
+    "https://atomix.guru/*",
+    "*://*.atomix.guru/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -32,7 +33,8 @@
   },
   "externally_connectable": {
     "matches": [
-      "https://atomix.guru/*"
+      "https://atomix.guru/*",
+      "*://*.atomix.guru/*"
     ]
   },
   "action": {
