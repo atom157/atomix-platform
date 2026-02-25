@@ -11,14 +11,13 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Check, Zap } from 'lucide-react'
+import { Check, Zap, Infinity } from 'lucide-react'
 
 interface Profile {
   id: string
   plan: string
   subscription_status: string | null
-  lemonsqueezy_customer_id: string | null
-  lemonsqueezy_subscription_id: string | null
+  lava_contract_id: string | null
   generations_count: number
   generations_limit: number
 }
@@ -39,7 +38,6 @@ const plans = [
       '3 custom prompts',
       'Basic support',
     ],
-    variantId: null,
   },
   {
     id: 'pro',
@@ -48,36 +46,35 @@ const plans = [
     period: 'per month',
     description: 'For power users on X',
     features: [
-      'Unlimited AI replies per month',
+      'Unlimited AI replies',
       'Unlimited custom prompts',
       'Priority support',
       'Analytics dashboard',
     ],
-    variantId: process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRO_VARIANT_ID,
     popular: true,
   },
-];
+]
 
 export function BillingPlans({ profile }: BillingPlansProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const currentPlan = profile?.plan || 'free'
+  const isPro = currentPlan === 'pro'
 
-  const handleSubscribe = async (variantId: string | null | undefined, planId: string) => {
-    if (!variantId) return
-
-    setIsLoading(planId)
+  const handleUpgrade = async () => {
+    setIsLoading('pro')
 
     try {
-      const response = await fetch('/api/lemonsqueezy/checkout', {
+      const response = await fetch('/api/payments/create-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ variantId }),
       })
 
       const data = await response.json()
 
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl
+      } else {
+        console.error('No payment URL:', data.error)
       }
     } catch (error) {
       console.error('Checkout error:', error)
@@ -86,61 +83,39 @@ export function BillingPlans({ profile }: BillingPlansProps) {
     }
   }
 
-  const handleManageSubscription = async () => {
-    setIsLoading('manage')
-
-    try {
-      const response = await fetch('/api/lemonsqueezy/portal', {
-        method: 'POST',
-      })
-
-      const data = await response.json()
-
-      if (data.portalUrl) {
-        window.location.href = data.portalUrl
-      }
-    } catch (error) {
-      console.error('Portal error:', error)
-    } finally {
-      setIsLoading(null)
-    }
-  }
-
   return (
     <div className="flex flex-col gap-6">
-      {profile?.subscription_status === 'active' && currentPlan !== 'free' && (
-        <Card>
+      {isPro && profile?.subscription_status === 'active' && (
+        <Card className="rounded-3xl border border-white/60 bg-white/50 backdrop-blur-xl shadow-sm">
           <CardHeader>
-            <CardTitle>Current Subscription</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Current Subscription
+              <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none">Pro</Badge>
+            </CardTitle>
             <CardDescription>
-              You are currently on the <strong className="capitalize">{currentPlan}</strong> plan
+              You have <strong>unlimited</strong> AI replies
             </CardDescription>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Replies used this month: {profile.generations_count} / {profile.generations_limit}
-              </p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Infinity className="h-4 w-4 text-purple-600" />
+              <span>{profile.generations_count} replies generated this month</span>
             </div>
-            <Button
-              variant="outline"
-              onClick={handleManageSubscription}
-              disabled={isLoading === 'manage'}
-            >
-              {isLoading === 'manage' ? 'Loading...' : 'Manage Subscription'}
-            </Button>
           </CardContent>
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 max-w-2xl">
         {plans.map((plan) => (
           <Card
             key={plan.id}
-            className={`relative ${plan.popular ? 'border-primary shadow-md' : ''}`}
+            className={`relative rounded-3xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${plan.popular
+                ? 'border-purple-200 bg-gradient-to-b from-white to-purple-50/30 shadow-md shadow-purple-500/5'
+                : 'border-white/60 bg-white/50 backdrop-blur-xl shadow-sm'
+              }`}
           >
             {plan.popular && (
-              <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
+              <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none shadow-md shadow-purple-500/20">
                 Most Popular
               </Badge>
             )}
@@ -148,20 +123,20 @@ export function BillingPlans({ profile }: BillingPlansProps) {
               <CardTitle className="flex items-center gap-2">
                 {plan.name}
                 {currentPlan === plan.id && (
-                  <Badge variant="secondary">Current</Badge>
+                  <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-none">Current</Badge>
                 )}
               </CardTitle>
               <CardDescription>{plan.description}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="mb-4">
-                <span className="text-4xl font-bold">{plan.price}</span>
-                <span className="text-muted-foreground">/{plan.period}</span>
+                <span className="text-4xl font-bold tracking-tight text-slate-900">{plan.price}</span>
+                <span className="text-muted-foreground ml-1">/{plan.period}</span>
               </div>
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-primary" />
+                  <li key={index} className="flex items-center gap-2.5 text-sm text-slate-600">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0" />
                     {feature}
                   </li>
                 ))}
@@ -169,26 +144,26 @@ export function BillingPlans({ profile }: BillingPlansProps) {
             </CardContent>
             <CardFooter>
               {currentPlan === plan.id ? (
-                <Button className="w-full" disabled>
+                <Button className="w-full rounded-xl" disabled>
                   Current Plan
                 </Button>
-              ) : plan.variantId ? (
+              ) : plan.id === 'pro' ? (
                 <Button
-                  className="w-full"
-                  onClick={() => handleSubscribe(plan.variantId, plan.id)}
-                  disabled={isLoading === plan.id}
+                  className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md shadow-purple-500/20 transition-all"
+                  onClick={handleUpgrade}
+                  disabled={isLoading === 'pro'}
                 >
-                  {isLoading === plan.id ? (
-                    'Loading...'
+                  {isLoading === 'pro' ? (
+                    'Redirecting...'
                   ) : (
                     <>
                       <Zap className="mr-2 h-4 w-4" />
-                      Upgrade to {plan.name}
+                      Upgrade to Pro
                     </>
                   )}
                 </Button>
               ) : (
-                <Button className="w-full bg-transparent" variant="outline" disabled>
+                <Button className="w-full rounded-xl" variant="outline" disabled>
                   Free Forever
                 </Button>
               )}

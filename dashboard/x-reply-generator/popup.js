@@ -173,22 +173,29 @@ function showConnectedState(userId, extToken, selectedPromptId) {
       if (data.usage) {
         var userPlan = data.usage.tier || 'free';
         var isFreeOrTrial = userPlan === 'free' || userPlan === 'trial';
+        var isUnlimited = !isFreeOrTrial && (data.usage.limit >= 999999);
 
-        // HARD EXPLICIT OVERRIDE
         var displayLimit = isFreeOrTrial ? 20 : (data.usage.limit || 20);
 
         tierBadge.textContent = userPlan.charAt(0).toUpperCase() + userPlan.slice(1);
         tierBadge.className = 'tier-badge tier-' + userPlan;
 
-        var prefix = isFreeOrTrial ? 'TRIAL: ' : '';
-        usageText.textContent = prefix + data.usage.used + ' / ' + displayLimit + ' replies';
-
-        var percentage = Math.min((data.usage.used / displayLimit) * 100, 100);
-        usageFill.style.width = percentage + '%';
-        if (percentage > 80) {
-          usageFill.classList.add('usage-warning');
-        } else {
+        if (isUnlimited) {
+          usageText.textContent = data.usage.used + ' replies · Unlimited ∞';
+          usageFill.style.width = '100%';
           usageFill.classList.remove('usage-warning');
+          usageFill.style.background = 'linear-gradient(90deg, #3b82f6, #8b5cf6)';
+        } else {
+          var prefix = isFreeOrTrial ? 'TRIAL: ' : '';
+          usageText.textContent = prefix + data.usage.used + ' / ' + displayLimit + ' replies';
+          var percentage = Math.min((data.usage.used / displayLimit) * 100, 100);
+          usageFill.style.width = percentage + '%';
+          usageFill.style.background = '';
+          if (percentage > 80) {
+            usageFill.classList.add('usage-warning');
+          } else {
+            usageFill.classList.remove('usage-warning');
+          }
         }
       }
 

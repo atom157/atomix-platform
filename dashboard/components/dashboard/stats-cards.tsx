@@ -52,13 +52,19 @@ export function StatsCards({
   const stats = [
     {
       title: 'Replies This Month',
-      value: `${used} / ${limit}`,
-      description: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`,
+      value: limit >= 999999 ? `${used}` : `${used} / ${limit}`,
+      description: limit >= 999999
+        ? `Pro plan · Unlimited`
+        : `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`,
       icon: MessageSquare,
       accent: 'from-blue-500 to-indigo-600',
       iconBg: 'bg-blue-50 text-blue-600',
       glowColor: 'hover:shadow-blue-500/10',
-      extra: (
+      extra: limit >= 999999 ? (
+        <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-purple-600">
+          <span>∞</span> Unlimited replies
+        </div>
+      ) : (
         <div className="mt-3 h-2 w-full rounded-full bg-slate-100/80 overflow-hidden">
           <div
             className={`h-2 rounded-full transition-all duration-700 ease-out ${percentage > 90 ? 'bg-gradient-to-r from-red-500 to-rose-600 shadow-sm shadow-red-500/50' : 'bg-gradient-to-r from-blue-500 to-purple-600 shadow-sm shadow-blue-500/50'}`}
