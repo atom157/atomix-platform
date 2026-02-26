@@ -171,11 +171,10 @@ function showConnectedState(userId, extToken, selectedPromptId) {
       promptCard.style.display = 'block';
 
       if (data.usage) {
-        var userPlan = data.usage.tier || 'free';
-        var isFreeOrTrial = userPlan === 'free' || userPlan === 'trial';
-        var isUnlimited = !isFreeOrTrial && (data.usage.limit >= 999999);
+        var userPlan = data.usage.tier || 'trial';
+        var isUnlimited = (data.usage.limit >= 999999);
 
-        var displayLimit = isFreeOrTrial ? 20 : (data.usage.limit || 20);
+        var displayLimit = data.usage.limit || 20;
 
         tierBadge.textContent = userPlan.charAt(0).toUpperCase() + userPlan.slice(1);
         tierBadge.className = 'tier-badge tier-' + userPlan;

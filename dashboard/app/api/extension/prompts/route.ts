@@ -71,14 +71,14 @@ export async function GET(request: Request) {
       await supabase
         .from('profiles')
         .update({
-          plan: 'free',
+          plan: 'trial',
           subscription_status: 'expired',
           generations_limit: 20,
           cancel_at_period_end: false,
         })
         .eq('id', userId)
 
-      profile.plan = 'free'
+      profile.plan = 'trial'
       profile.generations_limit = 20
     }
 
@@ -89,7 +89,7 @@ export async function GET(request: Request) {
           ? {
             tier: profile.plan,
             used: profile.generations_count,
-            limit: (profile.plan === 'free' || profile.plan === 'trial') ? 20 : profile.generations_limit,
+            limit: profile.generations_limit,
           }
           : null,
       },

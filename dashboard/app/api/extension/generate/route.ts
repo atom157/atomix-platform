@@ -126,19 +126,19 @@ export async function POST(request: Request) {
       await supabase
         .from('profiles')
         .update({
-          plan: 'free',
+          plan: 'trial',
           subscription_status: 'expired',
           generations_limit: 20,
           cancel_at_period_end: false,
         })
         .eq('id', userId)
 
-      profile.plan = 'free'
+      profile.plan = 'trial'
       profile.generations_limit = 20
     }
 
-    // Check usage limits
-    const effectiveLimit = (profile.plan === 'free' || profile.plan === 'trial') ? 20 : profile.generations_limit;
+    // Check usage limits — read directly from DB, no overrides
+    const effectiveLimit = profile.generations_limit;
     if (profile.generations_count >= effectiveLimit) {
       return NextResponse.json(
         { error: 'Reply limit reached. Please upgrade your plan.' },
