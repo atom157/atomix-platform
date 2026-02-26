@@ -31,17 +31,23 @@ export async function POST(request: Request) {
         console.log(JSON.stringify(body, null, 2))
         console.log('[LAVA-WH] ========================')
 
-        const { eventType, buyer, contractId, clientUtm, status, parentContractId } = body
+        // ── Correct field paths: type is top-level, everything else is under data.* ──
+        const eventType = body.type
+        const data = body.data || {}
+        const contractId = data.contractId
+        const parentContractId = data.parentContractId
+        const status = data.status
+        const clientUtm = data.clientUtm
+        const buyerEmail = data.buyer?.email || data.customer_email || null
 
         console.log('[LAVA-WH] Event:', eventType, '| Status:', status, '| Contract:', contractId)
         console.log('[LAVA-WH] clientUtm:', JSON.stringify(clientUtm))
-        console.log('[LAVA-WH] buyer:', JSON.stringify(buyer))
+        console.log('[LAVA-WH] buyer:', JSON.stringify(data.buyer))
 
         const supabaseAdmin = getSupabaseAdmin()
 
-        // ── Extract user ID from clientUtm.utm_content (set during invoice creation) ──
+        // ── Extract user ID from data.clientUtm.utm_content (set during invoice creation) ──
         const userId = clientUtm?.utm_content || null
-        const buyerEmail = buyer?.email || null
 
         console.log('[LAVA-WH] Extracted userId:', userId)
         console.log('[LAVA-WH] Extracted buyerEmail:', buyerEmail)
