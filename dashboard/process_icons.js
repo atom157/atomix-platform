@@ -2,43 +2,35 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
-const svgCode = `
-<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-        <linearGradient id="atomix-x-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#a855f7" />
-            <stop offset="100%" stopColor="#3b82f6" />
-        </linearGradient>
-    </defs>
-    <!-- Deep blue hexagon background -->
-    <polygon points="50 5, 89 27.5, 89 72.5, 50 95, 11 72.5, 11 27.5" fill="#1e3a8a" />
-
-    <!-- Dynamic Purple-to-Blue 'X' -->
-    <path d="M30 30 L70 70 M70 30 L30 70" stroke="url(#atomix-x-grad)" stroke-width="12" stroke-linecap="round" />
-
-    <!-- Magenta Spark (Center) -->
-    <path d="M50 38 Q50 50 38 50 Q50 50 50 62 Q50 50 62 50 Q50 50 50 38 Z" fill="#ec4899" />
-</svg>
-`;
-
 const sizes = [16, 32, 48, 128];
-// Output directory is ../extension/icons relative to dashboard where script is run
 const outDir = path.join(__dirname, '../extension/icons');
+const sourceImg = path.join(__dirname, 'public', 'logo-512.png');
 
 if (!fs.existsSync(outDir)) {
     fs.mkdirSync(outDir, { recursive: true });
 }
 
-const buffer = Buffer.from(svgCode);
-
 async function generate() {
     for (const size of sizes) {
-        // We ensure 1px safety padding natively by the 0 0 100 100 viewbox and polygon which stops at 5% margin
-        await sharp(buffer)
-            .resize(size, size)
+        // Calculate padding (e.g. 10% padding so it avoids cutoff)
+        const padding = Math.max(1, Math.floor(size * 0.1));
+        const innerSize = size - (padding * 2);
+
+        await sharp(sourceImg)
+            .resize(innerSize, innerSize, {
+                fit: 'contain',
+                background: { r: 0, g: 0, b: 0, alpha: 0 }
+            })
+            .extend({
+                top: padding,
+                bottom: padding,
+                left: padding,
+                right: padding,
+                background: { r: 0, g: 0, b: 0, alpha: 0 }
+            })
             .png()
             .toFile(path.join(outDir, `icon${size}.png`));
-        console.log(`Generated icon${size}.png`);
+        console.log(`Generated icon${size}.png from logo-512.png`);
     }
 }
 
