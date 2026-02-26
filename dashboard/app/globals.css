@@ -180,6 +180,25 @@
   animation: floatBadge 3s ease-in-out infinite;
 }
 
+@layer utilities {
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  .perspective-\[1200px\] {
+    perspective: 1200px;
+  }
+
+  .translate-z-10 {
+    transform: translateZ(10px);
+  }
+}
+
+
 @keyframes float-slow {
 
   0%,
