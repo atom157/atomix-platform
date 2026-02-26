@@ -211,6 +211,8 @@ export async function POST(request: Request) {
 
     const openai = new OpenAI({ apiKey })
 
+    console.log('Generating response in:', (safeSettings as Record<string, unknown>)?.language || 'same', 'with length:', (safeSettings as Record<string, unknown>)?.length || 'medium')
+
     const completion = await openai.chat.completions.create({
       model: (safeSettings as Record<string, unknown>)?.model as string || 'gpt-4o-mini',
       messages: [
@@ -352,6 +354,12 @@ OUTPUT:
     } else {
       basePrompt += `\n\nADDITIONAL USER INSTRUCTIONS:\n${customPrompt}`
     }
+  }
+
+  // ── HIGH PRIORITY: Language enforcement (appended LAST to override everything) ──
+  if (language && language !== 'same') {
+    const langName = languageDescriptions[language] || language
+    basePrompt += `\n\n=== CRITICAL LANGUAGE OVERRIDE ===\nIMPORTANT: You MUST write your ENTIRE reply in ${langName}. Even if the original tweet is in a different language, your response MUST be in ${langName}. This is a hard requirement — do NOT switch to the tweet's language. Every single word of your reply must be in ${langName}.`
   }
 
   return basePrompt
