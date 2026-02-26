@@ -29,6 +29,11 @@ export const metadata: Metadata = {
     title: 'AtomiX — AI-Powered Replies for X (Twitter)',
     description: 'One click. Human-like reply. Instant engagement.',
   },
+  icons: {
+    icon: [
+      { url: '/icon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+  },
 }
 
 export const viewport: Viewport = {
