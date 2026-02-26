@@ -231,7 +231,7 @@ function showConnectedState(userId, extToken, selectedPromptId) {
         data.prompts.forEach(function (prompt) {
           var option = document.createElement('option');
           option.value = prompt.id;
-          option.textContent = prompt.name + (prompt.is_default ? ' ★ Default' : '');
+          option.textContent = (prompt.is_default ? '📌 ' : '') + prompt.name;
           if (prompt.is_default) {
             defaultPromptId = prompt.id;
           }
@@ -478,9 +478,9 @@ if (saveDefaultBtn) {
             // Update dropdown labels
             var options = promptSelect.options;
             for (var i = 0; i < options.length; i++) {
-              options[i].textContent = options[i].textContent.replace(' ★ Default', '');
+              options[i].textContent = options[i].textContent.replace('📌 ', '');
               if (options[i].value === selectedId) {
-                options[i].textContent += ' ★ Default';
+                options[i].textContent = '📌 ' + options[i].textContent;
               }
             }
           }
