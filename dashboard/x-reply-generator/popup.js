@@ -398,7 +398,7 @@ saveCustomPromptBtn.addEventListener('click', function () {
 // Event listeners
 saveBtn.addEventListener('click', saveSettings);
 connectBtn.addEventListener('click', connectAccount);
-disconnectBtn.addEventListener('click', disconnectAccount);
+disconnectBtn.addEventListener('click', function (e) { e.preventDefault(); disconnectAccount(); });
 
 // Listen for auth success
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
