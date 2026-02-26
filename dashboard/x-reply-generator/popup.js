@@ -115,8 +115,8 @@ function loadSettings() {
     }
 
     includeHashtagsCheckbox.checked = result.includeHashtags || false;
-    mentionAuthorCheckbox.checked = result.mentionAuthor !== undefined ? result.mentionAuthor : true;
-    addEmojiCheckbox.checked = result.addEmoji !== undefined ? result.addEmoji : true;
+    mentionAuthorCheckbox.checked = result.mentionAuthor || false;
+    addEmojiCheckbox.checked = result.addEmoji || false;
 
     checkAuthAndShowState(result.selectedPromptId);
   });

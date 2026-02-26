@@ -302,8 +302,8 @@ function buildSystemPrompt(customPrompt: string, settings: Record<string, unknow
   const tone = (settings?.tone as string) || 'friendly'
   const length = (settings?.length as string) || 'medium'
   const language = (settings?.language as string) || 'same'
-  const mentionAuthor = settings?.mentionAuthor !== false
-  const addEmoji = settings?.addEmoji !== false
+  const mentionAuthor = settings?.mentionAuthor === true
+  const addEmoji = settings?.addEmoji === true
   const includeHashtags = settings?.includeHashtags === true
   const bannedWords = settings?.bannedWords as string
 
@@ -329,9 +329,9 @@ STYLE RULES:
 1. Tone: ${toneDescriptions[tone] || 'friendly'}
 2. Length: ${lengthDescriptions[length] || '2-3 sentences'}
 3. Language: Write in ${languageDescriptions[language] || 'the same language as the original tweet'}
-4. ${mentionAuthor ? 'You may reference the author naturally by name or @handle, but only when it fits' : 'Do not mention the author directly'}
-5. ${addEmoji ? 'Use 1-2 emojis only if they feel natural, not decorative' : 'Do NOT use any emojis'}
-6. ${includeHashtags ? 'You can add 1-2 relevant hashtags at the end' : 'Do NOT add hashtags'}
+4. ${mentionAuthor ? 'Start or weave in the author\'s @handle naturally in the reply' : 'STRICT RULE: Do NOT mention or reference the author\'s handle anywhere in the reply'}
+5. ${addEmoji ? 'Integrate expressive and relevant emojis naturally into the text' : 'STRICT RULE: Do NOT use any emojis, emoticons, or Unicode symbols whatsoever'}
+6. ${includeHashtags ? 'Include 1-3 relevant and trending hashtags at the end of the response' : 'STRICT RULE: Do NOT include any hashtags'}
 
 CONTENT RULES:
 - Add genuine value: share a related thought, a personal angle, a relevant question, or useful context.

@@ -196,8 +196,8 @@
               length: settings.length || 'medium',
               bannedWords: settings.bannedWords || '',
               includeHashtags: settings.includeHashtags || false,
-              mentionAuthor: settings.mentionAuthor !== false,
-              addEmoji: settings.addEmoji !== false,
+              mentionAuthor: settings.mentionAuthor || false,
+              addEmoji: settings.addEmoji || false,
               customPrompt: settings.customPromptContent || null
             },
           },
