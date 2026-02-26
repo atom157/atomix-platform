@@ -16,13 +16,14 @@ export default async function WelcomePage() {
     const { data: { user } } = await supabase.auth.getUser();
 
     return (
-        <div className="relative min-h-screen bg-slate-900 text-slate-100 font-sans overflow-hidden flex flex-col items-center">
+        <div className="relative min-h-screen bg-[#0a0514] text-slate-100 font-sans overflow-hidden flex flex-col items-center">
 
             {/* Deep Violet/Blue Gradient Background */}
             <div className="absolute inset-0 z-0">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,_rgba(76,29,149,0.3)_0%,_transparent_40%)]" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_70%,_rgba(30,58,138,0.4)_0%,_transparent_50%)]" />
-                <div className="absolute inset-0 bg-gradient-to-br from-[#120a2e] via-[#0f172a] to-[#0f172a] opacity-90" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,_rgba(76,29,149,0.45)_0%,_transparent_60%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,_rgba(30,58,138,0.45)_0%,_transparent_60%)]" />
+                <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-600/20 blur-[120px] rounded-full pointer-events-none" />
+                <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] bg-blue-600/20 blur-[120px] rounded-full pointer-events-none" />
             </div>
 
             {/* Header */}
@@ -38,16 +39,16 @@ export default async function WelcomePage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mt-8 items-stretch justify-center">
 
                     {/* Step 1: Pin It (Side-by-side Layout) */}
-                    <div className="bg-white/[0.03] backdrop-blur-[20px] border-[0.5px] border-white/20 rounded-[2rem] p-8 md:p-10 flex shadow-2xl shadow-indigo-500/10 hover:shadow-indigo-500/20 hover:border-white/30 transition-all duration-300 relative group overflow-hidden h-full min-h-[400px]">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-indigo-400/30 transition-colors" />
+                    <div className="bg-[#130f26]/60 backdrop-blur-[24px] border-[0.5px] border-white/20 rounded-[2rem] p-8 md:p-10 flex shadow-[0_8px_32px_0_rgba(76,29,149,0.25)] hover:shadow-[0_16px_48px_0_rgba(76,29,149,0.45)] hover:border-white/30 transition-all duration-300 relative group overflow-hidden h-full min-h-[400px]">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-indigo-400/30 transition-colors pointer-events-none" />
                         <div className="relative z-10 flex flex-col justify-between h-full w-full">
                             <div>
-                                <div className="inline-flex items-center justify-center h-8 px-4 rounded-full bg-white/10 text-white font-semibold text-sm mb-6 border border-white/10">
+                                <div className="inline-flex items-center justify-center h-8 px-4 rounded-full bg-white/10 text-white font-bold text-sm mb-6 border border-white/10 shadow-inner">
                                     Step 1
                                 </div>
-                                <h3 className="text-3xl font-bold text-white mb-4 tracking-tight">Pin It</h3>
-                                <p className="text-slate-300 text-lg leading-relaxed mb-8 max-w-[200px]">
-                                    Click the <strong className="text-white font-semibold">puzzle icon</strong> 🧩 in your Chrome toolbar and pin AtomiX for instant access.
+                                <h3 className="text-3xl font-extrabold text-white mb-4 tracking-tight drop-shadow-sm">Pin It</h3>
+                                <p className="text-slate-200 text-lg leading-relaxed mb-8 max-w-[200px] font-medium drop-shadow-sm">
+                                    Click the <strong className="text-white font-bold">puzzle icon</strong> 🧩 in your Chrome toolbar and pin AtomiX for instant access.
                                 </p>
                             </div>
 
@@ -78,14 +79,14 @@ export default async function WelcomePage() {
                     </div>
 
                     {/* Step 2: Connect Google (Centered Layout) */}
-                    <div className="bg-white/[0.03] backdrop-blur-[20px] border-[0.5px] border-white/20 rounded-[2rem] p-8 md:p-10 flex flex-col shadow-2xl shadow-purple-500/10 hover:shadow-purple-500/20 hover:border-white/30 transition-all duration-300 relative group overflow-hidden h-full min-h-[400px]">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/20 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-purple-400/30 transition-colors" />
+                    <div className="bg-[#130f26]/60 backdrop-blur-[24px] border-[0.5px] border-white/20 rounded-[2rem] p-8 md:p-10 flex flex-col shadow-[0_8px_32px_0_rgba(147,51,234,0.25)] hover:shadow-[0_16px_48px_0_rgba(147,51,234,0.45)] hover:border-white/30 transition-all duration-300 relative group overflow-hidden h-full min-h-[400px]">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/20 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-purple-400/30 transition-colors pointer-events-none" />
                         <div className="relative z-10 flex flex-col items-center justify-center text-center h-full w-full">
-                            <div className="inline-flex items-center justify-center h-8 px-4 rounded-full bg-white/10 text-white font-semibold text-sm mb-6 border border-white/10 mt-2">
+                            <div className="inline-flex items-center justify-center h-8 px-4 rounded-full bg-white/10 text-white font-bold text-sm mb-6 border border-white/10 mt-2 shadow-inner">
                                 Step 2
                             </div>
-                            <h3 className="text-3xl font-bold text-white mb-4 tracking-tight">Connect Google</h3>
-                            <p className="text-slate-300 text-lg leading-relaxed mb-auto max-w-[280px]">
+                            <h3 className="text-3xl font-extrabold text-white mb-4 tracking-tight drop-shadow-sm">Connect Google</h3>
+                            <p className="text-slate-200 text-lg leading-relaxed mb-auto max-w-[280px] font-medium drop-shadow-sm">
                                 Sign in with Google below to activate your AI engine and sync your custom prompts.
                             </p>
 
@@ -96,15 +97,15 @@ export default async function WelcomePage() {
                     </div>
 
                     {/* Step 3: Generate on X (Centered / Animated) */}
-                    <div className="bg-white/[0.03] backdrop-blur-[20px] border-[0.5px] border-white/20 rounded-[2rem] p-8 md:p-10 flex flex-col shadow-2xl shadow-blue-500/10 hover:shadow-blue-500/20 hover:border-white/30 transition-all duration-300 relative group overflow-hidden h-full min-h-[400px]">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-blue-400/30 transition-colors" />
+                    <div className="bg-[#130f26]/60 backdrop-blur-[24px] border-[0.5px] border-white/20 rounded-[2rem] p-8 md:p-10 flex flex-col shadow-[0_8px_32px_0_rgba(59,130,246,0.25)] hover:shadow-[0_16px_48px_0_rgba(59,130,246,0.45)] hover:border-white/30 transition-all duration-300 relative group overflow-hidden h-full min-h-[400px]">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-blue-400/30 transition-colors pointer-events-none" />
                         <div className="relative z-10 flex flex-col items-center justify-center text-center h-full w-full">
-                            <div className="inline-flex items-center justify-center h-8 px-4 rounded-full bg-white/10 text-white font-semibold text-sm mb-6 border border-white/10 mt-2">
+                            <div className="inline-flex items-center justify-center h-8 px-4 rounded-full bg-white/10 text-white font-bold text-sm mb-6 border border-white/10 mt-2 shadow-inner">
                                 Step 3
                             </div>
-                            <h3 className="text-3xl font-bold text-white mb-4 tracking-tight">Generate on X</h3>
-                            <p className="text-slate-300 text-lg leading-relaxed mb-auto max-w-[280px]">
-                                Head to <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 transition-colors underline decoration-blue-400/50 underline-offset-4">x.com</a> and look for the sparkling AtomiX button inside any reply box.
+                            <h3 className="text-3xl font-extrabold text-white mb-4 tracking-tight drop-shadow-sm">Generate on X</h3>
+                            <p className="text-slate-200 text-lg leading-relaxed mb-auto max-w-[280px] font-medium drop-shadow-sm">
+                                Head to <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 transition-colors underline decoration-blue-400/50 underline-offset-4 font-bold">x.com</a> and look for the sparkling AtomiX button inside any reply box.
                             </p>
 
                             {/* Simulated Visual: Twitter Reply Box with Loop Animation */}
