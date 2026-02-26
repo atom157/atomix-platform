@@ -68,7 +68,7 @@ export default function LandingPage() {
           </div>
           <div className="max-w-7xl mx-auto px-6 w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center z-10">
             {/* Left */}
-            <div className="flex flex-col items-start gap-8 max-w-xl animate-[fadeUp_0.6s_ease-out]">
+            <div className="flex flex-col items-start gap-8 max-w-xl animate-fade-up">
               <div className="bg-slate-100 text-slate-700 border-none px-4 py-1.5 rounded-full flex gap-2 items-center text-sm font-medium">
                 <span className="flex text-yellow-500">{'★★★★★'}</span>
                 <span>5.0 Rating | Saves 2+ hours a week</span>
@@ -94,7 +94,7 @@ export default function LandingPage() {
             </div>
 
             {/* Right — Demo illustration */}
-            <div className="relative w-full h-[500px] lg:h-[600px] flex items-center justify-center animate-[fadeUp_0.8s_ease-out_0.2s_both]">
+            <div className="relative w-full h-[500px] lg:h-[600px] flex items-center justify-center animate-fade-up-delay">
               <div className="relative w-full max-w-md">
                 {/* Mock tweet card */}
                 <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-slate-200/50 p-6 space-y-4">
@@ -112,7 +112,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* AI reply bubble */}
-                <div className="absolute -bottom-6 -right-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl border border-blue-100 p-4 shadow-xl shadow-blue-100/30 max-w-[280px] animate-[fadeUp_1s_ease-out_0.6s_both]">
+                <div className="absolute -bottom-6 -right-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl border border-blue-100 p-4 shadow-xl shadow-blue-100/30 max-w-[280px] animate-fade-up-delay-2">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-5 h-5 rounded-md bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                       <span className="text-white text-[8px] font-bold">✨</span>
@@ -124,7 +124,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Floating badge */}
-                <div className="absolute -top-4 -left-4 bg-white rounded-full px-3 py-1.5 shadow-lg border border-slate-100 text-xs font-semibold text-slate-700 animate-[float_3s_ease-in-out_infinite]">
+                <div className="absolute -top-4 -left-4 bg-white rounded-full px-3 py-1.5 shadow-lg border border-slate-100 text-xs font-semibold text-slate-700 animate-float-badge">
                   ⚡ 1.2s response
                 </div>
               </div>
@@ -258,17 +258,6 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* Keyframe animations */}
-      <style jsx global>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(24px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
-        }
-      `}</style>
     </div>
   )
 }
