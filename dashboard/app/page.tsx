@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { GlassmorphicEngine } from '@/components/landing/GlassmorphicEngine'
-
+import { HowItWorks3D } from '@/components/landing/HowItWorks3D'
 /* ─── Feature data ─── */
 const features = [
   { title: 'Custom Prompts', desc: 'Create your own voice and style. Define how you want to sound so every reply feels authentic.', icon: '✏️' },
@@ -100,51 +100,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Features ── */}
-        <section id="features" className="px-6 py-32 bg-white relative">
-          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-          <div className="mx-auto max-w-7xl">
-            <div className="text-center mb-20">
-              <h2 className="text-4xl font-extrabold text-slate-900 md:text-5xl tracking-tight">Everything you need</h2>
-              <p className="mt-4 text-lg text-slate-600 font-medium max-w-2xl mx-auto">Powerful features that make your X replies stand out, engineered for speed and authenticity.</p>
-            </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {features.map((f) => (
-                <div key={f.title} className="group relative rounded-3xl border border-slate-100 bg-white/50 p-8 shadow-sm backdrop-blur-sm transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/5 hover:border-slate-200">
-                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-purple-50 text-2xl shadow-inner border border-blue-100/50 group-hover:scale-110 transition-transform duration-300">
-                    {f.icon}
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3">{f.title}</h3>
-                  <p className="text-[15px] leading-relaxed text-slate-600 font-medium">{f.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── How It Works ── */}
-        <section id="how-it-works" className="relative px-6 py-32 overflow-hidden">
-          <div className="absolute inset-0 bg-slate-50/50" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-purple-100/40 rounded-full blur-[100px] -z-10" />
-          <div className="mx-auto max-w-7xl relative z-10">
-            <div className="text-center mb-24">
-              <h2 className="text-4xl font-extrabold text-slate-900 md:text-5xl tracking-tight">How it works</h2>
-              <p className="mt-4 text-lg text-slate-600 font-medium">Three simple steps to authentic replies.</p>
-            </div>
-            <div className="grid gap-12 md:grid-cols-3 relative">
-              <div className="hidden md:block absolute top-[2.5rem] left-[15%] right-[15%] h-[2px] bg-gradient-to-r from-blue-100 via-purple-200 to-blue-100 -z-10" />
-              {steps.map((s) => (
-                <div key={s.n} className="flex flex-col items-center text-center relative">
-                  <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-xl shadow-slate-200/50 border border-slate-100 text-2xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-600 to-purple-600">
-                    {s.n}
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900 mb-4">{s.title}</h3>
-                  <p className="max-w-sm text-[15px] leading-relaxed text-slate-600 font-medium px-4">{s.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <HowItWorks3D />
 
         {/* ── Pricing ── */}
         <section id="pricing" className="px-6 py-32 bg-white relative">
