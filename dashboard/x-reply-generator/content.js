@@ -286,8 +286,20 @@
 
     const btn = event.currentTarget;
 
-    const tweetArticle = document.querySelector('article[data-testid="tweet"]') ||
+    // Walk up from the button's toolbar to find the relevant tweet
+    // The toolbar lives inside the tweet article, or near a reply box
+    let tweetArticle = btn.closest('article[data-testid="tweet"]') ||
       btn.closest('article');
+
+    // If button is in a reply box (not inside any article), find the tweet being replied to
+    if (!tweetArticle) {
+      // On a single-tweet page, grab the main (first) tweet
+      tweetArticle = document.querySelector('[data-testid="tweet"]') ||
+        document.querySelector('article[role="article"]') ||
+        document.querySelector('article');
+    }
+
+    console.log('[XRG] Tweet article found:', !!tweetArticle, tweetArticle?.getAttribute?.('data-testid'));
 
     if (!tweetArticle) {
       showNotification('Could not find tweet', 'error');

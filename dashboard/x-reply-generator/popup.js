@@ -433,9 +433,20 @@ if (saveDefaultBtn) {
       return;
     }
 
+    // Show loading state immediately
+    saveDefaultBtn.textContent = '⏳';
+    saveDefaultBtn.style.opacity = '0.6';
+    saveDefaultBtn.disabled = true;
+
     // Read token from storage
     chrome.storage.local.get(['extToken'], function (result) {
-      if (!result.extToken) return;
+      if (!result.extToken) {
+        saveDefaultBtn.textContent = '❌';
+        saveDefaultBtn.style.opacity = '1';
+        saveDefaultBtn.disabled = false;
+        setTimeout(function () { saveDefaultBtn.innerHTML = '&#128190;'; }, 1200);
+        return;
+      }
 
       fetch(API_BASE + '/api/extension/prompts/set-default', {
         method: 'POST',
@@ -447,11 +458,18 @@ if (saveDefaultBtn) {
       })
         .then(function (res) { return res.json(); })
         .then(function (data) {
+          saveDefaultBtn.style.opacity = '1';
+          saveDefaultBtn.disabled = false;
+
           if (data.error) {
             console.error('[POPUP] Set default failed:', data.error);
             saveDefaultBtn.textContent = '❌';
           } else {
             saveDefaultBtn.textContent = '✅';
+
+            // Persist the selection to chrome.storage for next popup open
+            chrome.storage.sync.set({ selectedPromptId: selectedId });
+
             // Update dropdown labels
             var options = promptSelect.options;
             for (var i = 0; i < options.length; i++) {
@@ -465,6 +483,8 @@ if (saveDefaultBtn) {
         })
         .catch(function (err) {
           console.error('[POPUP] Set default error:', err);
+          saveDefaultBtn.style.opacity = '1';
+          saveDefaultBtn.disabled = false;
           saveDefaultBtn.textContent = '❌';
           setTimeout(function () { saveDefaultBtn.innerHTML = '&#128190;'; }, 1200);
         });
