@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { GlassmorphicEngine } from '@/components/landing/GlassmorphicEngine'
 
 /* ─── Feature data ─── */
 const features = [
@@ -93,41 +94,8 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right — Demo illustration */}
             <div className="relative w-full h-[500px] lg:h-[600px] flex items-center justify-center animate-fade-up-delay">
-              <div className="relative w-full max-w-md">
-                {/* Mock tweet card */}
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-slate-200/50 p-6 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500" />
-                    <div>
-                      <p className="font-bold text-sm">Elon Musk</p>
-                      <p className="text-xs text-slate-400">@elonmusk</p>
-                    </div>
-                  </div>
-                  <p className="text-[15px] text-slate-700 leading-relaxed">What&apos;s the most underrated productivity hack you use daily?</p>
-                  <div className="flex items-center gap-6 text-xs text-slate-400">
-                    <span>💬 2.4K</span><span>🔄 890</span><span>❤️ 12K</span>
-                  </div>
-                </div>
-
-                {/* AI reply bubble */}
-                <div className="absolute -bottom-6 -right-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl border border-blue-100 p-4 shadow-xl shadow-blue-100/30 max-w-[280px] animate-fade-up-delay-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 rounded-md bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                      <span className="text-white text-[8px] font-bold">✨</span>
-                    </div>
-                    <span className="text-xs font-semibold text-blue-600">AtomiX Reply</span>
-                    <span className="text-[10px] text-slate-400 ml-auto">1.2s</span>
-                  </div>
-                  <p className="text-[13px] text-slate-700 leading-relaxed">Honestly, blocking 90 min of &quot;deep work&quot; time before checking any messages. Sounds simple but it changed everything for me.</p>
-                </div>
-
-                {/* Floating badge */}
-                <div className="absolute -top-4 -left-4 bg-white rounded-full px-3 py-1.5 shadow-lg border border-slate-100 text-xs font-semibold text-slate-700 animate-float-badge">
-                  ⚡ 1.2s response
-                </div>
-              </div>
+              <GlassmorphicEngine />
             </div>
           </div>
         </section>
