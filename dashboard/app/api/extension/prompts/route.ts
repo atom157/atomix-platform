@@ -162,3 +162,91 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: corsHeaders })
   }
 }
+
+export async function PUT(request: Request) {
+  const origin = request.headers.get('origin')
+  const corsHeaders = getCorsHeaders(origin)
+
+  try {
+    const supabase = getSupabaseAdmin()
+    const tokenResult = await verifyExtensionToken(request)
+    if (!tokenResult.valid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders })
+    }
+
+    const userId = tokenResult.userId!
+    let body: unknown
+    try { body = await request.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400, headers: corsHeaders })
+    }
+
+    const { id, name, content } = body as Record<string, unknown>
+
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json({ error: 'Missing prompt id' }, { status: 400, headers: corsHeaders })
+    }
+    if (typeof name !== 'string' || !name.trim()) {
+      return NextResponse.json({ error: 'Prompt name is required' }, { status: 400, headers: corsHeaders })
+    }
+
+    const updateData: Record<string, string> = { name: name.trim().slice(0, 100) }
+    if (typeof content === 'string') {
+      updateData.content = content.trim().slice(0, 5000)
+    }
+
+    const { data: updated, error } = await supabase
+      .from('prompts')
+      .update(updateData)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select('id, name, is_default')
+      .single()
+
+    if (error) {
+      logger.error('prompts.update_failed', { userId, dbError: error.message })
+      return NextResponse.json({ error: 'Failed to update prompt' }, { status: 500, headers: corsHeaders })
+    }
+
+    return NextResponse.json({ prompt: updated }, { headers: corsHeaders })
+  } catch (error) {
+    logger.exception('prompts.put_error', error, { route: '/api/extension/prompts' })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: corsHeaders })
+  }
+}
+
+export async function DELETE(request: Request) {
+  const origin = request.headers.get('origin')
+  const corsHeaders = getCorsHeaders(origin)
+
+  try {
+    const supabase = getSupabaseAdmin()
+    const tokenResult = await verifyExtensionToken(request)
+    if (!tokenResult.valid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders })
+    }
+
+    const userId = tokenResult.userId!
+    const url = new URL(request.url)
+    const promptId = url.searchParams.get('id')
+
+    if (!promptId) {
+      return NextResponse.json({ error: 'Missing prompt id' }, { status: 400, headers: corsHeaders })
+    }
+
+    const { error } = await supabase
+      .from('prompts')
+      .delete()
+      .eq('id', promptId)
+      .eq('user_id', userId)
+
+    if (error) {
+      logger.error('prompts.delete_failed', { userId, dbError: error.message })
+      return NextResponse.json({ error: 'Failed to delete prompt' }, { status: 500, headers: corsHeaders })
+    }
+
+    return NextResponse.json({ success: true }, { headers: corsHeaders })
+  } catch (error) {
+    logger.exception('prompts.delete_error', error, { route: '/api/extension/prompts' })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: corsHeaders })
+  }
+}

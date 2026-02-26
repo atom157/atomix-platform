@@ -379,91 +379,191 @@ function showToast(message, isError) {
   setTimeout(function () { toast.remove(); }, 3000);
 }
 
-// Custom Prompt handlers
+// ─── Prompt CRUD System ───
+var promptSelectView = document.getElementById('promptSelectView');
+var promptEditorView = document.getElementById('promptEditorView');
+var editorTitle = document.getElementById('editorTitle');
+var editPromptBtn = document.getElementById('editPromptBtn');
+var newPromptBtn = document.getElementById('newPromptBtn');
+var cancelEditBtn = document.getElementById('cancelEditBtn');
+var deletePromptBtn = document.getElementById('deletePromptBtn');
+var deleteConfirm = document.getElementById('deleteConfirm');
+var confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+var cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+
+var editingPromptId = null; // null = create mode, string = edit mode
+
 customPromptContent.addEventListener('input', function () {
   var len = this.value.length;
   charCounter.textContent = len + ' / 500';
-  if (len >= 500) {
-    charCounter.classList.add('limit-reached');
-  } else {
-    charCounter.classList.remove('limit-reached');
-  }
+  charCounter.classList.toggle('limit-reached', len >= 500);
 });
 
+function showSelectView() {
+  promptSelectView.style.display = 'block';
+  promptEditorView.style.display = 'none';
+  deleteConfirm.style.display = 'none';
+  customPromptName.value = '';
+  customPromptContent.value = '';
+  charCounter.textContent = '0 / 500';
+  editingPromptId = null;
+}
+
+function showEditorView(mode, id, name, content) {
+  promptSelectView.style.display = 'none';
+  promptEditorView.style.display = 'block';
+  deleteConfirm.style.display = 'none';
+
+  if (mode === 'edit') {
+    editingPromptId = id;
+    editorTitle.textContent = 'Edit Prompt';
+    saveCustomPromptBtn.textContent = 'Update Prompt';
+    deletePromptBtn.style.display = 'flex';
+    customPromptName.value = name || '';
+    customPromptContent.value = content || '';
+    charCounter.textContent = (content || '').length + ' / 500';
+  } else {
+    editingPromptId = null;
+    editorTitle.textContent = 'New Prompt';
+    saveCustomPromptBtn.textContent = 'Create Prompt';
+    deletePromptBtn.style.display = 'none';
+    customPromptName.value = '';
+    customPromptContent.value = '';
+    charCounter.textContent = '0 / 500';
+  }
+}
+
+// ➕ New Prompt
+newPromptBtn.addEventListener('click', function () {
+  showEditorView('create');
+});
+
+// ✏️ Edit selected prompt
+editPromptBtn.addEventListener('click', function () {
+  var selectedId = promptSelect.value;
+  if (!selectedId) {
+    showToast('Select a prompt to edit', true);
+    return;
+  }
+  // Fetch the prompt content from the API
+  chrome.storage.local.get(['extToken'], function (result) {
+    if (!result.extToken) return;
+    // We need the content too, so fetch individual prompt
+    // For now, open editor with name from dropdown and let user edit
+    var selectedOption = promptSelect.options[promptSelect.selectedIndex];
+    var displayName = selectedOption.textContent.replace('📌 ', '');
+    showEditorView('edit', selectedId, displayName, '');
+  });
+});
+
+// ✕ Cancel
+cancelEditBtn.addEventListener('click', function () {
+  showSelectView();
+});
+
+// 💾 Save (Create or Update)
 saveCustomPromptBtn.addEventListener('click', function () {
   var name = customPromptName.value.trim();
   var content = customPromptContent.value.trim();
-
-  if (!name || !content) {
-    showToast('Name and content are required', true);
-    return;
-  }
+  if (!name) { showToast('Name is required', true); return; }
 
   var originalText = saveCustomPromptBtn.textContent;
-  saveCustomPromptBtn.textContent = 'Saving...';
+  saveCustomPromptBtn.textContent = '⏳ Saving...';
   saveCustomPromptBtn.disabled = true;
 
-  getSecureToken(function (tokenResult) {
-    if (!tokenResult.extToken || !tokenResult.userId) {
+  chrome.storage.local.get(['extToken'], function (result) {
+    if (!result.extToken) {
       saveCustomPromptBtn.textContent = originalText;
       saveCustomPromptBtn.disabled = false;
-      showToast('You must be connected to save prompts', true);
       return;
     }
 
+    var isEdit = !!editingPromptId;
+    var method = isEdit ? 'PUT' : 'POST';
+    var bodyData = isEdit
+      ? { id: editingPromptId, name: name, content: content }
+      : { name: name, content: content };
+
     fetch(API_BASE + '/api/extension/prompts', {
-      method: 'POST',
+      method: method,
       headers: {
-        'Authorization': 'Bearer ' + tokenResult.extToken,
+        'Authorization': 'Bearer ' + result.extToken,
         'Content-Type': 'application/json'
       },
-      credentials: 'include',
-      body: JSON.stringify({ name: name, content: content })
+      body: JSON.stringify(bodyData)
     })
-      .then(function (response) {
-        if (!response.ok) {
-          return response.text().then(function (text) {
-            try {
-              var err = JSON.parse(text);
-              throw new Error(err.error || 'Failed to save');
-            } catch (e) {
-              throw new Error('API Endpoint Not Deployed');
-            }
-          });
-        }
-        return response.json();
-      })
+      .then(function (res) { return res.json(); })
       .then(function (data) {
-        // Success State Animation Triggered
-        saveCustomPromptBtn.textContent = '✅ Saved!';
-        saveCustomPromptBtn.classList.add('success');
-
-        // Also set selected prompt id to the newly created one!
-        chrome.storage.sync.set({ selectedPromptId: data.prompt.id }, function () {
-          // Clear local inputs to prevent accidental duplicates
-          customPromptName.value = '';
-          customPromptContent.value = '';
-          charCounter.textContent = '0 / 500';
-
-          // Re-fetch the dropdown so the new prompt is available immediately
-          checkAuthAndShowState(data.prompt.id);
-
+        if (data.error) {
+          showToast(data.error, true);
+          saveCustomPromptBtn.textContent = '❌ Error';
+        } else {
+          saveCustomPromptBtn.textContent = '✅ Saved!';
+          var newId = data.prompt ? data.prompt.id : (editingPromptId || '');
+          chrome.storage.sync.set({ selectedPromptId: newId });
+          // Return to select view and refresh prompts
           setTimeout(function () {
-            saveCustomPromptBtn.textContent = originalText;
-            saveCustomPromptBtn.classList.remove('success');
-            saveCustomPromptBtn.disabled = false;
-          }, 1500);
-        });
-      })
-      .catch(function (error) {
-        saveCustomPromptBtn.textContent = '❌ Error';
-        saveCustomPromptBtn.classList.add('error');
-        showToast(error.message, true);
+            showSelectView();
+            checkAuthAndShowState(newId);
+          }, 600);
+        }
         setTimeout(function () {
           saveCustomPromptBtn.textContent = originalText;
-          saveCustomPromptBtn.classList.remove('error');
           saveCustomPromptBtn.disabled = false;
-        }, 1500);
+        }, 800);
+      })
+      .catch(function (err) {
+        console.error('[POPUP] Save error:', err);
+        saveCustomPromptBtn.textContent = '❌ Error';
+        showToast('Failed to save', true);
+        setTimeout(function () {
+          saveCustomPromptBtn.textContent = originalText;
+          saveCustomPromptBtn.disabled = false;
+        }, 1200);
+      });
+  });
+});
+
+// 🗑️ Delete button → show confirmation
+deletePromptBtn.addEventListener('click', function () {
+  deleteConfirm.style.display = 'block';
+});
+
+cancelDeleteBtn.addEventListener('click', function () {
+  deleteConfirm.style.display = 'none';
+});
+
+// Confirm delete
+confirmDeleteBtn.addEventListener('click', function () {
+  if (!editingPromptId) return;
+
+  confirmDeleteBtn.textContent = '⏳';
+  confirmDeleteBtn.disabled = true;
+
+  chrome.storage.local.get(['extToken'], function (result) {
+    if (!result.extToken) return;
+
+    fetch(API_BASE + '/api/extension/prompts?id=' + editingPromptId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + result.extToken }
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.error) {
+          showToast(data.error, true);
+          confirmDeleteBtn.textContent = 'Delete';
+          confirmDeleteBtn.disabled = false;
+        } else {
+          showToast('Prompt deleted');
+          showSelectView();
+          checkAuthAndShowState('');
+        }
+      })
+      .catch(function (err) {
+        console.error('[POPUP] Delete error:', err);
+        showToast('Failed to delete', true);
+        confirmDeleteBtn.textContent = 'Delete';
+        confirmDeleteBtn.disabled = false;
       });
   });
 });
@@ -472,16 +572,6 @@ saveCustomPromptBtn.addEventListener('click', function () {
 saveBtn.addEventListener('click', saveSettings);
 connectBtn.addEventListener('click', connectAccount);
 disconnectBtn.addEventListener('click', function (e) { e.preventDefault(); disconnectAccount(); });
-
-// Toggle prompt editor
-var toggleEditBtn = document.getElementById('toggleEditBtn');
-var promptEditor = document.getElementById('promptEditor');
-if (toggleEditBtn && promptEditor) {
-  toggleEditBtn.addEventListener('click', function () {
-    promptEditor.classList.toggle('open');
-    toggleEditBtn.textContent = promptEditor.classList.contains('open') ? '✕' : '✏️';
-  });
-}
 
 // Save selected prompt as default
 var saveDefaultBtn = document.getElementById('saveDefaultBtn');
@@ -494,12 +584,10 @@ if (saveDefaultBtn) {
       return;
     }
 
-    // Show loading state immediately
     saveDefaultBtn.textContent = '⏳';
     saveDefaultBtn.style.opacity = '0.6';
     saveDefaultBtn.disabled = true;
 
-    // Read token from storage
     chrome.storage.local.get(['extToken'], function (result) {
       if (!result.extToken) {
         saveDefaultBtn.textContent = '❌';
@@ -527,11 +615,7 @@ if (saveDefaultBtn) {
             saveDefaultBtn.textContent = '❌';
           } else {
             saveDefaultBtn.textContent = '✅';
-
-            // Persist the selection to chrome.storage for next popup open
             chrome.storage.sync.set({ selectedPromptId: selectedId });
-
-            // Update dropdown labels
             var options = promptSelect.options;
             for (var i = 0; i < options.length; i++) {
               options[i].textContent = options[i].textContent.replace('📌 ', '');
@@ -587,4 +671,3 @@ chrome.storage.onChanged.addListener(function (changes, areaName) {
 
 // Initialize
 loadSettings();
-

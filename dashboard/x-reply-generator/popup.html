@@ -21,15 +21,6 @@
       }
     }
 
-    .prompt-editor {
-      display: none;
-      margin-top: 8px;
-    }
-
-    .prompt-editor.open {
-      display: block;
-    }
-
     .toggles-2col {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -58,6 +49,25 @@
     .footer-links a:hover {
       opacity: 1;
       color: #64748b;
+    }
+
+    .mini-btn {
+      width: 30px;
+      height: 30px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #f8fafc;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .mini-btn:hover {
+      background: #ede9fe;
+      border-color: #c4b5fd;
     }
   </style>
 </head>
@@ -126,7 +136,6 @@
             <div class="usage-bar">
               <div class="usage-fill" id="usageFill" style="width: 0%"></div>
             </div>
-            <!-- Upgrade button for trial/free users -->
             <a href="https://www.atomix.guru/dashboard/billing" target="_blank" rel="noopener noreferrer"
               id="upgradeProBtn"
               style="display:none; margin-top:8px; width:100%; padding:10px 0; border:none; border-radius:12px; background:linear-gradient(135deg,#8B5CF6,#D946EF); color:#fff; font-size:13px; font-weight:700; text-align:center; text-decoration:none; cursor:pointer; transition:all 0.2s ease; box-shadow:0 2px 12px rgba(139,92,246,0.3);"
@@ -134,7 +143,6 @@
               onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 12px rgba(139,92,246,0.3)';">
               🚀 Upgrade to PRO
             </a>
-            <!-- Manage sub link for pro users -->
             <a href="https://app.lava.top/my-purchases" target="_blank" rel="noopener noreferrer" id="manageSubLink"
               style="display:none; margin-top:6px; font-size:11px; color:#7c3aed; text-decoration:none; opacity:0.85;"
               onmouseover="this.style.opacity='1'; this.style.textDecoration='underline';"
@@ -155,35 +163,51 @@
           <span>Prompt</span>
         </div>
 
-        <!-- Dropdown row: select + save + edit toggle -->
-        <div style="display:flex; gap:6px; align-items:center;">
-          <select id="promptSelect" class="select-styled" style="flex:1;">
-            <option value="">Use default prompt</option>
-          </select>
-          <button id="saveDefaultBtn" title="Set as default"
-            style="width:32px; height:32px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; flex-shrink:0;"
-            onmouseover="this.style.background='#ede9fe'; this.style.borderColor='#c4b5fd';"
-            onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0';">&#128190;</button>
-          <button id="toggleEditBtn" title="Create / edit prompt"
-            style="width:32px; height:32px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; flex-shrink:0;"
-            onmouseover="this.style.background='#ede9fe'; this.style.borderColor='#c4b5fd';"
-            onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0';">✏️</button>
+        <!-- Select View (default) -->
+        <div id="promptSelectView">
+          <div style="display:flex; gap:5px; align-items:center;">
+            <select id="promptSelect" class="select-styled" style="flex:1;"></select>
+            <button id="saveDefaultBtn" title="Set as default" class="mini-btn"
+              style="font-size:14px;">&#128190;</button>
+            <button id="editPromptBtn" title="Edit selected" class="mini-btn"
+              style="font-size:13px;">&#9999;&#65039;</button>
+            <button id="newPromptBtn" title="New prompt" class="mini-btn"
+              style="font-size:16px;font-weight:bold;color:#64748b;">+</button>
+          </div>
         </div>
 
-        <!-- Collapsible prompt editor -->
-        <div class="prompt-editor" id="promptEditor">
+        <!-- Editor View (create / edit) -->
+        <div id="promptEditorView" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span id="editorTitle" style="font-size:12px;font-weight:600;color:#64748b;">New Prompt</span>
+            <div style="display:flex;gap:4px;">
+              <button id="deletePromptBtn" title="Delete" class="mini-btn"
+                style="display:none;border-color:#fecdd3;background:#fff1f2;font-size:12px;">&#128465;&#65039;</button>
+              <button id="cancelEditBtn" title="Cancel" class="mini-btn" style="font-size:13px;">&#10005;</button>
+            </div>
+          </div>
           <input type="text" id="customPromptName" class="input-styled" placeholder="Prompt name"
             style="margin-bottom:6px;" />
           <div class="textarea-wrapper">
-            <textarea id="customPromptContent" class="textarea-styled" placeholder="Write custom AI instructions..."
-              maxlength="500" style="min-height:60px;"></textarea>
+            <textarea id="customPromptContent" class="textarea-styled" placeholder="AI instructions for reply style..."
+              maxlength="500" style="min-height:56px;"></textarea>
             <div class="char-counter" id="charCounter">0 / 500</div>
           </div>
-          <button class="btn-primary" id="saveCustomPromptBtn" style="margin-top:6px;">Save Prompt</button>
+          <button class="btn-primary" id="saveCustomPromptBtn" style="margin-top:6px;width:100%;">Create Prompt</button>
+          <div id="deleteConfirm"
+            style="display:none;margin-top:6px;padding:8px;background:#fff1f2;border:1px solid #fecdd3;border-radius:8px;text-align:center;">
+            <span style="font-size:12px;color:#be123c;">Delete this prompt?</span>
+            <div style="display:flex;gap:6px;justify-content:center;margin-top:6px;">
+              <button id="confirmDeleteBtn"
+                style="padding:4px 14px;border:none;border-radius:6px;background:#ef4444;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Delete</button>
+              <button id="cancelDeleteBtn"
+                style="padding:4px 14px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;color:#64748b;font-size:12px;cursor:pointer;">Cancel</button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- ── Settings (Language + Length side by side) ── -->
+      <!-- ── Settings ── -->
       <div class="card">
         <div class="card-header">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -193,12 +217,9 @@
           </svg>
           <span>Settings</span>
         </div>
-
         <div class="settings-grid">
           <div class="setting-col">
-            <label class="setting-label">
-              <span class="setting-icon">🌍</span> Language
-            </label>
+            <label class="setting-label"><span class="setting-icon">🌍</span> Language</label>
             <select id="language" class="select-styled">
               <option value="en">English</option>
               <option value="same">Same as Tweet</option>
@@ -207,9 +228,7 @@
             </select>
           </div>
           <div class="setting-col">
-            <label class="setting-label">
-              <span class="setting-icon">📏</span> Length
-            </label>
+            <label class="setting-label"><span class="setting-icon">📏</span> Length</label>
             <select id="length" class="select-styled">
               <option value="short">Short</option>
               <option value="medium">Medium</option>
@@ -217,33 +236,23 @@
             </select>
           </div>
         </div>
-
-        <!-- Two-column toggles -->
         <div class="toggles-2col" style="margin-top:8px;">
           <label class="toggle-item">
             <span class="toggle-label">Emojis</span>
-            <div class="toggle-switch">
-              <input type="checkbox" id="addEmoji" checked />
-              <span class="toggle-slider"></span>
-            </div>
+            <div class="toggle-switch"><input type="checkbox" id="addEmoji" checked /><span
+                class="toggle-slider"></span></div>
           </label>
           <label class="toggle-item">
             <span class="toggle-label">Mention @</span>
-            <div class="toggle-switch">
-              <input type="checkbox" id="mentionAuthor" checked />
-              <span class="toggle-slider"></span>
-            </div>
+            <div class="toggle-switch"><input type="checkbox" id="mentionAuthor" checked /><span
+                class="toggle-slider"></span></div>
           </label>
           <label class="toggle-item">
             <span class="toggle-label">Hashtags</span>
-            <div class="toggle-switch">
-              <input type="checkbox" id="includeHashtags" />
-              <span class="toggle-slider"></span>
+            <div class="toggle-switch"><input type="checkbox" id="includeHashtags" /><span class="toggle-slider"></span>
             </div>
           </label>
         </div>
-
-        <!-- Hidden bannedWords input (still functional, just not visible) -->
         <input type="hidden" id="bannedWords" value="" />
       </div>
 
@@ -260,7 +269,7 @@
         Save Settings
       </button>
       <div class="footer-links">
-        <a href="https://www.atomix.guru/dashboard" target="_blank">Settings & Stats ↗</a>
+        <a href="https://www.atomix.guru/dashboard" target="_blank">Settings &amp; Stats ↗</a>
         <a href="#" id="disconnectBtn" onmouseover="this.style.color='#ef4444';"
           onmouseout="this.style.color='#94a3b8';">Sign Out</a>
       </div>
