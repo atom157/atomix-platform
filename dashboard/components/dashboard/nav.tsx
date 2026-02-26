@@ -15,6 +15,7 @@ import { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LogOut, CreditCard, Zap } from 'lucide-react'
+import { Logo } from '@/components/ui/logo'
 
 interface DashboardNavProps {
   user: User
@@ -38,13 +39,8 @@ export function DashboardNav({ user }: DashboardNavProps) {
   return (
     <header className="border-b border-slate-100 bg-white/70 backdrop-blur-xl supports-[backdrop-filter]:bg-white/50 sticky top-0 z-50">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/dashboard" className="flex items-center gap-2 group">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-sm shadow-purple-500/20 group-hover:scale-105 transition-transform">
-            <span className="text-white font-bold text-xs leading-none">✨</span>
-          </div>
-          <span className="text-xl font-bold tracking-tight text-slate-900">
-            Atomi<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">X</span>
-          </span>
+        <Link href="/dashboard" className="flex items-center gap-2 group transition-transform hover:scale-[1.02]">
+          <Logo />
         </Link>
 
         <nav className="flex items-center gap-2 sm:gap-4">

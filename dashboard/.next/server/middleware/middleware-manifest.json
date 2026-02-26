@@ -1,0 +1,55 @@
+{
+  "sorted_middleware": [],
+  "middleware": {
+    "/": {
+      "files": [
+        "server/edge/chunks/edge-wrapper_0b0266f1.js",
+        "server/edge/chunks/[root-of-the-server]__29c14538._.js",
+        "server/edge/chunks/turbopack-edge-wrapper_63634b72.js"
+      ],
+      "name": "middleware",
+      "page": "/",
+      "matchers": [
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/dashboard/:path*{(\\\\.json)}?",
+          "originalSource": "/dashboard/:path*"
+        },
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/protected/:path*{(\\\\.json)}?",
+          "originalSource": "/protected/:path*"
+        },
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/auth/login{(\\\\.json)}?",
+          "originalSource": "/auth/login"
+        },
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/auth/sign-up{(\\\\.json)}?",
+          "originalSource": "/auth/sign-up"
+        },
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/auth/extension-connected{(\\\\.json)}?",
+          "originalSource": "/auth/extension-connected"
+        },
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/api/extension/:path*{(\\\\.json)}?",
+          "originalSource": "/api/extension/:path*"
+        },
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/api/lemonsqueezy/:path*{(\\\\.json)}?",
+          "originalSource": "/api/lemonsqueezy/:path*"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Q_Cv3L1tsFmtP-z0TRhrN",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "kRQ6Jqke8Fas0aht5iQanVQXDXKa+ht+Q9xi/BfgQp0=",
+        "__NEXT_PREVIEW_MODE_ID": "ec5d1eea6de433d069433947044a80c5",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "713bb67df24077230f80cc1dd1d7af5d34d6cccda49b8411167cff5cd31da0c8",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "b2824d41137966d8da9b2aaa843a5b6bad4c4aca87cc7d11bdcc1499563fabce"
+      }
+    }
+  },
+  "instrumentation": null,
+  "functions": {}
+}

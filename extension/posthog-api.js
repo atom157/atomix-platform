@@ -4,7 +4,7 @@
  */
 
 // We fetch these from a config file or inject at build time in production
-const POSTHOG_KEY = 'YOUR_POSTHOG_API_KEY';
+const POSTHOG_KEY = 'phc_EjszwSW0oePhPxtzKiHgyL9vAPuiDo11zaMnX1GktWM';
 const POSTHOG_HOST = 'https://us.i.posthog.com';
 
 /**
