@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Check, Zap, Infinity, Sparkles } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 interface Profile {
   id: string
@@ -64,9 +65,19 @@ export function BillingPlans({ profile }: BillingPlansProps) {
     setIsLoading('pro')
 
     try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.user?.email) {
+        console.error('User email not found');
+        setIsLoading(null);
+        return;
+      }
+
       const response = await fetch('/api/payments/create-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: session.user.email }),
       })
 
       const data = await response.json()

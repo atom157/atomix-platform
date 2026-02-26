@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 const LAVA_API_BASE = 'https://gate.lava.top'
 const LAVA_OFFER_ID = 'a1151102-abca-4f02-b96e-29d9036e3a6b'
 
-export async function POST() {
+export async function POST(request: Request) {
     try {
         const supabase = await createClient()
 
@@ -24,9 +24,10 @@ export async function POST() {
             )
         }
 
+        const reqBody = await request.json().catch(() => ({}));
+
         const payload = {
-            account: user.email,
-            payerEmail: user.email,
+            email: reqBody.email || user.email,
             offerId: LAVA_OFFER_ID,
             currency: 'USD',
             periodicity: 'MONTHLY',
@@ -40,7 +41,7 @@ export async function POST() {
             },
         };
 
-        console.log('[LAVA] Sending to Lava.top:', JSON.stringify(payload, null, 2));
+        console.log('[LAVA-V3] Final Payload:', JSON.stringify(payload, null, 2));
 
         // Create invoice via Lava.top v3 API
         const invoiceResponse = await fetch(`${LAVA_API_BASE}/api/v3/invoice`, {

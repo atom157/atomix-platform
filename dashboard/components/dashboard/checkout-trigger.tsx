@@ -31,6 +31,7 @@ export function CheckoutTrigger() {
                     const response = await fetch('/api/payments/create-invoice', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: session.user.email }),
                     });
 
                     const data = await response.json();
