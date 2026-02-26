@@ -213,10 +213,15 @@ function showConnectedState(userId, extToken, selectedPromptId) {
           }
         }
 
-        // Show "Manage Subscription" link for Pro users only
+        // Show "Manage Subscription" for Pro, "Upgrade to PRO" for trial/free
         var manageSubLink = document.getElementById('manageSubLink');
-        if (manageSubLink) {
-          manageSubLink.style.display = (userPlan === 'pro') ? 'block' : 'none';
+        var upgradeProBtn = document.getElementById('upgradeProBtn');
+        if (userPlan === 'pro') {
+          if (manageSubLink) manageSubLink.style.display = 'block';
+          if (upgradeProBtn) upgradeProBtn.style.display = 'none';
+        } else {
+          if (manageSubLink) manageSubLink.style.display = 'none';
+          if (upgradeProBtn) upgradeProBtn.style.display = 'block';
         }
       }
 
