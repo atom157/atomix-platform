@@ -20,6 +20,45 @@
         box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
       }
     }
+
+    .prompt-editor {
+      display: none;
+      margin-top: 8px;
+    }
+
+    .prompt-editor.open {
+      display: block;
+    }
+
+    .toggles-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 12px;
+    }
+
+    .toggles-2col .toggle-item {
+      padding: 6px 0;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      padding: 6px 0 2px;
+    }
+
+    .footer-links a {
+      font-size: 11px;
+      color: #94a3b8;
+      text-decoration: none;
+      opacity: 0.7;
+      transition: all 0.15s;
+    }
+
+    .footer-links a:hover {
+      opacity: 1;
+      color: #64748b;
+    }
   </style>
 </head>
 
@@ -53,6 +92,7 @@
             <circle cx="12" cy="7" r="4" />
           </svg>
           <span>Account</span>
+          <span class="tier-badge" id="tierBadge" style="margin-left:auto;">Free</span>
         </div>
 
         <div id="notConnected" class="account-section">
@@ -70,18 +110,12 @@
         <div id="connected" class="account-section" style="display: none;">
           <div class="account-info">
             <div class="account-tier">
-              <span class="tier-badge" id="tierBadge">Free</span>
               <span class="usage-text" id="usageText">0 / 20 replies</span>
             </div>
             <div class="usage-bar">
               <div class="usage-fill" id="usageFill" style="width: 0%"></div>
             </div>
-            <a href="https://app.lava.top/my-purchases" target="_blank" rel="noopener noreferrer" id="manageSubLink"
-              style="display:none; margin-top:6px; font-size:11px; color:#7c3aed; text-decoration:none; opacity:0.85;"
-              onmouseover="this.style.opacity='1'; this.style.textDecoration='underline';"
-              onmouseout="this.style.opacity='0.85'; this.style.textDecoration='none';">
-              ⚙️ Manage Subscription
-            </a>
+            <!-- Upgrade button for trial/free users -->
             <a href="https://www.atomix.guru/dashboard/billing" target="_blank" rel="noopener noreferrer"
               id="upgradeProBtn"
               style="display:none; margin-top:8px; width:100%; padding:10px 0; border:none; border-radius:12px; background:linear-gradient(135deg,#8B5CF6,#D946EF); color:#fff; font-size:13px; font-weight:700; text-align:center; text-decoration:none; cursor:pointer; transition:all 0.2s ease; box-shadow:0 2px 12px rgba(139,92,246,0.3);"
@@ -89,17 +123,18 @@
               onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 12px rgba(139,92,246,0.3)';">
               🚀 Upgrade to PRO
             </a>
-          </div>
-          <div style="text-align:center; margin-top:8px;">
-            <a href="#" id="disconnectBtn" style="font-size:11px; color:#94a3b8; text-decoration:none; opacity:0.7;"
-              onmouseover="this.style.opacity='1'; this.style.color='#ef4444';"
-              onmouseout="this.style.opacity='0.7'; this.style.color='#94a3b8';">
-              Sign Out
+            <!-- Manage sub link for pro users -->
+            <a href="https://app.lava.top/my-purchases" target="_blank" rel="noopener noreferrer" id="manageSubLink"
+              style="display:none; margin-top:6px; font-size:11px; color:#7c3aed; text-decoration:none; opacity:0.85;"
+              onmouseover="this.style.opacity='1'; this.style.textDecoration='underline';"
+              onmouseout="this.style.opacity='0.85'; this.style.textDecoration='none';">
+              ⚙️ Manage Subscription
             </a>
           </div>
         </div>
       </div>
 
+      <!-- ── Prompt Card ── -->
       <div class="card" id="promptCard">
         <div class="card-header">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -109,33 +144,35 @@
           <span>Prompt</span>
         </div>
 
-        <div class="prompt-form">
-          <input type="text" id="customPromptName" class="input-styled" placeholder="e.g., Professional Expert" />
-          <div class="textarea-wrapper">
-            <textarea id="customPromptContent" class="textarea-styled"
-              placeholder="Write your custom AI instructions here..." maxlength="500"></textarea>
-            <div class="char-counter" id="charCounter">0 / 500</div>
-          </div>
-          <button class="btn-primary" id="saveCustomPromptBtn">Save Prompt</button>
-        </div>
-
-        <div class="divider"></div>
-
+        <!-- Dropdown row: select + save + edit toggle -->
         <div style="display:flex; gap:6px; align-items:center;">
           <select id="promptSelect" class="select-styled" style="flex:1;">
             <option value="">Use default prompt</option>
           </select>
-          <button id="saveDefaultBtn" title="Set as default prompt"
+          <button id="saveDefaultBtn" title="Set as default"
             style="width:32px; height:32px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; flex-shrink:0;"
             onmouseover="this.style.background='#ede9fe'; this.style.borderColor='#c4b5fd';"
             onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0';">&#128190;</button>
+          <button id="toggleEditBtn" title="Create / edit prompt"
+            style="width:32px; height:32px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; flex-shrink:0;"
+            onmouseover="this.style.background='#ede9fe'; this.style.borderColor='#c4b5fd';"
+            onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0';">✏️</button>
         </div>
-        <p class="prompt-hint">
-          <a href="https://www.atomix.guru/dashboard" target="_blank">Manage in Dashboard &#8599;</a>
-        </p>
+
+        <!-- Collapsible prompt editor -->
+        <div class="prompt-editor" id="promptEditor">
+          <input type="text" id="customPromptName" class="input-styled" placeholder="Prompt name"
+            style="margin-bottom:6px;" />
+          <div class="textarea-wrapper">
+            <textarea id="customPromptContent" class="textarea-styled" placeholder="Write custom AI instructions..."
+              maxlength="500" style="min-height:60px;"></textarea>
+            <div class="char-counter" id="charCounter">0 / 500</div>
+          </div>
+          <button class="btn-primary" id="saveCustomPromptBtn" style="margin-top:6px;">Save Prompt</button>
+        </div>
       </div>
 
-      <!-- ── Generation Settings ── -->
+      <!-- ── Settings (Language + Length side by side) ── -->
       <div class="card">
         <div class="card-header">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -169,52 +206,34 @@
             </select>
           </div>
         </div>
-      </div>
 
-      <!-- ── Options (Toggles) ── -->
-      <div class="card">
-        <div class="card-header">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
-          <span>Options</span>
-        </div>
-
-        <div class="toggle-group">
+        <!-- Two-column toggles -->
+        <div class="toggles-2col" style="margin-top:8px;">
           <label class="toggle-item">
-            <span class="toggle-label">Use Emojis</span>
+            <span class="toggle-label">Emojis</span>
             <div class="toggle-switch">
               <input type="checkbox" id="addEmoji" checked />
               <span class="toggle-slider"></span>
             </div>
           </label>
           <label class="toggle-item">
-            <span class="toggle-label">Mention Author</span>
+            <span class="toggle-label">Mention @</span>
             <div class="toggle-switch">
               <input type="checkbox" id="mentionAuthor" checked />
               <span class="toggle-slider"></span>
             </div>
           </label>
           <label class="toggle-item">
-            <span class="toggle-label">Add Hashtags</span>
+            <span class="toggle-label">Hashtags</span>
             <div class="toggle-switch">
               <input type="checkbox" id="includeHashtags" />
               <span class="toggle-slider"></span>
             </div>
           </label>
         </div>
-      </div>
 
-      <!-- ── Banned Words ── -->
-      <div class="card">
-        <div class="card-header">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-          </svg>
-          <span>Banned Words</span>
-        </div>
-        <input type="text" id="bannedWords" class="input-styled" placeholder="spam, promo, ad (comma separated)" />
+        <!-- Hidden bannedWords input (still functional, just not visible) -->
+        <input type="hidden" id="bannedWords" value="" />
       </div>
 
     </main>
@@ -229,7 +248,11 @@
         </svg>
         Save Settings
       </button>
-      <p class="footer-hint">Reload X tab after saving changes</p>
+      <div class="footer-links">
+        <a href="https://www.atomix.guru/dashboard" target="_blank">Dashboard ↗</a>
+        <a href="#" id="disconnectBtn" onmouseover="this.style.color='#ef4444';"
+          onmouseout="this.style.color='#94a3b8';">Sign Out</a>
+      </div>
     </footer>
 
   </div>

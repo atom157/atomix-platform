@@ -205,11 +205,15 @@ function showConnectedState(userId, extToken, selectedPromptId) {
           usageText.textContent = prefix + data.usage.used + ' / ' + displayLimit + ' replies';
           var percentage = Math.min((data.usage.used / displayLimit) * 100, 100);
           usageFill.style.width = percentage + '%';
-          usageFill.style.background = '';
-          if (percentage > 80) {
-            usageFill.classList.add('usage-warning');
+          usageFill.classList.remove('usage-warning');
+
+          // Urgency colors to drive upgrades
+          if (percentage > 90) {
+            usageFill.style.background = 'linear-gradient(90deg, #ef4444, #dc2626)';
+          } else if (percentage > 75) {
+            usageFill.style.background = 'linear-gradient(90deg, #f59e0b, #ef4444)';
           } else {
-            usageFill.classList.remove('usage-warning');
+            usageFill.style.background = '';
           }
         }
 
@@ -426,6 +430,16 @@ saveCustomPromptBtn.addEventListener('click', function () {
 saveBtn.addEventListener('click', saveSettings);
 connectBtn.addEventListener('click', connectAccount);
 disconnectBtn.addEventListener('click', function (e) { e.preventDefault(); disconnectAccount(); });
+
+// Toggle prompt editor
+var toggleEditBtn = document.getElementById('toggleEditBtn');
+var promptEditor = document.getElementById('promptEditor');
+if (toggleEditBtn && promptEditor) {
+  toggleEditBtn.addEventListener('click', function () {
+    promptEditor.classList.toggle('open');
+    toggleEditBtn.textContent = promptEditor.classList.contains('open') ? '✕' : '✏️';
+  });
+}
 
 // Save selected prompt as default
 var saveDefaultBtn = document.getElementById('saveDefaultBtn');
