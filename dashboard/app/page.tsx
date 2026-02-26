@@ -179,7 +179,7 @@ export default function LandingPage() {
             <Logo className="scale-110 origin-left" />
           </div>
           <div className="flex items-center gap-8">
-            <Link href="/privacy-policy" className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-900">Privacy Policy</Link>
+            <Link href="/privacy" className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-900">Privacy Policy</Link>
             <a href="mailto:support@atomix.guru" className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-900">Contact</a>
           </div>
           <p className="text-sm font-medium text-slate-400">&copy; {new Date().getFullYear()} AtomiX. All rights reserved.</p>
