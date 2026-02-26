@@ -1,170 +1,293 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
 import Link from 'next/link'
+import { useState } from 'react'
 
-export default async function LandingPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+/* ─── Feature data ─── */
+const features = [
+  { title: 'Custom Prompts', desc: 'Create your own voice and style. Define how you want to sound so every reply feels authentic.', icon: '✏️' },
+  { title: 'Context Analysis', desc: 'Reads the original tweet, thread, and tone before generating. Your reply always fits the conversation.', icon: '🔍' },
+  { title: 'Human-Like Replies', desc: 'No robotic text. AtomiX generates replies that match your personality and feel genuinely human.', icon: '💬' },
+  { title: 'One-Click Generation', desc: 'Just click the AtomiX button right inside the X reply box. No tab switching, no copy-pasting.', icon: '⚡' },
+  { title: 'Under 2 Seconds', desc: 'Lightning-fast generation powered by GPT-4o. Get your perfectly-tuned reply in a blink.', icon: '⏱️' },
+  { title: 'Privacy First', desc: 'Your data stays yours. We never store tweets or personal information. Fully transparent.', icon: '🔒' },
+]
 
+const steps = [
+  { n: '1', title: 'Install Extension', desc: 'Add AtomiX to Chrome in one click. It integrates directly into the X interface without any clunky popups.' },
+  { n: '2', title: 'Set Your Tone', desc: 'Configure custom prompts that match your personality, profession, and unique communication style.' },
+  { n: '3', title: 'Reply Instantly', desc: 'Click the AtomiX button directly on any tweet to instantly generate a context-aware, human-like reply.' },
+]
+
+const plans = [
+  { name: 'Free', price: '$0', period: '/month', desc: 'Perfect for getting started', features: ['20 replies/month', 'Basic prompts', 'Standard generation', 'Custom prompts'], highlighted: false },
+  { name: 'Pro', price: '$9', period: '/month', desc: 'For power users on X', features: ['∞ unlimited replies/month', 'Custom prompts', 'Priority generation', 'Analytics dashboard'], highlighted: true },
+]
+
+const faqs = [
+  { q: 'What is AtomiX?', a: 'AtomiX is a Chrome extension that generates human-like replies on X (Twitter) using AI and your custom prompts. It reads the tweet context and produces a perfectly-tuned response in under 2 seconds.' },
+  { q: 'Is it free to use?', a: 'Yes! The free plan includes 20 replies per month. If you need unlimited, you can upgrade to Pro for $9/month.' },
+  { q: 'Does it work with other platforms?', a: 'Currently, AtomiX works exclusively with X (Twitter). Support for LinkedIn and other platforms is on our roadmap.' },
+  { q: 'How does context analysis work?', a: 'AtomiX reads the original tweet, any conversation thread, and applies your custom prompts to generate a relevant, natural-sounding reply that fits the conversation.' },
+  { q: 'Is my data safe?', a: 'Absolutely. We never store tweets or personal information. Your custom prompts are encrypted and only accessible by you.' },
+]
+
+/* ─── Main Page ─── */
+export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a1a] text-white overflow-hidden">
-      {/* Ambient glow */}
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute top-[-20%] left-[10%] w-[500px] h-[500px] rounded-full bg-blue-600/10 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[5%] w-[400px] h-[400px] rounded-full bg-purple-600/10 blur-[100px]" />
-      </div>
+    <div className="min-h-screen bg-white text-slate-900 selection:bg-purple-200 font-sans">
 
-      {/* Nav */}
-      <nav className="relative z-10 flex items-center justify-between px-6 md:px-12 py-5 max-w-7xl mx-auto">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            AtomiX
-          </span>
+      {/* ── Navbar ── */}
+      <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4 backdrop-blur-md bg-white/70 border-b border-slate-100">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <span className="text-white font-bold text-sm">✨</span>
+            </div>
+            <span className="font-bold text-xl tracking-tight">AtomiX</span>
+          </div>
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+            <a href="#features" className="hover:text-slate-900 transition-colors">Features</a>
+            <a href="#how-it-works" className="hover:text-slate-900 transition-colors">How it works</a>
+            <a href="#pricing" className="hover:text-slate-900 transition-colors">Pricing</a>
+          </nav>
+          <div className="flex items-center gap-4">
+            <Link href="/auth/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 hidden md:block">Log in</Link>
+            <Link href="/auth/sign-up" className="bg-slate-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-slate-800 transition-colors">Get Extension</Link>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {user ? (
-            <Link
-              href="/dashboard"
-              className="px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40"
-            >
-              Go to Dashboard
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/auth/login"
-                className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
-              >
-                Log In
-              </Link>
-              <Link
-                href="/auth/sign-up"
-                className="px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40"
-              >
-                Get Started
-              </Link>
-            </>
-          )}
-        </div>
-      </nav>
+      </header>
 
-      {/* Hero */}
-      <main className="relative z-10 flex flex-col items-center text-center px-6 pt-20 pb-16 md:pt-32 md:pb-24 max-w-5xl mx-auto">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-slate-300 mb-8 backdrop-blur-sm">
-          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          Trusted by 500+ creators on X
-        </div>
+      <main className="relative flex flex-col flex-1">
 
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6">
-          <span className="bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent">
-            AI-Powered Replies
-          </span>
-          <br />
-          <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            for X (Twitter)
-          </span>
-        </h1>
+        {/* ── Hero ── */}
+        <section className="relative w-full min-h-screen pt-24 pb-12 flex items-center overflow-hidden">
+          <div className="absolute top-0 right-0 -z-10 w-full h-full overflow-hidden pointer-events-none">
+            <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-blue-100/50 blur-3xl opacity-60 mix-blend-multiply" />
+            <div className="absolute top-[20%] right-[10%] w-[500px] h-[500px] rounded-full bg-purple-100/50 blur-3xl opacity-60 mix-blend-multiply" />
+          </div>
+          <div className="max-w-7xl mx-auto px-6 w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center z-10">
+            {/* Left */}
+            <div className="flex flex-col items-start gap-8 max-w-xl animate-[fadeUp_0.6s_ease-out]">
+              <div className="bg-slate-100 text-slate-700 border-none px-4 py-1.5 rounded-full flex gap-2 items-center text-sm font-medium">
+                <span className="flex text-yellow-500">{'★★★★★'}</span>
+                <span>5.0 Rating | Saves 2+ hours a week</span>
+              </div>
+              <div className="space-y-4">
+                <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.1]">
+                  Reply Like You, <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Not Like AI</span>
+                </h1>
+                <p className="text-lg md:text-xl text-slate-600 leading-relaxed font-medium">
+                  Custom prompts + context analysis = replies that sound human.
+                  Read the context and generate perfectly-tuned responses right inside X in under 2 seconds.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto pt-2">
+                <Link href="/auth/sign-up" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-blue-500/25 rounded-full px-8 h-14 text-base font-semibold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                  Add to Chrome — Free
+                </Link>
+                <a href="#how-it-works" className="rounded-full px-8 h-14 text-base font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center">
+                  View Demo
+                </a>
+              </div>
+            </div>
 
-        <p className="text-lg md:text-xl text-slate-400 max-w-2xl mb-10 leading-relaxed">
-          AtomiX reads the tweet, understands the context, and generates a
-          perfectly-tuned human-like reply in under 2 seconds. Right inside X —
-          no switching tabs.
-        </p>
+            {/* Right — Demo illustration */}
+            <div className="relative w-full h-[500px] lg:h-[600px] flex items-center justify-center animate-[fadeUp_0.8s_ease-out_0.2s_both]">
+              <div className="relative w-full max-w-md">
+                {/* Mock tweet card */}
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-slate-200/50 p-6 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500" />
+                    <div>
+                      <p className="font-bold text-sm">Elon Musk</p>
+                      <p className="text-xs text-slate-400">@elonmusk</p>
+                    </div>
+                  </div>
+                  <p className="text-[15px] text-slate-700 leading-relaxed">What&apos;s the most underrated productivity hack you use daily?</p>
+                  <div className="flex items-center gap-6 text-xs text-slate-400">
+                    <span>💬 2.4K</span><span>🔄 890</span><span>❤️ 12K</span>
+                  </div>
+                </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-16">
-          {user ? (
-            <Link
-              href="/dashboard"
-              className="px-8 py-3.5 text-base font-bold rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 transition-all shadow-xl shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              Go to Dashboard →
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/auth/sign-up"
-                className="px-8 py-3.5 text-base font-bold rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 transition-all shadow-xl shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                Get Started — It&apos;s Free
-              </Link>
-              <Link
-                href="/auth/login"
-                className="px-8 py-3.5 text-base font-semibold rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all backdrop-blur-sm"
-              >
-                Log In
-              </Link>
-            </>
-          )}
-        </div>
+                {/* AI reply bubble */}
+                <div className="absolute -bottom-6 -right-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl border border-blue-100 p-4 shadow-xl shadow-blue-100/30 max-w-[280px] animate-[fadeUp_1s_ease-out_0.6s_both]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded-md bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                      <span className="text-white text-[8px] font-bold">✨</span>
+                    </div>
+                    <span className="text-xs font-semibold text-blue-600">AtomiX Reply</span>
+                    <span className="text-[10px] text-slate-400 ml-auto">1.2s</span>
+                  </div>
+                  <p className="text-[13px] text-slate-700 leading-relaxed">Honestly, blocking 90 min of &quot;deep work&quot; time before checking any messages. Sounds simple but it changed everything for me.</p>
+                </div>
 
-        {/* Feature pills */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl">
-          <FeatureCard
-            icon="⚡"
-            title="Under 2 Seconds"
-            desc="Generate human-like replies instantly with one click."
-          />
-          <FeatureCard
-            icon="🎯"
-            title="Custom Prompts"
-            desc="Create, save, and switch between unlimited prompt styles."
-          />
-          <FeatureCard
-            icon="🔒"
-            title="Privacy First"
-            desc="Your data stays yours. No tweet data is stored."
-          />
-        </div>
+                {/* Floating badge */}
+                <div className="absolute -top-4 -left-4 bg-white rounded-full px-3 py-1.5 shadow-lg border border-slate-100 text-xs font-semibold text-slate-700 animate-[float_3s_ease-in-out_infinite]">
+                  ⚡ 1.2s response
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Features ── */}
+        <section id="features" className="px-6 py-32 bg-white relative">
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+          <div className="mx-auto max-w-7xl">
+            <div className="text-center mb-20">
+              <h2 className="text-4xl font-extrabold text-slate-900 md:text-5xl tracking-tight">Everything you need</h2>
+              <p className="mt-4 text-lg text-slate-600 font-medium max-w-2xl mx-auto">Powerful features that make your X replies stand out, engineered for speed and authenticity.</p>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {features.map((f) => (
+                <div key={f.title} className="group relative rounded-3xl border border-slate-100 bg-white/50 p-8 shadow-sm backdrop-blur-sm transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/5 hover:border-slate-200">
+                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-purple-50 text-2xl shadow-inner border border-blue-100/50 group-hover:scale-110 transition-transform duration-300">
+                    {f.icon}
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">{f.title}</h3>
+                  <p className="text-[15px] leading-relaxed text-slate-600 font-medium">{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── How It Works ── */}
+        <section id="how-it-works" className="relative px-6 py-32 overflow-hidden">
+          <div className="absolute inset-0 bg-slate-50/50" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-purple-100/40 rounded-full blur-[100px] -z-10" />
+          <div className="mx-auto max-w-7xl relative z-10">
+            <div className="text-center mb-24">
+              <h2 className="text-4xl font-extrabold text-slate-900 md:text-5xl tracking-tight">How it works</h2>
+              <p className="mt-4 text-lg text-slate-600 font-medium">Three simple steps to authentic replies.</p>
+            </div>
+            <div className="grid gap-12 md:grid-cols-3 relative">
+              <div className="hidden md:block absolute top-[2.5rem] left-[15%] right-[15%] h-[2px] bg-gradient-to-r from-blue-100 via-purple-200 to-blue-100 -z-10" />
+              {steps.map((s) => (
+                <div key={s.n} className="flex flex-col items-center text-center relative">
+                  <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-xl shadow-slate-200/50 border border-slate-100 text-2xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-600 to-purple-600">
+                    {s.n}
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-4">{s.title}</h3>
+                  <p className="max-w-sm text-[15px] leading-relaxed text-slate-600 font-medium px-4">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Pricing ── */}
+        <section id="pricing" className="px-6 py-32 bg-white relative">
+          <div className="mx-auto max-w-6xl">
+            <div className="text-center mb-20">
+              <h2 className="text-4xl font-extrabold text-slate-900 md:text-5xl tracking-tight">Simple pricing</h2>
+              <p className="mt-4 text-lg text-slate-600 font-medium">Choose the plan that fits your workflow. No hidden fees.</p>
+            </div>
+            <div className="grid gap-8 md:grid-cols-2 max-w-4xl mx-auto">
+              {plans.map((plan) => (
+                <div key={plan.name} className={`relative rounded-3xl p-8 flex flex-col h-full bg-white transition-all duration-300 hover:-translate-y-2 ${plan.highlighted ? 'border-[2px] border-transparent shadow-2xl shadow-purple-500/10 scale-105 z-10' : 'border border-slate-200 shadow-sm'}`}>
+                  {plan.highlighted && (
+                    <>
+                      <div className="absolute inset-0 rounded-3xl p-[2px] bg-gradient-to-b from-blue-500 to-purple-600 -z-20">
+                        <div className="absolute inset-0 bg-white rounded-[22px] z-[-1]" />
+                      </div>
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-1 text-xs font-bold text-white shadow-md">Most Popular</div>
+                    </>
+                  )}
+                  <div className="mb-6">
+                    <h3 className="text-2xl font-bold text-slate-900">{plan.name}</h3>
+                    <p className="mt-2 text-[15px] font-medium text-slate-500">{plan.desc}</p>
+                    <div className="mt-6 flex items-baseline gap-1">
+                      <span className="text-5xl font-extrabold text-slate-900 tracking-tight">{plan.price}</span>
+                      <span className="text-[15px] font-semibold text-slate-500">{plan.period}</span>
+                    </div>
+                  </div>
+                  <ul className="mb-8 flex flex-col gap-4 flex-1">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-3 text-[15px] font-medium text-slate-600">
+                        <div className="mt-0.5 rounded-full bg-blue-50 p-1">
+                          <svg className="h-4 w-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        </div>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href="/auth/sign-up" className={`w-full rounded-full h-12 text-[15px] font-semibold transition-all flex items-center justify-center ${plan.highlighted ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90 shadow-md shadow-blue-500/20 border-0' : 'bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200'}`}>
+                    Get Started
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── FAQ ── */}
+        <section id="faq" className="px-6 py-32 bg-slate-50/50 relative">
+          <div className="mx-auto max-w-3xl">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-extrabold text-slate-900 md:text-5xl tracking-tight">Frequently asked questions</h2>
+              <p className="mt-4 text-lg text-slate-600 font-medium">Everything you need to know about AtomiX.</p>
+            </div>
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 md:p-8">
+              {faqs.map((faq, i) => (
+                <FAQItem key={i} q={faq.q} a={faq.a} isLast={i === faqs.length - 1} />
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
 
-      {/* How it works */}
-      <section className="relative z-10 py-16 md:py-24 px-6">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-14">
-            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              How It Works
+      {/* ── Footer ── */}
+      <footer className="border-t border-slate-100 bg-white px-6 py-12">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 md:flex-row">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-purple-500/20">
+              <span className="text-white font-bold text-sm">✨</span>
+            </div>
+            <span className="text-xl font-bold tracking-tight text-slate-900">
+              Atomi<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">X</span>
             </span>
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <StepCard step="1" title="Install Extension" desc="Add AtomiX to Chrome — takes 10 seconds." />
-            <StepCard step="2" title="Open Any Tweet" desc="An 'AtomiX Reply' button appears below every tweet." />
-            <StepCard step="3" title="One Click Reply" desc="AI reads the context and generates a natural reply." />
           </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-white/5 py-8 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="text-sm text-slate-500">
-            © {new Date().getFullYear()} AtomiX. All rights reserved.
-          </span>
-          <div className="flex gap-6 text-sm text-slate-500">
-            <Link href="/privacy-policy" className="hover:text-slate-300 transition-colors">Privacy</Link>
+          <div className="flex items-center gap-8">
+            <Link href="/privacy-policy" className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-900">Privacy Policy</Link>
+            <a href="mailto:support@atomix.guru" className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-900">Contact</a>
           </div>
+          <p className="text-sm font-medium text-slate-400">&copy; {new Date().getFullYear()} AtomiX. All rights reserved.</p>
         </div>
       </footer>
+
+      {/* Keyframe animations */}
+      <style jsx global>{`
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(24px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+      `}</style>
     </div>
   )
 }
 
-function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+/* ─── Collapsible FAQ item (no external deps) ─── */
+function FAQItem({ q, a, isLast }: { q: string; a: string; isLast: boolean }) {
+  const [open, setOpen] = useState(false)
   return (
-    <div className="group p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/[0.12] transition-all backdrop-blur-sm">
-      <div className="text-2xl mb-2">{icon}</div>
-      <h3 className="text-sm font-semibold text-white mb-1">{title}</h3>
-      <p className="text-xs text-slate-400 leading-relaxed">{desc}</p>
-    </div>
-  )
-}
-
-function StepCard({ step, title, desc }: { step: string; title: string; desc: string }) {
-  return (
-    <div className="relative p-6 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
-      <span className="absolute -top-3 -left-3 w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-xs font-bold shadow-lg">
-        {step}
-      </span>
-      <h3 className="text-base font-semibold text-white mb-2 mt-1">{title}</h3>
-      <p className="text-sm text-slate-400 leading-relaxed">{desc}</p>
+    <div className={`${isLast ? '' : 'border-b border-slate-100'}`}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between text-left text-[16px] font-semibold text-slate-900 hover:text-blue-600 transition-colors py-5"
+      >
+        {q}
+        <svg className={`w-5 h-5 text-slate-400 transition-transform duration-200 flex-shrink-0 ml-4 ${open ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="6 9 12 15 18 9" /></svg>
+      </button>
+      <div className={`overflow-hidden transition-all duration-200 ${open ? 'max-h-40 pb-5' : 'max-h-0'}`}>
+        <p className="text-[15px] leading-relaxed text-slate-600 font-medium">{a}</p>
+      </div>
     </div>
   )
 }
