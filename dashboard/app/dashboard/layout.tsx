@@ -2,6 +2,7 @@ import React from "react"
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardNav } from '@/components/dashboard/nav'
+import { CheckoutTrigger } from '@/components/dashboard/checkout-trigger'
 
 export default async function DashboardLayout({
   children,
@@ -23,6 +24,7 @@ export default async function DashboardLayout({
       <div className="relative z-10">
         <DashboardNav user={user} />
         <main className="container mx-auto px-4 py-8">
+          <CheckoutTrigger />
           {children}
         </main>
       </div>

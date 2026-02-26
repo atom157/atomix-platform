@@ -1,0 +1,91 @@
+[00:47:47.686] Server  ERROR    ⨯ Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/app/welcome/page/build-manifest.json'
+[00:47:47.689] Server  LOG      ✓ Compiled in 130ms
+[00:47:48.240] Server  ERROR    ⨯ Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/static/development/_buildManifest.js.tmp.sqgxpxqknbj'
+[00:47:48.318] Server  ERROR   Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/app/welcome/page/build-manifest.json'
+[00:47:48.342] Server  ERROR    ⨯ Error: Cannot find module '../chunks/ssr/[turbopack]_runtime.js'
+Require stack:
+- /Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/pages/_document.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/require.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/load-components.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/utils.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/options.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/index.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-server.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/start-server.js
+[00:47:48.357] Server  ERROR   Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/routes-manifest.json'
+[00:47:48.379] Server  ERROR    ⨯ Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/app/welcome/page/build-manifest.json'
+[00:47:48.408] Server  ERROR    ⨯ Error: Cannot find module '../chunks/ssr/[turbopack]_runtime.js'
+Require stack:
+- /Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/pages/_document.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/require.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/load-components.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/utils.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/options.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/index.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-server.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/start-server.js
+[00:47:48.432] Server  ERROR    ⨯ Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/app/welcome/page/build-manifest.json'
+[00:47:48.450] Server  ERROR   Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/app/welcome/page/build-manifest.json'
+[00:47:48.465] Server  ERROR    ⨯ Error: Cannot find module '../chunks/ssr/[turbopack]_runtime.js'
+Require stack:
+- /Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/pages/_document.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/require.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/load-components.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/utils.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/options.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/index.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-server.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/start-server.js
+[00:47:48.484] Server  ERROR    ⨯ Error: Cannot find module '../chunks/ssr/[turbopack]_runtime.js'
+Require stack:
+- /Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/pages/_document.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/require.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/load-components.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/utils.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/options.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/index.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-server.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/start-server.js
+[00:47:48.501] Server  ERROR   Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/app/welcome/page/build-manifest.json'
+[00:47:48.513] Server  ERROR   Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/routes-manifest.json'
+[00:47:48.533] Server  ERROR    ⨯ Error: Cannot find module '../chunks/ssr/[turbopack]_runtime.js'
+Require stack:
+- /Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/pages/_document.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/require.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/load-components.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/utils.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/options.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/index.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-server.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/start-server.js
+[00:47:48.547] Server  ERROR   Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/routes-manifest.json'
+[00:47:48.569] Server  ERROR    ⨯ Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/app/welcome/page/build-manifest.json'
+[00:47:48.592] Server  ERROR    ⨯ Error: Cannot find module '../chunks/ssr/[turbopack]_runtime.js'
+Require stack:
+- /Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/pages/_document.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/require.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/load-components.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/utils.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/options.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/index.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-server.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/start-server.js
+[00:47:48.610] Server  ERROR   Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/app/welcome/page/build-manifest.json'
+[00:47:48.624] Server  ERROR    ⨯ Error: Cannot find module '../chunks/ssr/[turbopack]_runtime.js'
+Require stack:
+- /Users/atom_157/Downloads/site ok/dashboard/.next/dev/server/pages/_document.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/require.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/load-components.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/utils.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/options.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/build/swc/index.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-server.js
+- /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/start-server.js
+[00:47:48.637] Server  ERROR   Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/routes-manifest.json'
