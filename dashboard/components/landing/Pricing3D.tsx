@@ -5,8 +5,27 @@ import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const ChromeIcon = ({ className = "" }: { className?: string }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 0C5.373 0 0 5.372 0 12c0 6.627 5.373 12 12 12 6.628 0 12-5.373 12-12C24 5.372 18.628 0 12 0zm0 2c4.856 0 8.895 3.456 9.8 8h-9.8c-1.123 0-2.126.476-2.834 1.233L4.981 3.987C6.883 2.721 9.324 2 12 2zm-8.85 5.5h5.176c-.21.776-.326 1.6-.326 2.5 0 2.228.91 4.244 2.373 5.702l-4.185 7.248C2.887 20.373 2 16.398 2 12c0-1.64.33-3.197.917-4.613L2.91 7.375zM12 15.5c-1.933 0-3.5-1.567-3.5-3.5s1.567-3.5 3.5-3.5 3.5 1.567 3.5 3.5-1.567 3.5-3.5 3.5zm7.382-6.5h3.69c.587 1.416.918 2.972.918 4.613 0 4.195-2.756 7.747-6.526 9.176L13.19 15.22c1.08-.888 1.83-2.193 1.99-3.663h4.202z" />
+    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="chrome-a" x1="3.2173" y1="15" x2="44.7812" y2="15" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#d93025" />
+                <stop offset="1" stopColor="#ea4335" />
+            </linearGradient>
+            <linearGradient id="chrome-b" x1="20.7219" y1="47.6791" x2="41.5039" y2="11.6837" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#fcc934" />
+                <stop offset="1" stopColor="#fbbc04" />
+            </linearGradient>
+            <linearGradient id="chrome-c" x1="26.5981" y1="46.5015" x2="5.8161" y2="10.506" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#1e8e3e" />
+                <stop offset="1" stopColor="#34a853" />
+            </linearGradient>
+        </defs>
+        <circle cx="24" cy="23.9947" r="12" fill="#fff" />
+        <path d="M3.2154,36A24,24,0,1,0,12,3.2154,24,24,0,0,0,3.2154,36ZM34.3923,18A12,12,0,1,1,18,13.6077,12,12,0,0,1,34.3923,18Z" fill="none" />
+        <path d="M24,12H44.7812a23.9939,23.9939,0,0,0-41.5639.0029L13.6079,30l.0093-.0024A11.9852,11.9852,0,0,1,24,12Z" fill="url(#chrome-a)" />
+        <circle cx="24" cy="24" r="9.5" fill="#1a73e8" />
+        <path d="M34.3913,30.0029,24.0007,48A23.994,23.994,0,0,0,44.78,12.0031H23.9989l-.0025.0093A11.985,11.985,0,0,1,34.3913,30.0029Z" fill="url(#chrome-b)" />
+        <path d="M13.6086,30.0031,3.218,12.006A23.994,23.994,0,0,0,24.0025,48L34.3931,30.0029l-.0067-.0068a11.9852,11.9852,0,0,1-20.7778.007Z" fill="url(#chrome-c)" />
     </svg>
 );
 
