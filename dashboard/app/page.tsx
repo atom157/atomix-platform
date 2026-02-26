@@ -35,6 +35,13 @@ const faqs = [
 ]
 
 /* ─── Main Page ─── */
+
+const ChromeIcon = ({ className = "" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 0C5.373 0 0 5.372 0 12c0 6.627 5.373 12 12 12 6.628 0 12-5.373 12-12C24 5.372 18.628 0 12 0zm0 2c4.856 0 8.895 3.456 9.8 8h-9.8c-1.123 0-2.126.476-2.834 1.233L4.981 3.987C6.883 2.721 9.324 2 12 2zm-8.85 5.5h5.176c-.21.776-.326 1.6-.326 2.5 0 2.228.91 4.244 2.373 5.702l-4.185 7.248C2.887 20.373 2 16.398 2 12c0-1.64.33-3.197.917-4.613L2.91 7.375zM12 15.5c-1.933 0-3.5-1.567-3.5-3.5s1.567-3.5 3.5-3.5 3.5 1.567 3.5 3.5-1.567 3.5-3.5 3.5zm7.382-6.5h3.69c.587 1.416.918 2.972.918 4.613 0 4.195-2.756 7.747-6.526 9.176L13.19 15.22c1.08-.888 1.83-2.193 1.99-3.663h4.202z" />
+  </svg>
+);
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-slate-900 selection:bg-purple-200 font-sans">
@@ -55,7 +62,10 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-4">
             <Link href="/auth/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 hidden md:block">Log in</Link>
-            <Link href="/auth/sign-up" className="bg-slate-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-slate-800 transition-colors">Get Extension</Link>
+            <Link href="/auth/sign-up" className="group bg-slate-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2">
+              <ChromeIcon className="w-[14px] h-[14px] transition-transform duration-300 group-hover:scale-[1.15]" />
+              Get Extension
+            </Link>
           </div>
         </div>
       </header>
@@ -86,7 +96,8 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto pt-2">
-                <Link href="/auth/sign-up" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-blue-500/25 rounded-full px-8 h-14 text-base font-semibold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                <Link href="/auth/sign-up" className="group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-blue-500/25 rounded-full px-8 h-14 text-base font-semibold flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                  <ChromeIcon className="w-[20px] h-[20px] transition-transform duration-300 group-hover:scale-[1.12]" />
                   Add to Chrome — Free
                 </Link>
                 <a href="#how-it-works" className="rounded-full px-8 h-14 text-base font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center">
