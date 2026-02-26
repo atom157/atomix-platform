@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Copy, Heart, Repeat, MessageCircle, BarChart2 } from "lucide-react"
+import { LogoMark } from "@/components/ui/logo"
 
 export function GlassmorphicEngine() {
     const [isHovered, setIsHovered] = useState(false)
@@ -139,9 +140,7 @@ export function GlassmorphicEngine() {
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center justify-between px-1">
                             <div className="flex items-center gap-2.5">
-                                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md shadow-purple-500/20">
-                                    <span className="text-white text-[10px] font-bold leading-none">✨</span>
-                                </div>
+                                <LogoMark className="w-6 h-6" />
                                 <span className="text-sm font-bold text-slate-800 tracking-tight">AtomiX Reply</span>
                             </div>
                             {!isGenerating && replyText === "" && (

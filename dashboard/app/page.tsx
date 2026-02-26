@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { GlassmorphicEngine } from '@/components/landing/GlassmorphicEngine'
 import { HowItWorks3D } from '@/components/landing/HowItWorks3D'
 import { Pricing3D } from '@/components/landing/Pricing3D'
+import { Logo } from '@/components/ui/logo'
 /* ─── Feature data ─── */
 const features = [
   { title: 'Custom Prompts', desc: 'Create your own voice and style. Define how you want to sound so every reply feels authentic.', icon: '✏️' },
@@ -50,10 +51,7 @@ export default function LandingPage() {
       <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4 backdrop-blur-md bg-white/70 border-b border-slate-100">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">✨</span>
-            </div>
-            <span className="font-bold text-xl tracking-tight">AtomiX</span>
+            <Logo />
           </div>
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
             <a href="#features" className="hover:text-slate-900 transition-colors">Features</a>
@@ -159,12 +157,7 @@ export default function LandingPage() {
       <footer className="border-t border-slate-100 bg-white px-6 py-12">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 md:flex-row">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-purple-500/20">
-              <span className="text-white font-bold text-sm">✨</span>
-            </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900">
-              Atomi<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">X</span>
-            </span>
+            <Logo className="scale-110 origin-left" />
           </div>
           <div className="flex items-center gap-8">
             <Link href="/privacy-policy" className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-900">Privacy Policy</Link>
