@@ -133,26 +133,41 @@ export function PromptsManager({ initialPrompts }: PromptsManagerProps) {
 
     if (!user) return
 
-    // First, remove default from all prompts
-    await supabase
+    // Optimistic UI update — user sees change instantly
+    const previousPrompts = [...prompts]
+    setPrompts(
+      prompts.map((p) => ({
+        ...p,
+        is_default: p.id === id,
+      }))
+    )
+
+    // Step 1: Remove default from ALL user's prompts
+    const { error: clearError } = await supabase
       .from('prompts')
       .update({ is_default: false })
       .eq('user_id', user.id)
 
-    // Then set the new default
-    const { error } = await supabase
+    if (clearError) {
+      console.error('[PROMPTS] Failed to clear defaults:', clearError.message)
+      setPrompts(previousPrompts) // revert
+      return
+    }
+
+    // Step 2: Set the new default
+    const { error: setError } = await supabase
       .from('prompts')
       .update({ is_default: true })
       .eq('id', id)
+      .eq('user_id', user.id) // extra safety
 
-    if (!error) {
-      setPrompts(
-        prompts.map((p) => ({
-          ...p,
-          is_default: p.id === id,
-        }))
-      )
+    if (setError) {
+      console.error('[PROMPTS] Failed to set default:', setError.message)
+      setPrompts(previousPrompts) // revert
+      return
     }
+
+    console.log('[PROMPTS] ✅ Default prompt set to:', id)
     router.refresh()
   }
 
