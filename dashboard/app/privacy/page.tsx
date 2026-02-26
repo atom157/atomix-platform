@@ -44,7 +44,14 @@ export default function PrivacyPage() {
                     </section>
 
                     <section className="mb-12">
-                        <h2 className="text-2xl font-bold text-slate-900 mb-4">3. Third Parties</h2>
+                        <h2 className="text-2xl font-bold text-slate-900 mb-4">3. Analytics</h2>
+                        <p className="text-slate-600 leading-relaxed">
+                            We use PostHog to collect strictly anonymous behavioral analytics (such as page views and button clicks) to understand how AtomiX is used and to improve the product. We explicitly configure this tracking to <strong>never capture IP addresses</strong>, ensuring your activity cannot be traced back to you.
+                        </p>
+                    </section>
+
+                    <section className="mb-12">
+                        <h2 className="text-2xl font-bold text-slate-900 mb-4">4. Third Parties</h2>
                         <p className="text-slate-900 leading-relaxed font-semibold">
                             We do NOT sell or share user data with third parties.
                         </p>
@@ -54,14 +61,14 @@ export default function PrivacyPage() {
                     </section>
 
                     <section className="mb-12">
-                        <h2 className="text-2xl font-bold text-slate-900 mb-4">4. Data Storage</h2>
+                        <h2 className="text-2xl font-bold text-slate-900 mb-4">5. Data Storage</h2>
                         <p className="text-slate-600 leading-relaxed">
                             We use Supabase to securely store your account details, custom prompts, and extension settings. All sensitive data is encrypted at rest and in transit.
                         </p>
                     </section>
 
                     <section className="mb-12">
-                        <h2 className="text-2xl font-bold text-slate-900 mb-4">5. User Rights & Deletion</h2>
+                        <h2 className="text-2xl font-bold text-slate-900 mb-4">6. User Rights & Deletion</h2>
                         <p className="text-slate-600 leading-relaxed">
                             You maintain full control over your data. You can delete your account and all associated data at any time directly via the AtomiX web dashboard. Once deleted, this action cannot be undone and your data is immediately purged from our servers.
                         </p>

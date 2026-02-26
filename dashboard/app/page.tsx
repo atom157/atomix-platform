@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { usePostHog } from 'posthog-js/react'
 import { GlassmorphicEngine } from '@/components/landing/GlassmorphicEngine'
 import { HowItWorks3D } from '@/components/landing/HowItWorks3D'
 import { Pricing3D } from '@/components/landing/Pricing3D'
@@ -63,6 +64,7 @@ const ChromeIcon = ({ className = "" }: { className?: string }) => (
 );
 
 export default function LandingPage() {
+  const posthog = usePostHog()
   return (
     <div className="min-h-screen bg-white text-slate-900 selection:bg-purple-200 font-sans">
 
@@ -79,7 +81,7 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-4">
             <Link href="/auth/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 hidden md:block">Log in</Link>
-            <Link href="/auth/sign-up" className="group bg-slate-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2">
+            <Link href="/auth/sign-up" onClick={() => posthog?.capture('cta_clicked', { location: 'navbar' })} className="group bg-slate-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2">
               <ChromeIcon className="w-[14px] h-[14px] transition-transform duration-300 group-hover:scale-[1.15]" />
               Get Extension
             </Link>
@@ -113,7 +115,7 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto pt-2">
-                <Link href="/auth/sign-up" className="group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-blue-500/25 rounded-full px-8 h-14 text-base font-semibold flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                <Link href="/auth/sign-up" onClick={() => posthog?.capture('cta_clicked', { location: 'hero' })} className="group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-blue-500/25 rounded-full px-8 h-14 text-base font-semibold flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98]">
                   <ChromeIcon className="w-[20px] h-[20px] transition-transform duration-300 group-hover:scale-[1.12]" />
                   Add to Chrome — Free
                 </Link>

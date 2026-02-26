@@ -42,6 +42,8 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
+import { PostHogProvider } from '@/components/providers/posthog-provider'
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -50,8 +52,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.variable} font-sans antialiased`}>
-        {children}
-        <Analytics />
+        <PostHogProvider>
+          {children}
+          <Analytics />
+        </PostHogProvider>
       </body>
     </html>
   )

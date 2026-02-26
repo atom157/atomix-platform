@@ -11,7 +11,15 @@
 //   is listed in host_permissions. That's why we proxy the API call here.
 // ---------------------------------------------------------------------------
 
+import { trackEvent } from './posthog-api.js';
+
 const API_BASE = 'https://www.atomix.guru';
+
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install') {
+    trackEvent('extension_installed');
+  }
+});
 
 // ── Message router ──────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -63,6 +71,12 @@ async function handleGenerateReply({ tweetData, settings, extToken, promptId }, 
     }
 
     sendResponse({ ok: true, reply: data.reply });
+
+    // Background async tracking
+    trackEvent('reply_generated', {
+      length: settings?.length || 'medium',
+      language: settings?.language || 'en'
+    });
   } catch (err) {
     // Network-level error (DNS failure, SSL, offline, etc.)
     console.error('[BG] generateReply error:', err);

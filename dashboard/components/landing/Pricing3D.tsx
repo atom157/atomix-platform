@@ -3,6 +3,7 @@
 import React from 'react';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { usePostHog } from 'posthog-js/react';
 
 const ChromeIcon = ({ className = "" }: { className?: string }) => (
     <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -30,6 +31,7 @@ const ChromeIcon = ({ className = "" }: { className?: string }) => (
 );
 
 export function Pricing3D() {
+    const posthog = usePostHog();
     return (
         <section id="pricing" className="px-6 py-32 bg-white relative overflow-hidden">
             {/* Background elements */}
@@ -71,7 +73,7 @@ export function Pricing3D() {
                                 Basic prompts
                             </li>
                         </ul>
-                        <Button variant="outline" className="group w-full rounded-xl py-6 border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-base transition-colors flex items-center justify-center gap-3">
+                        <Button onClick={() => posthog?.capture('pricing_clicked', { plan: 'free' })} variant="outline" className="group w-full rounded-xl py-6 border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-base transition-colors flex items-center justify-center gap-3">
                             <ChromeIcon className="w-[18px] h-[18px] transition-transform duration-300 group-hover:scale-[1.15]" />
                             Add to Chrome — Free
                         </Button>
@@ -122,7 +124,7 @@ export function Pricing3D() {
                                 </li>
                             </ul>
                             <div className="relative z-10">
-                                <Button className="w-full rounded-xl py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-base shadow-lg shadow-purple-500/25 transition-all hover:scale-[1.02] border-0">
+                                <Button onClick={() => posthog?.capture('pricing_clicked', { plan: 'pro' })} className="w-full rounded-xl py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-base shadow-lg shadow-purple-500/25 transition-all hover:scale-[1.02] border-0">
                                     Get Started with PRO
                                 </Button>
                             </div>

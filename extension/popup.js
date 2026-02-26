@@ -31,6 +31,10 @@ var promptSelect = document.getElementById('promptSelect');
 var API_BASE = 'https://www.atomix.guru';
 var chrome = window.chrome;
 
+import('./posthog-api.js').then(module => {
+  window.posthogTrackEvent = module.trackEvent;
+});
+
 console.log('[POPUP] Initializing...');
 
 // ── Optimistic Auth: instantly show cached state to prevent flicker ──
@@ -502,6 +506,7 @@ saveCustomPromptBtn.addEventListener('click', function () {
           saveCustomPromptBtn.textContent = '✅ Saved!';
           var newId = data.prompt ? data.prompt.id : (editingPromptId || '');
           chrome.storage.sync.set({ selectedPromptId: newId });
+          window.posthogTrackEvent && window.posthogTrackEvent('prompt_managed', { action: isEdit ? 'edit' : 'create' });
           // Return to select view and refresh prompts
           setTimeout(function () {
             showSelectView();
@@ -556,6 +561,7 @@ confirmDeleteBtn.addEventListener('click', function () {
           confirmDeleteBtn.disabled = false;
         } else {
           showToast('Prompt deleted');
+          window.posthogTrackEvent && window.posthogTrackEvent('prompt_managed', { action: 'delete' });
           showSelectView();
           checkAuthAndShowState('');
         }
