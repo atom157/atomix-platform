@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Check, Zap, Infinity } from 'lucide-react'
+import { Check, Zap, Infinity, ExternalLink } from 'lucide-react'
 
 interface Profile {
   id: string
@@ -101,6 +101,16 @@ export function BillingPlans({ profile }: BillingPlansProps) {
               <Infinity className="h-4 w-4 text-purple-600" />
               <span>{profile.generations_count} replies generated this month</span>
             </div>
+            <a
+              href="https://app.lava.top/my-purchases"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" size="sm" className="rounded-xl border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 transition-all">
+                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                Manage Subscription
+              </Button>
+            </a>
           </CardContent>
         </Card>
       )}
@@ -110,8 +120,8 @@ export function BillingPlans({ profile }: BillingPlansProps) {
           <Card
             key={plan.id}
             className={`relative rounded-3xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${plan.popular
-                ? 'border-purple-200 bg-gradient-to-b from-white to-purple-50/30 shadow-md shadow-purple-500/5'
-                : 'border-white/60 bg-white/50 backdrop-blur-xl shadow-sm'
+              ? 'border-purple-200 bg-gradient-to-b from-white to-purple-50/30 shadow-md shadow-purple-500/5'
+              : 'border-white/60 bg-white/50 backdrop-blur-xl shadow-sm'
               }`}
           >
             {plan.popular && (

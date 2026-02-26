@@ -196,6 +196,12 @@ function showConnectedState(userId, extToken, selectedPromptId) {
             usageFill.classList.remove('usage-warning');
           }
         }
+
+        // Show "Manage Subscription" link for Pro users only
+        var manageSubLink = document.getElementById('manageSubLink');
+        if (manageSubLink) {
+          manageSubLink.style.display = (userPlan === 'pro') ? 'block' : 'none';
+        }
       }
 
       promptSelect.innerHTML = '<option value="">Use default prompt</option>';
