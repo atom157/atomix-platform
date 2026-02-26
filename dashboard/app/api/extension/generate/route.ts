@@ -73,10 +73,29 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate tweetData
-    if (!tweetData || !validateTweetData(tweetData as Record<string, unknown>)) {
+    // Validate tweetData — log exactly which fields are missing
+    const td = tweetData as Record<string, unknown> | null
+    if (!td) {
+      console.error('[GENERATE] tweetData is null/undefined')
       return NextResponse.json(
-        { error: 'Invalid or missing tweet data' },
+        { error: 'Missing tweet data' },
+        { status: 400, headers: corsHeaders }
+      )
+    }
+
+    console.log('[GENERATE] Tweet data received:', {
+      hasText: !!td.text,
+      textLength: typeof td.text === 'string' ? td.text.length : 0,
+      author: td.author || '(empty)',
+      handle: td.handle || '(empty)',
+      hasThread: Array.isArray(td.threadContext),
+    })
+
+    // Only text is strictly required — author/handle can be empty
+    if (typeof td.text !== 'string' || td.text.trim().length === 0) {
+      console.error('[GENERATE] Invalid tweet text:', typeof td.text, td.text)
+      return NextResponse.json(
+        { error: 'Missing tweet text — scraper could not read the tweet' },
         { status: 400, headers: corsHeaders }
       )
     }

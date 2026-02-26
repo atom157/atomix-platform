@@ -104,20 +104,32 @@
 
   // Extract tweet data from the page
   function extractTweetData(tweetElement) {
+    // Try multiple selectors for the tweet article
     const article = tweetElement.closest('article') ||
-      tweetElement.closest('[data-testid="tweet"]');
+      tweetElement.closest('[data-testid="tweet"]') ||
+      tweetElement.closest('[data-testid="tweetDetail"]') ||
+      document.querySelector('article[data-testid="tweet"]');
 
-    if (!article) return null;
+    if (!article) {
+      console.warn('[XRG] No article element found near button');
+      return null;
+    }
 
-    const tweetTextEl = article.querySelector('[data-testid="tweetText"]');
-    const tweetText = tweetTextEl ? tweetTextEl.innerText : '';
+    // Tweet text — try multiple selectors
+    const tweetTextEl = article.querySelector('[data-testid="tweetText"]') ||
+      article.querySelector('[lang]') ||
+      article.querySelector('div[dir="auto"]');
+    const tweetText = tweetTextEl ? tweetTextEl.innerText.trim() : '';
 
+    // Author name
     const authorEl = article.querySelector('[data-testid="User-Name"]');
     const authorName = authorEl ? authorEl.innerText.split('\n')[0] : '';
 
+    // Author handle
     const handleMatch = authorEl ? authorEl.innerText.match(/@[\w]+/) : null;
     const authorHandle = handleMatch ? handleMatch[0] : '';
 
+    // Engagement metrics
     const metrics = {};
     const replyCount = article.querySelector('[data-testid="reply"]');
     const retweetCount = article.querySelector('[data-testid="retweet"]');
@@ -127,6 +139,7 @@
     if (retweetCount) metrics.retweets = retweetCount.innerText || '0';
     if (likeCount) metrics.likes = likeCount.innerText || '0';
 
+    // Thread context
     let threadContext = [];
     const conversationThread = document.querySelectorAll('article[data-testid="tweet"]');
     conversationThread.forEach((tweet, index) => {
@@ -136,13 +149,18 @@
       }
     });
 
-    return {
+    const result = {
       text: tweetText,
       author: authorName,
       handle: authorHandle,
       metrics,
       threadContext: threadContext.slice(0, -1)
     };
+
+    console.log('[XRG] Scraped Tweet Data:', JSON.stringify(result, null, 2));
+    console.log('[XRG] Text found:', !!tweetText, '| Author:', authorName, '| Handle:', authorHandle);
+
+    return result;
   }
 
   // Generate reply — delegates fetch to the background Service Worker.
@@ -276,11 +294,25 @@
       return;
     }
 
-    const tweetData = extractTweetData(tweetArticle);
+    let tweetData = extractTweetData(tweetArticle);
 
+    // Fallback: if scraper got no text, try grabbing any visible tweet text on the page
     if (!tweetData || !tweetData.text) {
-      showNotification('Could not read tweet', 'error');
-      return;
+      console.warn('[XRG] Primary scrape failed, trying fallback...');
+      const fallbackText = document.querySelector('[data-testid="tweetText"]');
+      if (fallbackText && fallbackText.innerText.trim()) {
+        tweetData = {
+          text: fallbackText.innerText.trim(),
+          author: 'Unknown',
+          handle: '',
+          metrics: {},
+          threadContext: []
+        };
+        console.log('[XRG] Fallback tweet data:', tweetData.text.substring(0, 80));
+      } else {
+        showNotification('Could not read tweet text', 'error');
+        return;
+      }
     }
 
     isGenerating = true;
