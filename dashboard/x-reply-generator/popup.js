@@ -176,8 +176,24 @@ function showConnectedState(userId, extToken, selectedPromptId) {
 
         var displayLimit = data.usage.limit || 20;
 
-        tierBadge.textContent = userPlan.charAt(0).toUpperCase() + userPlan.slice(1);
         tierBadge.className = 'tier-badge tier-' + userPlan;
+
+        // PRO badge: shimmer + gradient styling
+        if (userPlan === 'pro') {
+          tierBadge.textContent = '✨ PRO';
+          tierBadge.style.background = 'linear-gradient(135deg, #8B5CF6, #D946EF)';
+          tierBadge.style.color = '#fff';
+          tierBadge.style.border = 'none';
+          tierBadge.style.boxShadow = '0 2px 8px rgba(139,92,246,0.3)';
+          tierBadge.style.animation = 'proBadgeShimmer 2.5s ease-in-out infinite';
+        } else {
+          tierBadge.textContent = userPlan.charAt(0).toUpperCase() + userPlan.slice(1);
+          tierBadge.style.background = '';
+          tierBadge.style.color = '';
+          tierBadge.style.border = '';
+          tierBadge.style.boxShadow = '';
+          tierBadge.style.animation = '';
+        }
 
         if (isUnlimited) {
           usageText.textContent = data.usage.used + ' replies · Unlimited ∞';
@@ -405,6 +421,56 @@ saveCustomPromptBtn.addEventListener('click', function () {
 saveBtn.addEventListener('click', saveSettings);
 connectBtn.addEventListener('click', connectAccount);
 disconnectBtn.addEventListener('click', function (e) { e.preventDefault(); disconnectAccount(); });
+
+// Save selected prompt as default
+var saveDefaultBtn = document.getElementById('saveDefaultBtn');
+if (saveDefaultBtn) {
+  saveDefaultBtn.addEventListener('click', function () {
+    var selectedId = promptSelect.value;
+    if (!selectedId) {
+      saveDefaultBtn.textContent = '⚠️';
+      setTimeout(function () { saveDefaultBtn.innerHTML = '&#128190;'; }, 1000);
+      return;
+    }
+
+    // Read token from storage
+    chrome.storage.local.get(['extToken'], function (result) {
+      if (!result.extToken) return;
+
+      fetch(API_BASE + '/api/extension/prompts/set-default', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + result.extToken
+        },
+        body: JSON.stringify({ promptId: selectedId })
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.error) {
+            console.error('[POPUP] Set default failed:', data.error);
+            saveDefaultBtn.textContent = '❌';
+          } else {
+            saveDefaultBtn.textContent = '✅';
+            // Update dropdown labels
+            var options = promptSelect.options;
+            for (var i = 0; i < options.length; i++) {
+              options[i].textContent = options[i].textContent.replace(' ★ Default', '');
+              if (options[i].value === selectedId) {
+                options[i].textContent += ' ★ Default';
+              }
+            }
+          }
+          setTimeout(function () { saveDefaultBtn.innerHTML = '&#128190;'; }, 1200);
+        })
+        .catch(function (err) {
+          console.error('[POPUP] Set default error:', err);
+          saveDefaultBtn.textContent = '❌';
+          setTimeout(function () { saveDefaultBtn.innerHTML = '&#128190;'; }, 1200);
+        });
+    });
+  });
+}
 
 // Listen for auth success
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {

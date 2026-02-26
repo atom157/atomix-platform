@@ -6,6 +6,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AtomiX</title>
   <link rel="stylesheet" href="popup.css">
+  <style>
+    @keyframes proBadgeShimmer {
+      0% {
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+      }
+
+      50% {
+        box-shadow: 0 2px 16px rgba(217, 70, 239, 0.5);
+      }
+
+      100% {
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -99,11 +114,17 @@
 
         <div class="divider"></div>
 
-        <select id="promptSelect" class="select-styled">
-          <option value="">Use default prompt</option>
-        </select>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <select id="promptSelect" class="select-styled" style="flex:1;">
+            <option value="">Use default prompt</option>
+          </select>
+          <button id="saveDefaultBtn" title="Set as default prompt"
+            style="width:32px; height:32px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; flex-shrink:0;"
+            onmouseover="this.style.background='#ede9fe'; this.style.borderColor='#c4b5fd';"
+            onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0';">&#128190;</button>
+        </div>
         <p class="prompt-hint">
-          <a href="https://atomix.guru/dashboard" target="_blank">Manage in Dashboard ↗</a>
+          <a href="https://www.atomix.guru/dashboard" target="_blank">Manage in Dashboard &#8599;</a>
         </p>
       </div>
 
