@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     // Get user's prompts
     const { data: prompts, error } = await supabase
       .from('prompts')
-      .select('id, name, is_default')
+      .select('id, name, content, is_default')
       .eq('user_id', userId)
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: false })

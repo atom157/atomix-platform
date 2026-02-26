@@ -273,8 +273,10 @@ function showConnectedState(userId, extToken, selectedPromptId) {
 
       promptSelect.innerHTML = '<option value="">Use default prompt</option>';
       var defaultPromptId = null;
+      window._promptsCache = [];
       if (data.prompts) {
         data.prompts.forEach(function (prompt) {
+          window._promptsCache.push(prompt);
           var option = document.createElement('option');
           option.value = prompt.id;
           option.textContent = (prompt.is_default ? '📌 ' : '') + prompt.name;
@@ -445,15 +447,14 @@ editPromptBtn.addEventListener('click', function () {
     showToast('Select a prompt to edit', true);
     return;
   }
-  // Fetch the prompt content from the API
-  chrome.storage.local.get(['extToken'], function (result) {
-    if (!result.extToken) return;
-    // We need the content too, so fetch individual prompt
-    // For now, open editor with name from dropdown and let user edit
-    var selectedOption = promptSelect.options[promptSelect.selectedIndex];
-    var displayName = selectedOption.textContent.replace('📌 ', '');
-    showEditorView('edit', selectedId, displayName, '');
-  });
+  // Look up cached prompt data
+  var cached = (window._promptsCache || []).find(function (p) { return p.id === selectedId; });
+  var name = cached ? cached.name : '';
+  var content = cached ? (cached.content || '') : '';
+  showEditorView('edit', selectedId, name, content);
+  // Place cursor at end of textarea
+  customPromptContent.focus();
+  customPromptContent.setSelectionRange(content.length, content.length);
 });
 
 // ✕ Cancel
