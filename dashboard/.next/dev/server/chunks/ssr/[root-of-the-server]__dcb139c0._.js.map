@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 28, "column": 0}, "map": {"version":3,"sources":["file:///Users/atom_157/Downloads/site%20ok/dashboard/components/providers/posthog-provider.tsx"],"sourcesContent":["'use client'\nimport posthog from 'posthog-js'\nimport { PostHogProvider as PHProvider } from 'posthog-js/react'\nimport { useEffect } from 'react'\n\nexport function PostHogProvider({ children }: { children: React.ReactNode }) {\n    useEffect(() => {\n        if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST) {\n            posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {\n                api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,\n                person_profiles: 'identified_only',\n                capture_pageview: false, // We handle this manually or let automatic pageview capture work\n                ip: false, // Privacy compliance: Anonymize IP\n            })\n        }\n    }, [])\n\n    return <PHProvider client={posthog}>{children}</PHProvider>\n}\n"],"names":[],"mappings":";;;;;AACA;AACA;AACA;AAHA;;;;;AAKO,SAAS,gBAAgB,EAAE,QAAQ,EAAiC;IACvE,IAAA,kNAAS,EAAC;QACN;;IAQJ,GAAG,EAAE;IAEL,qBAAO,8OAAC,iLAAU;QAAC,QAAQ,0JAAO;kBAAG;;;;;;AACzC"}}]
-}

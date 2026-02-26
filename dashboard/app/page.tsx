@@ -94,8 +94,8 @@ export default function LandingPage() {
         {/* ── Hero ── */}
         <section className="relative w-full min-h-screen pt-24 pb-12 flex items-center overflow-hidden">
           <div className="absolute top-0 right-0 -z-10 w-full h-full overflow-hidden pointer-events-none">
-            <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-blue-100/50 blur-3xl opacity-60 mix-blend-multiply" />
-            <div className="absolute top-[20%] right-[10%] w-[500px] h-[500px] rounded-full bg-purple-100/50 blur-3xl opacity-60 mix-blend-multiply" />
+            <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-blue-100/60 blur-[100px]" />
+            <div className="absolute top-[20%] right-[10%] w-[500px] h-[500px] rounded-full bg-purple-100/60 blur-[100px]" />
           </div>
           <div className="max-w-7xl mx-auto px-6 w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center z-10">
             {/* Left */}

@@ -182,8 +182,8 @@ export function HowItWorks3D() {
     return (
         <section id="how-it-works" className="relative px-6 py-32 overflow-hidden bg-slate-50">
             {/* Background glows matching the Hero */}
-            <div className="absolute top-0 right-[-10%] w-[600px] h-[600px] rounded-full bg-blue-100/40 blur-[100px] opacity-60 mix-blend-multiply pointer-events-none" />
-            <div className="absolute bottom-[10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-purple-100/40 blur-[100px] opacity-60 mix-blend-multiply pointer-events-none" />
+            <div className="absolute top-0 right-[-10%] w-[600px] h-[600px] rounded-full bg-blue-100/60 blur-[100px] pointer-events-none" />
+            <div className="absolute bottom-[10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-purple-100/60 blur-[100px] pointer-events-none" />
 
             <div className="mx-auto max-w-7xl relative z-10">
                 <div className="text-center mb-24">
