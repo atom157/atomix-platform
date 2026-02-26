@@ -362,6 +362,25 @@ OUTPUT:
     basePrompt += `\n\n=== CRITICAL LANGUAGE OVERRIDE ===\nIMPORTANT: You MUST write your ENTIRE reply in ${langName}. Even if the original tweet is in a different language, your response MUST be in ${langName}. This is a hard requirement — do NOT switch to the tweet's language. Every single word of your reply must be in ${langName}.`
   }
 
+  // ── FINAL OVERRIDES: Toggle enforcement (absolute last instructions) ──
+  let toggleOverrides = '\n\n=== FINAL OUTPUT REQUIREMENTS (override everything above) ==='
+  if (addEmoji) {
+    toggleOverrides += '\nCRITICAL: You MUST include at least 2-3 relevant emojis in this response. This is a hard requirement that overrides all other style rules.'
+  } else {
+    toggleOverrides += '\nABSOLUTE BAN: Do NOT include any emojis, emoticons, or Unicode symbols. Zero emojis allowed.'
+  }
+  if (includeHashtags) {
+    toggleOverrides += '\nCRITICAL: You MUST end the response with 2-3 relevant hashtags. This is a hard requirement that overrides all other style rules.'
+  } else {
+    toggleOverrides += '\nABSOLUTE BAN: Do NOT include any hashtags. Zero hashtags allowed.'
+  }
+  if (mentionAuthor) {
+    toggleOverrides += '\nCRITICAL: You MUST start the reply by tagging the author with their @handle. This is a hard requirement.'
+  } else {
+    toggleOverrides += '\nABSOLUTE BAN: Do NOT mention or reference the author\'s @handle anywhere in the reply.'
+  }
+  basePrompt += toggleOverrides
+
   return basePrompt
 }
 
