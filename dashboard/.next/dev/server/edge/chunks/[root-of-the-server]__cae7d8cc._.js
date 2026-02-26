@@ -95,14 +95,10 @@ async function updateSession(request) {
         request
     });
     try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        if (!supabaseUrl || !supabaseAnonKey) {
-            __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$logger$2e$ts__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__["logger"].warn('proxy.missing_env_vars', {
-                route: 'middleware'
-            });
-            return supabaseResponse;
-        }
+        const supabaseUrl = ("TURBOPACK compile-time value", "https://mock123.supabase.co");
+        const supabaseAnonKey = ("TURBOPACK compile-time value", "mock-anon-key-123456");
+        if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+        ;
         const supabase = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$supabase$2f$ssr$2f$dist$2f$module$2f$createServerClient$2e$js__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__["createServerClient"])(supabaseUrl, supabaseAnonKey, {
             cookies: {
                 getAll () {
