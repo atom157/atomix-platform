@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
+import { createClient } from '@/lib/supabase/client';
+
 export function CheckoutTrigger() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -17,6 +19,15 @@ export function CheckoutTrigger() {
 
             const handleCheckout = async () => {
                 try {
+                    const supabase = createClient();
+                    const { data: { session } } = await supabase.auth.getSession();
+
+                    if (!session?.user?.email) {
+                        console.error('CheckoutTrigger: User email not yet hydrated.');
+                        setIsCheckingOut(false);
+                        return;
+                    }
+
                     const response = await fetch('/api/payments/create-invoice', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },

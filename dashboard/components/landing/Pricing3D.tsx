@@ -45,11 +45,11 @@ export function Pricing3D() {
         try {
             const { data: { session } } = await supabase.auth.getSession();
 
-            if (session) {
-                // User is authenticated, redirect to dashboard with checkout trigger
+            if (session?.user?.email) {
+                // User is authenticated and has an email, redirect to dashboard with checkout trigger
                 router.push('/dashboard?checkout=pro');
             } else {
-                // Unauthenticated, trigger Google Sign-In with redirect back to checkout flow
+                // Unauthenticated (or no email), trigger Google Sign-In with redirect back to checkout flow
                 const { error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: {

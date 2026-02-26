@@ -17,6 +17,31 @@ export async function POST() {
             )
         }
 
+        if (!user.email) {
+            return NextResponse.json(
+                { error: 'User email is required to create a purchase' },
+                { status: 400 }
+            )
+        }
+
+        const payload = {
+            account: user.email,
+            payerEmail: user.email,
+            offerId: LAVA_OFFER_ID,
+            currency: 'USD',
+            periodicity: 'MONTHLY',
+            buyerLanguage: 'EN',
+            // Pass Supabase user.id via UTM so webhook can map the payment back
+            clientUtm: {
+                utm_source: 'atomix',
+                utm_medium: 'dashboard',
+                utm_campaign: 'pro_upgrade',
+                utm_content: user.id,
+            },
+        };
+
+        console.log('[LAVA] Sending to Lava.top:', JSON.stringify(payload, null, 2));
+
         // Create invoice via Lava.top v3 API
         const invoiceResponse = await fetch(`${LAVA_API_BASE}/api/v3/invoice`, {
             method: 'POST',
@@ -24,20 +49,7 @@ export async function POST() {
                 'Content-Type': 'application/json',
                 'X-Api-Key': process.env.LAVA_API_KEY_PRIMARY!,
             },
-            body: JSON.stringify({
-                email: user.email,
-                offerId: LAVA_OFFER_ID,
-                currency: 'USD',
-                periodicity: 'MONTHLY',
-                buyerLanguage: 'EN',
-                // Pass Supabase user.id via UTM so webhook can map the payment back
-                clientUtm: {
-                    utm_source: 'atomix',
-                    utm_medium: 'dashboard',
-                    utm_campaign: 'pro_upgrade',
-                    utm_content: user.id,
-                },
-            }),
+            body: JSON.stringify(payload),
         })
 
         if (!invoiceResponse.ok) {
