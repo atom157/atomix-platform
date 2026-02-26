@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { GlassmorphicEngine } from '@/components/landing/GlassmorphicEngine'
 import { HowItWorks3D } from '@/components/landing/HowItWorks3D'
+import { Pricing3D } from '@/components/landing/Pricing3D'
 /* ─── Feature data ─── */
 const features = [
   { title: 'Custom Prompts', desc: 'Create your own voice and style. Define how you want to sound so every reply feels authentic.', icon: '✏️' },
@@ -100,52 +101,32 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <HowItWorks3D />
-
-        {/* ── Pricing ── */}
-        <section id="pricing" className="px-6 py-32 bg-white relative">
-          <div className="mx-auto max-w-6xl">
+        {/* ── Features ── */}
+        <section id="features" className="px-6 py-32 bg-white relative">
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+          <div className="mx-auto max-w-7xl">
             <div className="text-center mb-20">
-              <h2 className="text-4xl font-extrabold text-slate-900 md:text-5xl tracking-tight">Simple pricing</h2>
-              <p className="mt-4 text-lg text-slate-600 font-medium">Choose the plan that fits your workflow. No hidden fees.</p>
+              <h2 className="text-4xl font-extrabold text-slate-900 md:text-5xl tracking-tight">Everything you need</h2>
+              <p className="mt-4 text-lg text-slate-600 font-medium max-w-2xl mx-auto">Powerful features that make your X replies stand out, engineered for speed and authenticity.</p>
             </div>
-            <div className="grid gap-8 md:grid-cols-2 max-w-4xl mx-auto">
-              {plans.map((plan) => (
-                <div key={plan.name} className={`relative rounded-3xl p-8 flex flex-col h-full bg-white transition-all duration-300 hover:-translate-y-2 ${plan.highlighted ? 'border-[2px] border-transparent shadow-2xl shadow-purple-500/10 scale-105 z-10' : 'border border-slate-200 shadow-sm'}`}>
-                  {plan.highlighted && (
-                    <>
-                      <div className="absolute inset-0 rounded-3xl p-[2px] bg-gradient-to-b from-blue-500 to-purple-600 -z-20">
-                        <div className="absolute inset-0 bg-white rounded-[22px] z-[-1]" />
-                      </div>
-                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-1 text-xs font-bold text-white shadow-md">Most Popular</div>
-                    </>
-                  )}
-                  <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-slate-900">{plan.name}</h3>
-                    <p className="mt-2 text-[15px] font-medium text-slate-500">{plan.desc}</p>
-                    <div className="mt-6 flex items-baseline gap-1">
-                      <span className="text-5xl font-extrabold text-slate-900 tracking-tight">{plan.price}</span>
-                      <span className="text-[15px] font-semibold text-slate-500">{plan.period}</span>
-                    </div>
+            <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {features.map((f) => (
+                <div key={f.title} className="group relative rounded-3xl border border-slate-100 bg-white/50 p-8 shadow-sm backdrop-blur-sm transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/5 hover:border-slate-200">
+                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-purple-50 text-2xl shadow-inner border border-blue-100/50 group-hover:scale-110 transition-transform duration-300">
+                    {f.icon}
                   </div>
-                  <ul className="mb-8 flex flex-col gap-4 flex-1">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-3 text-[15px] font-medium text-slate-600">
-                        <div className="mt-0.5 rounded-full bg-blue-50 p-1">
-                          <svg className="h-4 w-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                        </div>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link href="/auth/sign-up" className={`w-full rounded-full h-12 text-[15px] font-semibold transition-all flex items-center justify-center ${plan.highlighted ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90 shadow-md shadow-blue-500/20 border-0' : 'bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200'}`}>
-                    Get Started
-                  </Link>
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">{f.title}</h3>
+                  <p className="text-[15px] leading-relaxed text-slate-600 font-medium">{f.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
+
+        <HowItWorks3D />
+
+        {/* ── Pricing ── */}
+        <Pricing3D />
 
         {/* ── FAQ ── */}
         <section id="faq" className="px-6 py-32 bg-slate-50/50 relative">

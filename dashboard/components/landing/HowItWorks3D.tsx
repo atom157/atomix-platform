@@ -224,8 +224,10 @@ export function HowItWorks3D() {
                                     <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[2rem]" />
 
                                     {/* Top 3D Icon Container */}
-                                    <div className="relative w-full h-[200px] mb-6 rounded-2xl bg-gradient-to-b from-slate-50/50 to-transparent border border-white/40 shadow-inner flex items-center justify-center perspective-[1200px] overflow-visible">
-                                        <step.IconComponent isHovered={isHovered} />
+                                    <div className="relative w-full h-[180px] mb-8 rounded-2xl bg-gradient-to-b from-slate-50/50 to-transparent border border-white/40 shadow-inner flex items-center justify-center perspective-[1200px] overflow-visible">
+                                        <div className="w-full h-full transform scale-[0.70]">
+                                            <step.IconComponent isHovered={isHovered} />
+                                        </div>
                                     </div>
 
                                     {/* Text Content */}
