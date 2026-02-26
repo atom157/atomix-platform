@@ -55,11 +55,15 @@ export async function GET(request: Request) {
     }
 
     // Get user profile for usage info
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('plan, generations_count, generations_limit, cancel_at_period_end, current_period_end')
+      .select('*')
       .eq('id', userId)
       .single()
+
+    if (profileError) {
+      console.error('[PROMPTS] Profile fetch error:', profileError.message)
+    }
 
     // Lazy expiration: downgrade if cancelled subscription has expired
     if (
@@ -87,9 +91,9 @@ export async function GET(request: Request) {
         prompts: prompts || [],
         usage: profile
           ? {
-            tier: profile.plan,
-            used: profile.generations_count,
-            limit: profile.generations_limit,
+            tier: profile.plan || 'trial',
+            used: profile.generations_count || 0,
+            limit: profile.generations_limit || 20,
           }
           : null,
       },

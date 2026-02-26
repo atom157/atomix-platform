@@ -185,7 +185,7 @@ function showConnectedState(userId, extToken, selectedPromptId) {
           usageFill.classList.remove('usage-warning');
           usageFill.style.background = 'linear-gradient(90deg, #3b82f6, #8b5cf6)';
         } else {
-          var prefix = isFreeOrTrial ? 'TRIAL: ' : '';
+          var prefix = (userPlan === 'trial' || userPlan === 'free') ? 'TRIAL: ' : '';
           usageText.textContent = prefix + data.usage.used + ' / ' + displayLimit + ' replies';
           var percentage = Math.min((data.usage.used / displayLimit) * 100, 100);
           usageFill.style.width = percentage + '%';
@@ -219,9 +219,10 @@ function showConnectedState(userId, extToken, selectedPromptId) {
     })
     .catch(function (error) {
       if (error.message === 'Token expired') return;
-      console.error('[POPUP] ❌ Error:', error);
+      console.error('[POPUP] ❌ Connection failed. Error name:', error.name, '| Message:', error.message);
+      console.error('[POPUP] ❌ Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       showDisconnectedState();
-      updateStatus('Connection failed', 'error');
+      updateStatus('Connection failed: ' + (error.message || 'Unknown error'), 'error');
     });
 }
 
