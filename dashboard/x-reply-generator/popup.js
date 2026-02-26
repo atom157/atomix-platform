@@ -33,6 +33,41 @@ var chrome = window.chrome;
 
 console.log('[POPUP] Initializing...');
 
+// ── Optimistic Auth: instantly show cached state to prevent flicker ──
+(function optimisticLoad() {
+  chrome.storage.local.get(['extToken', 'userId', 'cachedPlan', 'cachedUsed', 'cachedLimit'], function (c) {
+    if (c.extToken && c.userId) {
+      // User was logged in last time — show connected section immediately
+      notConnectedSection.style.display = 'none';
+      connectedSection.style.display = 'block';
+      // Restore cached tier/usage if available
+      if (c.cachedPlan) {
+        var plan = c.cachedPlan;
+        tierBadge.className = 'tier-badge tier-' + plan;
+        if (plan === 'pro') {
+          tierBadge.textContent = '✨ PRO';
+          tierBadge.style.background = 'linear-gradient(135deg, #8B5CF6, #D946EF)';
+          tierBadge.style.color = '#fff';
+          tierBadge.style.border = 'none';
+          tierBadge.style.boxShadow = '0 2px 8px rgba(139,92,246,0.3)';
+          tierBadge.style.animation = 'proBadgeShimmer 2.5s ease-in-out infinite';
+        } else {
+          tierBadge.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+        }
+      }
+      if (c.cachedUsed !== undefined && c.cachedLimit) {
+        usageText.textContent = c.cachedUsed + ' / ' + c.cachedLimit + ' replies';
+        var pct = Math.min((c.cachedUsed / c.cachedLimit) * 100, 100);
+        usageFill.style.width = pct + '%';
+      }
+    } else {
+      // Not logged in — show connect
+      notConnectedSection.style.display = 'block';
+      connectedSection.style.display = 'none';
+    }
+  });
+})();
+
 // Use LOCAL storage (not session - for compatibility with content scripts)
 function getSecureToken(callback) {
   console.log('[POPUP] getSecureToken - checking local storage');
@@ -54,9 +89,9 @@ function setSecureToken(token, userId, callback) {
 
 function clearSecureToken(callback) {
   console.log('[POPUP] clearSecureToken');
-  chrome.storage.local.remove(['extToken', 'userId'], function () {
+  chrome.storage.local.remove(['extToken', 'userId', 'cachedPlan', 'cachedUsed', 'cachedLimit'], function () {
     chrome.storage.sync.remove(['userId', 'extToken', 'selectedPromptId', 'isConnected'], function () {
-      console.log('[POPUP] ✅ Token cleared');
+      console.log('[POPUP] ✅ Token + cache cleared');
       if (callback) callback();
     });
   });
@@ -175,6 +210,13 @@ function showConnectedState(userId, extToken, selectedPromptId) {
         var isUnlimited = (data.usage.limit >= 999999);
 
         var displayLimit = data.usage.limit || 20;
+
+        // Cache for instant load next time
+        chrome.storage.local.set({
+          cachedPlan: userPlan,
+          cachedUsed: data.usage.used || 0,
+          cachedLimit: displayLimit
+        });
 
         tierBadge.className = 'tier-badge tier-' + userPlan;
 
