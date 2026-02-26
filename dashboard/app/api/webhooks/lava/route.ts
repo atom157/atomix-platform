@@ -25,110 +25,142 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json()
+
+        // Log the ENTIRE raw payload so we can debug field paths
+        console.log('[LAVA-WH] ===== RAW PAYLOAD =====')
+        console.log(JSON.stringify(body, null, 2))
+        console.log('[LAVA-WH] ========================')
+
         const { eventType, buyer, contractId, clientUtm, status, parentContractId } = body
 
         console.log('[LAVA-WH] Event:', eventType, '| Status:', status, '| Contract:', contractId)
+        console.log('[LAVA-WH] clientUtm:', JSON.stringify(clientUtm))
+        console.log('[LAVA-WH] buyer:', JSON.stringify(buyer))
 
-        const supabase = getSupabaseAdmin()
+        const supabaseAdmin = getSupabaseAdmin()
 
         // ── Extract user ID from clientUtm.utm_content (set during invoice creation) ──
         const userId = clientUtm?.utm_content || null
         const buyerEmail = buyer?.email || null
 
+        console.log('[LAVA-WH] Extracted userId:', userId)
+        console.log('[LAVA-WH] Extracted buyerEmail:', buyerEmail)
+
         // ── Handle events ──────────────────────────────────────────────────
         switch (eventType) {
-            // ── First payment success (product purchase or first subscription payment) ──
+            // ── First payment success ──
             case 'payment.success': {
                 if (!userId && !buyerEmail) {
-                    console.error('[LAVA-WH] No user identifier in payment.success')
+                    console.error('[LAVA-WH] ❌ No user identifier in payment.success — cannot update')
                     return NextResponse.json({ received: true })
                 }
 
-                const now = new Date()
-                const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // +30 days
-
-                const updateData = {
+                // Only update columns that definitely exist
+                const updateData: Record<string, unknown> = {
                     plan: 'pro',
                     subscription_status: 'active',
                     generations_limit: 999999,
                     lava_contract_id: contractId,
-                    cancel_at_period_end: false,
-                    current_period_end: periodEnd.toISOString(),
                 }
 
-                let error
+                console.log('[LAVA-WH] Target User ID:', userId)
+                console.log('[LAVA-WH] Update data:', JSON.stringify(updateData))
+
                 if (userId) {
-                    const result = await supabase.from('profiles').update(updateData).eq('id', userId)
-                    error = result.error
+                    // Primary path: update by Supabase user.id
+                    const result = await supabaseAdmin
+                        .from('profiles')
+                        .update(updateData)
+                        .eq('id', userId)
+                        .select()
+
+                    console.log('[LAVA-WH] Update result data:', JSON.stringify(result.data))
+                    console.log('[LAVA-WH] Update result error:', JSON.stringify(result.error))
+                    console.log('[LAVA-WH] Update result count:', result.data?.length ?? 0)
+
+                    if (result.error) {
+                        console.error('[LAVA-WH] ❌ Profile update FAILED:', result.error.message, '| Code:', result.error.code)
+                    } else if (!result.data || result.data.length === 0) {
+                        console.error('[LAVA-WH] ❌ No rows matched userId:', userId, '— profile row may not exist')
+                    } else {
+                        console.log('[LAVA-WH] ✅ User upgraded to Pro! userId:', userId, '| Updated plan:', result.data[0]?.plan)
+                    }
                 } else {
                     // Fallback: match by email via auth.users
-                    const { data: users } = await supabase.auth.admin.listUsers()
-                    const matchedUser = users?.users?.find(u => u.email === buyerEmail)
-                    if (matchedUser) {
-                        const result = await supabase.from('profiles').update(updateData).eq('id', matchedUser.id)
-                        error = result.error
-                    } else {
-                        console.error('[LAVA-WH] No user found for email:', buyerEmail)
-                    }
-                }
+                    console.log('[LAVA-WH] No userId, trying email fallback:', buyerEmail)
+                    const { data: users } = await supabaseAdmin.auth.admin.listUsers()
+                    const matchedUser = users?.users?.find((u: { email?: string }) => u.email === buyerEmail)
 
-                if (error) {
-                    console.error('[LAVA-WH] Profile update failed:', error.message)
-                } else {
-                    console.log('[LAVA-WH] ✅ User upgraded to Pro:', userId || buyerEmail)
+                    if (matchedUser) {
+                        console.log('[LAVA-WH] Found user by email. ID:', matchedUser.id)
+                        const result = await supabaseAdmin
+                            .from('profiles')
+                            .update(updateData)
+                            .eq('id', matchedUser.id)
+                            .select()
+
+                        console.log('[LAVA-WH] Email fallback result:', JSON.stringify(result.data), '| Error:', JSON.stringify(result.error))
+
+                        if (result.error) {
+                            console.error('[LAVA-WH] ❌ Email fallback update FAILED:', result.error.message)
+                        } else {
+                            console.log('[LAVA-WH] ✅ User upgraded to Pro via email! ID:', matchedUser.id)
+                        }
+                    } else {
+                        console.error('[LAVA-WH] ❌ No user found for email:', buyerEmail)
+                    }
                 }
                 break
             }
 
+            // ── Recurring payment success (subscription renewal) ──
             case 'subscription.recurring.payment.success': {
-                // Successful renewal: reset usage, extend billing period, clear cancel flag
                 const contractToMatch = parentContractId || contractId
-                const renewalPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                console.log('[LAVA-WH] Recurring payment for contract:', contractToMatch)
 
-                const { error } = await supabase
+                const result = await supabaseAdmin
                     .from('profiles')
                     .update({
                         generations_count: 0,
                         subscription_status: 'active',
                         plan: 'pro',
                         generations_limit: 999999,
-                        cancel_at_period_end: false,
-                        current_period_end: renewalPeriodEnd.toISOString(),
                     })
                     .eq('lava_contract_id', contractToMatch)
+                    .select()
 
-                if (error) {
-                    console.error('[LAVA-WH] Recurring reset failed:', error.message)
+                console.log('[LAVA-WH] Recurring update result:', JSON.stringify(result.data), '| Error:', JSON.stringify(result.error))
+
+                if (result.error) {
+                    console.error('[LAVA-WH] ❌ Recurring reset failed:', result.error.message)
                 } else {
-                    console.log('[LAVA-WH] ✅ Monthly usage reset + period extended for contract:', contractToMatch)
+                    console.log('[LAVA-WH] ✅ Monthly usage reset for contract:', contractToMatch)
                 }
                 break
             }
 
+            // ── Subscription cancelled ──
             case 'subscription.cancelled': {
-                // DON'T downgrade immediately — user paid for the current period.
-                // Mark for downgrade at period end. willExpireAt comes from Lava.top.
                 const cancelContractId = contractId
                 const willExpireAt = body.willExpireAt || null
+                console.log('[LAVA-WH] Cancellation for contract:', cancelContractId, '| willExpireAt:', willExpireAt)
 
                 const cancelUpdate: Record<string, unknown> = {
-                    cancel_at_period_end: true,
                     subscription_status: 'cancelled',
                 }
-                // If Lava.top provides the expiration date, store it
-                if (willExpireAt) {
-                    cancelUpdate.current_period_end = willExpireAt
-                }
 
-                const { error } = await supabase
+                const result = await supabaseAdmin
                     .from('profiles')
                     .update(cancelUpdate)
                     .eq('lava_contract_id', cancelContractId)
+                    .select()
 
-                if (error) {
-                    console.error('[LAVA-WH] Cancellation update failed:', error.message)
+                console.log('[LAVA-WH] Cancel result:', JSON.stringify(result.data), '| Error:', JSON.stringify(result.error))
+
+                if (result.error) {
+                    console.error('[LAVA-WH] ❌ Cancellation update failed:', result.error.message)
                 } else {
-                    console.log('[LAVA-WH] ✅ Subscription marked for cancellation at period end:', willExpireAt || 'unknown', '| Contract:', cancelContractId)
+                    console.log('[LAVA-WH] ✅ Subscription cancelled for contract:', cancelContractId)
                 }
                 break
             }
@@ -146,7 +178,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ received: true })
     } catch (error) {
-        console.error('[LAVA-WH] Webhook handler error:', error)
+        console.error('[LAVA-WH] ❌ Webhook handler EXCEPTION:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }
