@@ -345,7 +345,7 @@ OUTPUT:
 - Return ONLY the reply text. No quotes, no labels, no "Reply:" prefix.`
 
   if (bannedWords) {
-    basePrompt += `\n\nFORBIDDEN WORDS/PHRASES (never use these): ${bannedWords}`
+    basePrompt += `\n\nSTRICT RULE — FORBIDDEN WORDS: Do not use any of the following words or their variations, synonyms, or related forms in your response: ${bannedWords}. This is a hard requirement. Check your output and remove any matches before returning.`
   }
 
   if (customPrompt) {

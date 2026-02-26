@@ -574,6 +574,24 @@ saveBtn.addEventListener('click', saveSettings);
 connectBtn.addEventListener('click', connectAccount);
 disconnectBtn.addEventListener('click', function (e) { e.preventDefault(); disconnectAccount(); });
 
+// 🛡️ Banned words toggle
+var toggleBannedWords = document.getElementById('toggleBannedWords');
+var bannedWordsRow = document.getElementById('bannedWordsRow');
+if (toggleBannedWords && bannedWordsRow) {
+  toggleBannedWords.addEventListener('click', function () {
+    var isOpen = bannedWordsRow.style.display !== 'none';
+    bannedWordsRow.style.display = isOpen ? 'none' : 'block';
+    toggleBannedWords.style.background = isOpen ? '#f8fafc' : '#ede9fe';
+    toggleBannedWords.style.borderColor = isOpen ? '#e2e8f0' : '#c4b5fd';
+  });
+  // Auto-open if banned words already saved
+  if (bannedWordsInput.value.trim()) {
+    bannedWordsRow.style.display = 'block';
+    toggleBannedWords.style.background = '#ede9fe';
+    toggleBannedWords.style.borderColor = '#c4b5fd';
+  }
+}
+
 // Save selected prompt as default
 var saveDefaultBtn = document.getElementById('saveDefaultBtn');
 if (saveDefaultBtn) {
