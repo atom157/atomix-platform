@@ -205,15 +205,21 @@ function showConnectedState(userId, extToken, selectedPromptId) {
       }
 
       promptSelect.innerHTML = '<option value="">Use default prompt</option>';
+      var defaultPromptId = null;
       if (data.prompts) {
         data.prompts.forEach(function (prompt) {
           var option = document.createElement('option');
           option.value = prompt.id;
-          option.textContent = prompt.name + (prompt.is_default ? ' (Default)' : '');
+          option.textContent = prompt.name + (prompt.is_default ? ' ★ Default' : '');
+          if (prompt.is_default) {
+            defaultPromptId = prompt.id;
+          }
           promptSelect.appendChild(option);
         });
       }
-      if (selectedPromptId) promptSelect.value = selectedPromptId;
+      // Use saved selection, or fall back to the default prompt
+      var activePromptId = selectedPromptId || defaultPromptId;
+      if (activePromptId) promptSelect.value = activePromptId;
 
       // Enable prompt form
       customPromptName.disabled = false;
