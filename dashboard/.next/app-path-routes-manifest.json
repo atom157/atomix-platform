@@ -22,5 +22,6 @@
   "/dashboard/page": "/dashboard",
   "/dashboard/settings/page": "/dashboard/settings",
   "/page": "/",
-  "/privacy/page": "/privacy"
+  "/privacy/page": "/privacy",
+  "/welcome/page": "/welcome"
 }

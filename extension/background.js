@@ -18,6 +18,7 @@ const API_BASE = 'https://www.atomix.guru';
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     trackEvent('extension_installed');
+    chrome.tabs.create({ url: 'https://atomix.guru/welcome' });
   }
 });
 
