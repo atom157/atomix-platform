@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut, Settings, CreditCard, Zap } from 'lucide-react'
+import { LogOut, CreditCard, Zap } from 'lucide-react'
 
 interface DashboardNavProps {
   user: User
@@ -53,11 +53,6 @@ export function DashboardNav({ user }: DashboardNavProps) {
               Prompts
             </Button>
           </Link>
-          <Link href="/dashboard/settings">
-            <Button variant="ghost" size="sm" className="font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors">
-              Settings
-            </Button>
-          </Link>
           <Link href="/dashboard/billing">
             <Button variant="ghost" size="sm" className="font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors">
               Billing
@@ -85,12 +80,6 @@ export function DashboardNav({ user }: DashboardNavProps) {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/settings">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/billing">
                   <CreditCard className="mr-2 h-4 w-4" />

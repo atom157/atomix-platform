@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Check, Zap, Infinity, ExternalLink } from 'lucide-react'
+import { Check, Zap, Infinity, Sparkles } from 'lucide-react'
 
 interface Profile {
   id: string
@@ -84,19 +84,36 @@ export function BillingPlans({ profile }: BillingPlansProps) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col items-center gap-8">
+      {/* ── Pro Status Card ── */}
       {isPro && profile?.subscription_status === 'active' && (
-        <Card className="rounded-3xl border border-white/60 bg-white/50 backdrop-blur-xl shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Current Subscription
-              <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none">Pro</Badge>
+        <Card className="w-full max-w-2xl rounded-3xl border border-purple-200/60 bg-gradient-to-br from-white/80 via-purple-50/30 to-white/80 backdrop-blur-xl shadow-lg shadow-purple-500/5">
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="flex items-center justify-center gap-3 text-lg">
+              {/* ── Animated PRO Badge ── */}
+              <span className="relative inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-white shadow-lg shadow-purple-500/30"
+                style={{
+                  background: 'linear-gradient(135deg, #8B5CF6, #D946EF)',
+                }}>
+                <Sparkles className="h-3.5 w-3.5" />
+                PRO
+                {/* Shimmer overlay */}
+                <span className="absolute inset-0 rounded-full overflow-hidden">
+                  <span className="absolute inset-0 animate-shimmer"
+                    style={{
+                      background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
+                      backgroundSize: '200% 100%',
+                    }}
+                  />
+                </span>
+              </span>
+              <span className="text-slate-700">Active Subscription</span>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-center">
               You have <strong>unlimited</strong> AI replies
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex items-center justify-between">
+          <CardContent className="flex flex-col items-center gap-4 pt-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Infinity className="h-4 w-4 text-purple-600" />
               <span>{profile.generations_count} replies generated this month</span>
@@ -106,16 +123,17 @@ export function BillingPlans({ profile }: BillingPlansProps) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <Button variant="outline" size="sm" className="rounded-xl border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 transition-all">
-                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+              <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold text-purple-700 border border-purple-200/80 bg-purple-50/50 backdrop-blur-sm transition-all duration-300 hover:bg-purple-100/60 hover:border-purple-300 hover:shadow-lg hover:shadow-purple-500/10 hover:scale-[1.02] active:scale-[0.98]">
+                <Sparkles className="h-4 w-4" />
                 Manage Subscription
-              </Button>
+              </button>
             </a>
           </CardContent>
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 max-w-2xl">
+      {/* ── Plan Cards ── */}
+      <div className="grid gap-8 md:grid-cols-2 w-full max-w-2xl">
         {plans.map((plan) => (
           <Card
             key={plan.id}
@@ -125,25 +143,25 @@ export function BillingPlans({ profile }: BillingPlansProps) {
               }`}
           >
             {plan.popular && (
-              <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none shadow-md shadow-purple-500/20">
+              <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white border-none shadow-md shadow-purple-500/20 px-4">
                 Most Popular
               </Badge>
             )}
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="flex items-center justify-center gap-2 text-xl">
                 {plan.name}
                 {currentPlan === plan.id && (
-                  <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-none">Current</Badge>
+                  <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-none text-xs">Current</Badge>
                 )}
               </CardTitle>
               <CardDescription>{plan.description}</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <span className="text-4xl font-bold tracking-tight text-slate-900">{plan.price}</span>
-                <span className="text-muted-foreground ml-1">/{plan.period}</span>
+            <CardContent className="text-center">
+              <div className="mb-5">
+                <span className="text-5xl font-bold tracking-tight text-slate-900">{plan.price}</span>
+                <span className="text-muted-foreground ml-1 text-sm">/{plan.period}</span>
               </div>
-              <ul className="space-y-2.5">
+              <ul className="space-y-3 text-left">
                 {plan.features.map((feature, index) => (
                   <li key={index} className="flex items-center gap-2.5 text-sm text-slate-600">
                     <Check className="h-4 w-4 text-emerald-500 shrink-0" />
@@ -152,14 +170,14 @@ export function BillingPlans({ profile }: BillingPlansProps) {
                 ))}
               </ul>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="pt-2">
               {currentPlan === plan.id ? (
-                <Button className="w-full rounded-xl" disabled>
+                <Button className="w-full rounded-xl h-11" disabled>
                   Current Plan
                 </Button>
               ) : plan.id === 'pro' ? (
                 <Button
-                  className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md shadow-purple-500/20 transition-all"
+                  className="w-full rounded-xl h-11 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 shadow-md shadow-purple-500/20 transition-all text-base"
                   onClick={handleUpgrade}
                   disabled={isLoading === 'pro'}
                 >
@@ -173,7 +191,7 @@ export function BillingPlans({ profile }: BillingPlansProps) {
                   )}
                 </Button>
               ) : (
-                <Button className="w-full rounded-xl" variant="outline" disabled>
+                <Button className="w-full rounded-xl h-11" variant="outline" disabled>
                   Free Forever
                 </Button>
               )}
@@ -181,6 +199,17 @@ export function BillingPlans({ profile }: BillingPlansProps) {
           </Card>
         ))}
       </div>
+
+      {/* ── Shimmer keyframes ── */}
+      <style jsx>{`
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        .animate-shimmer {
+          animation: shimmer 2.5s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   )
 }
