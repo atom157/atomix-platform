@@ -1,110 +1,104 @@
 import React from 'react';
 import Link from 'next/link';
-import { Mail, MessageCircle, HelpCircle, FileText, ExternalLink } from 'lucide-react';
+import { Mail, MessageCircle, HelpCircle, FileText, ExternalLink, Sparkles } from 'lucide-react';
 
 export default function SupportPage() {
     return (
-        <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
+        <div className="max-w-3xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-16 px-4">
 
-            {/* Header */}
-            <div>
-                <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight">
-                    Help & Support
+            {/* HERO SUPPORT SECTION */}
+            <div className="text-center pt-8">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#2AABEE]/10 ring-1 ring-[#2AABEE]/20 mb-6 shadow-[0_0_40px_rgba(42,171,238,0.2)]">
+                    <MessageCircle className="w-10 h-10 text-[#2AABEE]" />
+                </div>
+                <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight mb-4">
+                    Need help with AtomiX?
                 </h1>
-                <p className="text-gray-400 mt-3 text-lg font-medium">
-                    We're here to help you get the most out of AtomiX.
+                <p className="text-gray-400 text-lg sm:text-xl font-medium max-w-xl mx-auto mb-10 leading-relaxed">
+                    We're here to get you unstuck. Reach out to our Telegram support team for fast, human assistance.
                 </p>
+
+                {/* PRIMARY CTA */}
+                <div className="max-w-md mx-auto">
+                    <a
+                        href="https://t.me/AtomiX_Support"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group relative inline-flex items-center justify-center gap-3 w-full px-8 py-5 bg-gradient-to-r from-[#2AABEE] to-[#229ED9] text-white rounded-2xl font-bold text-lg shadow-[0_0_40px_rgba(42,171,238,0.4)] hover:shadow-[0_0_60px_rgba(42,171,238,0.6)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+                    >
+                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+                        <MessageCircle className="w-6 h-6 relative z-10" />
+                        <span className="relative z-10">Chat with Support</span>
+                        <ExternalLink className="w-5 h-5 relative z-10 opacity-70 group-hover:opacity-100 transition-opacity" />
+                    </a>
+                    <div className="mt-4 flex items-center justify-center gap-2 text-sm font-medium text-gray-500">
+                        <Sparkles className="w-4 h-4 text-amber-400/70" />
+                        <p>Real humans. Average response time: <span className="text-gray-300">3–10 minutes</span>.</p>
+                    </div>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="max-w-2xl mx-auto space-y-12">
 
-                {/* Contact Channels */}
-                <div className="space-y-6">
-                    <div className="group bg-white/[0.02] border border-white/10 rounded-3xl p-8 backdrop-blur-2xl hover:bg-white/[0.04] hover:-translate-y-1 hover:shadow-[0_0_40px_rgba(42,171,238,0.15)] hover:border-[#2AABEE]/30 transition-all duration-300">
-                        <div className="w-12 h-12 rounded-2xl bg-[#2AABEE]/10 flex items-center justify-center mb-6 ring-1 ring-[#2AABEE]/20 group-hover:bg-[#2AABEE]/20 transition-colors">
-                            <MessageCircle className="w-6 h-6 text-[#2AABEE]" />
-                        </div>
-                        <h2 className="text-xl font-bold text-white mb-2 tracking-tight">Telegram Support</h2>
-                        <p className="text-gray-400 mb-8 text-sm leading-relaxed">
-                            Get fast answers directly from our team in our official Telegram support channel. Ideal for quick questions and bug reports.
-                        </p>
-                        <a
-                            href="https://t.me/AtomiX_Support"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-[#2AABEE] to-[#229ED9] text-white hover:shadow-[0_0_20px_rgba(42,171,238,0.4)] rounded-xl font-bold transition-all text-sm w-full justify-center"
-                        >
-                            Open Telegram <ExternalLink className="w-4 h-4" />
+                {/* Secondary Action: Email */}
+                <div className="text-center">
+                    <p className="text-sm text-gray-500 font-medium flex items-center justify-center gap-2">
+                        Prefer email? Drop us a line at
+                        <a href="mailto:atomix.guru@gmail.com" className="text-purple-400 hover:text-purple-300 hover:underline transition-colors flex items-center gap-1.5 bg-purple-500/10 px-3 py-1.5 rounded-lg border border-purple-500/20">
+                            <Mail className="w-3.5 h-3.5" /> atomix.guru@gmail.com
                         </a>
+                    </p>
+                </div>
+
+                <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
+                {/* Friendly Troubleshooting Block */}
+                <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 sm:p-8 backdrop-blur-2xl flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 text-center sm:text-left transition-colors hover:bg-white/[0.03]">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center shrink-0 ring-1 ring-amber-500/20">
+                        <span className="text-xl">💡</span>
                     </div>
-
-                    <div className="group bg-white/[0.02] border border-white/10 rounded-3xl p-8 backdrop-blur-2xl hover:bg-white/[0.04] hover:-translate-y-1 hover:shadow-[0_0_40px_rgba(139,92,246,0.15)] hover:border-purple-500/30 transition-all duration-300">
-                        <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-6 ring-1 ring-purple-500/20 group-hover:bg-purple-500/20 transition-colors">
-                            <Mail className="w-6 h-6 text-purple-400" />
-                        </div>
-                        <h2 className="text-xl font-bold text-white mb-2 tracking-tight">Email Support</h2>
-                        <p className="text-gray-400 mb-8 text-sm leading-relaxed">
-                            For billing inquiries, account recovery, or detailed technical assistance, drop us an email. We typically respond within 24 hours.
+                    <div>
+                        <h3 className="text-base font-bold text-white mb-2 tracking-tight">Quick Fix: Having trouble connecting?</h3>
+                        <p className="text-sm text-gray-400 leading-relaxed">
+                            Ensure you are logged into the dashboard, then click the extension icon and hit the Connect button. If the token fails to sync, try refreshing this page and trying again.
                         </p>
-                        <a
-                            href="mailto:atomix.guru@gmail.com"
-                            className="inline-flex items-center gap-2 px-6 py-3.5 bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/20 rounded-xl font-bold transition-all text-sm w-full justify-center"
-                        >
-                            atomix.guru@gmail.com
-                        </a>
                     </div>
                 </div>
 
-                {/* Policies & FAQ summary */}
-                <div className="space-y-6 h-full flex flex-col">
+                <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
 
-                    <div className="flex-1 bg-white/[0.02] border border-white/10 rounded-3xl p-8 backdrop-blur-2xl shadow-xl">
-                        <div className="flex items-center gap-3 mb-8">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
-                                <FileText className="w-5 h-5 text-white" />
-                            </div>
-                            <h2 className="text-xl font-bold text-white tracking-tight">Refunds & Cancellation</h2>
-                        </div>
-
-                        <div className="space-y-8">
-                            <div>
-                                <h3 className="text-sm font-bold text-gray-200 mb-2 uppercase tracking-wide">Cancellation Policy</h3>
-                                <p className="text-sm text-gray-400 leading-relaxed">
-                                    You can pause or cancel your PRO subscription at absolutely any time. Subscriptions are managed exclusively through our payment provider portal constraint.
-                                </p>
-                                <a href="https://app.lava.top/my-purchases" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-4 text-sm font-semibold text-purple-400 hover:text-purple-300 transition-colors">
-                                    Manage Subscription on Lava.top <span>→</span>
-                                </a>
-                            </div>
-
-                            <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-
-                            <div>
-                                <h3 className="text-sm font-bold text-gray-200 mb-2 uppercase tracking-wide">Refund Policy</h3>
-                                <p className="text-sm text-gray-400 leading-relaxed">
-                                    Because AtomiX offers a robust Free tier (allowing you to test the AI exactly as it performs on PRO), we generally do not issue refunds.
-                                    However, we offer a 14-day refund window <strong className="text-white">strictly</strong> if you have consumed fewer than 20 AI generations since your upgrade.
-                                </p>
-                            </div>
-                        </div>
+                {/* Demoted Legal & Policy Section */}
+                <div className="space-y-6 pt-4">
+                    <div className="flex items-center gap-3 mb-6 justify-center sm:justify-start">
+                        <FileText className="w-5 h-5 text-gray-500" />
+                        <h2 className="text-lg font-bold text-gray-300 tracking-tight">Policies & Billing</h2>
                     </div>
 
-                    <div className="bg-[#0A0A0B] border border-purple-500/20 rounded-3xl p-6 backdrop-blur-2xl flex items-start gap-4 shadow-[0_0_30px_rgba(139,92,246,0.05)]">
-                        <HelpCircle className="w-6 h-6 text-purple-400 shrink-0 mt-1" />
-                        <div>
-                            <h3 className="text-sm font-bold text-purple-100 mb-2">Having trouble connecting?</h3>
-                            <p className="text-sm text-purple-200/60 leading-relaxed">
-                                Ensure you are logged into the dashboard, then click the extension icon and hit the Connect button. If the token fails to sync, try refreshing this page and trying again.
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-6 hover:bg-white/[0.02] transition-colors">
+                            <h3 className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Cancellation</h3>
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                You can pause or cancel your PRO subscription at absolutely any time through our payment provider portal.
+                            </p>
+                            <a href="https://app.lava.top/my-purchases" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs font-semibold text-gray-400 hover:text-white transition-colors">
+                                Manage Subscription <span>→</span>
+                            </a>
+                        </div>
+
+                        <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-6 hover:bg-white/[0.02] transition-colors">
+                            <h3 className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Refunds</h3>
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                Due to our robust Free tier, refunds are generally not issued. We offer a 14-day refund window <strong className="text-gray-400">strictly</strong> if you have consumed fewer than 20 AI generations since upgrading.
                             </p>
                         </div>
                     </div>
-
                 </div>
             </div>
 
-            <div className="flex justify-center gap-8 mt-16 pt-8 border-t border-white/10">
-                <Link href="/legal/terms-of-service" className="text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors">Terms of Service</Link>
-                <Link href="/legal/privacy-policy" className="text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors">Privacy Policy</Link>
+            {/* Footer Links */}
+            <div className="flex justify-center gap-8 mt-16 pt-8 border-t border-white/5">
+                <Link href="/legal/terms-of-service" className="text-xs font-medium text-gray-600 hover:text-gray-400 transition-colors">Terms of Service</Link>
+                <Link href="/legal/privacy-policy" className="text-xs font-medium text-gray-600 hover:text-gray-400 transition-colors">Privacy Policy</Link>
             </div>
 
         </div>
