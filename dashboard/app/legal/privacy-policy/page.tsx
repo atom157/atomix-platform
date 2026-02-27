@@ -3,19 +3,20 @@ import Link from 'next/link';
 
 export default function PrivacyPolicyPage() {
     return (
-        <div className="min-h-screen bg-[#0A0A0B] text-slate-300 py-20 px-4 sm:px-6 lg:px-8 selection:bg-purple-500/30">
+        <div className="min-h-screen bg-[#0A0A0B] text-gray-300 py-20 px-4 sm:px-6 lg:px-8 selection:bg-purple-500/30">
             <div className="max-w-4xl mx-auto">
                 <div className="mb-12">
-                    <Link href="/" className="text-purple-400 hover:text-purple-300 transition-colors font-medium flex items-center gap-2 w-fit">
+                    <Link href="/" className="text-purple-400 hover:text-purple-300 transition-colors font-semibold flex items-center gap-2 w-fit">
                         ← Back to Home
                     </Link>
-                    <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-500 mt-6 tracking-tight">
+                    <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 mt-6 tracking-tight">
                         Privacy Policy
                     </h1>
-                    <p className="text-slate-400 mt-4 text-lg">Last updated: February 27, 2026</p>
+                    <p className="text-gray-500 mt-4 text-lg font-medium">Last updated: February 27, 2026</p>
                 </div>
 
-                <div className="space-y-12 bg-white/[0.02] border border-white/[0.05] rounded-3xl p-8 sm:p-12 backdrop-blur-xl shadow-2xl">
+                <div className="space-y-12 bg-white/[0.02] border border-white/10 rounded-3xl p-8 sm:p-12 backdrop-blur-2xl shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
 
                     <section>
                         <h2 className="text-2xl font-bold text-white mb-4">1. Introduction</h2>
@@ -27,7 +28,7 @@ export default function PrivacyPolicyPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-white mb-4">2. Information We DO NOT Collect</h2>
                         <p className="leading-relaxed mb-4">To ensure maximum privacy and security for our users, AtomiX operates on a principle of data minimization:</p>
-                        <ul className="list-disc pl-6 space-y-2 text-slate-400">
+                        <ul className="list-disc pl-6 space-y-2 text-gray-400">
                             <li><strong className="text-white">Passwords & Credentials:</strong> We NEVER collect or store your X (Twitter) passwords or login credentials. Authentication happens via secure OAuth directly with your provider.</li>
                             <li><strong className="text-white">Direct Messages (DMs):</strong> We do not have access to, nor do we read or process, your private messages on any platform.</li>
                             <li><strong className="text-white">Browsing History:</strong> We do not track websites you visit outside of generating replies on the specific X.com tabs where you actively use the extension.</li>
@@ -37,7 +38,7 @@ export default function PrivacyPolicyPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-white mb-4">3. Information We Collect and Process</h2>
                         <p className="leading-relaxed mb-4">We only collect information strictly necessary to provide the core functionality of AtomiX:</p>
-                        <ul className="list-disc pl-6 space-y-2 text-slate-400">
+                        <ul className="list-disc pl-6 space-y-2 text-gray-400">
                             <li><strong className="text-white">Publicly Visible Context:</strong> When you click the "Reply with AtomiX" button, the extension temporarily reads the text of the specific public tweet you are replying to. This text is sent to our secure backend API to generate a contractually relevant AI response. This data is not stored permanently.</li>
                             <li><strong className="text-white">Account Information:</strong> We store the email address and profile name provided during the OAuth signup process to manage your AtomiX account and subscription limits.</li>
                             <li><strong className="text-white">Usage Metrics:</strong> We track the number of AI generations you perform to enforce subscription limits (e.g., Free tier limits vs. PRO limits).</li>
