@@ -22,18 +22,17 @@ function verifyLavaSignature(payload: string, signature: string, secret: string)
 export async function POST(request: Request) {
     try {
         const payload = await request.text()
-        const signature = request.headers.get('Authorization') || request.headers.get('Signature') || request.headers.get('x-signature')
+        const signature = request.headers.get('Authorization') || request.headers.get('Signature') || request.headers.get('x-signature') || request.headers.get('x-lava-signature')
         const webhookSecret = process.env.LAVA_WEBHOOK_SECRET || process.env.LAVA_WEBHOOK_SECRET_RESULT
 
         // Log everything for debugging the V3 payload structure
+        console.log('[WEBHOOK-RAW] Header Signature:', signature)
+        console.log('[WEBHOOK-RAW] Body:', payload)
         console.log('[LAVA-WH] ===== INCOMING WEBHOOK =====')
-        console.log('[LAVA-WH] Signature Header:', signature)
-        console.log('[LAVA-WH] Raw Payload:', payload)
 
         if (signature && webhookSecret) {
             if (!verifyLavaSignature(payload, signature, webhookSecret)) {
-                console.warn('[LAVA-WH] ⚠️ Invalid HMAC Signature')
-                // We'll log the warning but won't strictly block yet until we verify the exact hashing mechanism in Vercel logs
+                console.error('[WEBHOOK] Signature mismatch, but proceeding with update for testing...')
             } else {
                 console.log('[LAVA-WH] 🔒 Signature Verified')
             }
@@ -58,7 +57,7 @@ export async function POST(request: Request) {
         const clientUtm = data.clientUtm || body.clientUtm
 
         // Deep email parsing
-        const buyerEmail = body.email || body.account || body.payerEmail || data.email || data.account || data.payerEmail || data.buyer?.email || data.customer_email || null
+        const buyerEmail = body.email || body.account || body.payerEmail || data.email || data.account || data.payerEmail || data.buyer?.email || data.customer_email || body.additional_data?.email || data.additional_data?.email || null
 
         console.log('[LAVA-WH] parsed eventType:', eventType, '| status:', status, '| contractId:', contractId)
         console.log('[LAVA-WH] clientUtm:', JSON.stringify(clientUtm))
@@ -117,9 +116,10 @@ export async function POST(request: Request) {
             }
         }
 
-        return NextResponse.json({ received: true })
+        return NextResponse.json({ received: true }, { status: 200 })
     } catch (error) {
         console.error('[LAVA-WH] ❌ Webhook handler EXCEPTION:', error)
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+        // Force 200 OK so Lava.top doesn't get blocked
+        return NextResponse.json({ error: 'Internal server error - caught for webhook', details: String(error) }, { status: 200 })
     }
 }
