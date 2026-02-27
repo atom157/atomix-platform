@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AtomiX — AI Replies for X",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "description": "AI-powered writing assistant for X (Twitter) that helps you generate authentic, human-like replies in seconds.",
   "homepage_url": "https://atomix.guru",
   "privacy_policy": "https://atomix.guru/privacy",
