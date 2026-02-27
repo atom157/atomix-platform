@@ -9,14 +9,8 @@ function getSupabaseAdmin() {
     )
 }
 
-function verifyLavaSignature(payload: string, signature: string, secret: string) {
-    try {
-        const hmac = crypto.createHmac('sha256', secret)
-        const digest = hmac.update(payload).digest('hex')
-        return signature === digest || signature === `sha256=${digest}`
-    } catch (e) {
-        return false
-    }
+function verifyLavaSignature(signature: string, secret: string) {
+    return signature === secret;
 }
 
 export async function GET() {
@@ -27,11 +21,11 @@ export async function POST(request: Request) {
     console.log('[LAVA-INCOMING] Something is hitting the webhook!')
     try {
         const payload = await request.text()
-        const signature = request.headers.get('Authorization') || request.headers.get('Signature') || request.headers.get('x-signature') || request.headers.get('x-lava-signature')
+        const signature = request.headers.get('x-api-key')
         const webhookSecret = process.env.LAVA_WEBHOOK_SECRET || process.env.LAVA_WEBHOOK_SECRET_RESULT
 
         // Log everything for debugging the V3 payload structure
-        console.log('[WEBHOOK-RAW] Header Signature:', signature)
+        console.log('[WEBHOOK-RAW] Header x-api-key:', signature ? '***HIDDEN***' : 'missing')
         console.log('[DEBUG] All Headers:', JSON.stringify(Object.fromEntries(request.headers.entries())))
         console.log('[WEBHOOK-RAW] Body:', payload)
         console.log('[LAVA-WH] ===== INCOMING WEBHOOK =====')
@@ -42,14 +36,14 @@ export async function POST(request: Request) {
         }
 
         if (signature) {
-            if (!verifyLavaSignature(payload, signature, webhookSecret)) {
-                console.error('[LAVA-WH] ❌ Invalid HMAC Signature. Rejecting request.')
+            if (!verifyLavaSignature(signature, webhookSecret)) {
+                console.error('[LAVA-WH] ❌ Invalid x-api-key Secret. Rejecting request.')
                 return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
             } else {
-                console.log('[LAVA-WH] 🔒 Signature Verified')
+                console.log('[LAVA-WH] 🔒 Secret Verified via x-api-key')
             }
         } else {
-            console.error('[LAVA-WH] ❌ Missing signature header in the request')
+            console.error('[LAVA-WH] ❌ Missing x-api-key header in the request')
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
@@ -80,9 +74,9 @@ export async function POST(request: Request) {
         const supabaseAdmin = getSupabaseAdmin()
         const userId = body.clientUtm?.utm_content || clientUtm?.utm_content || null
 
-        // Treat it as a success if the payload explicitly says so
-        const isSuccess = eventType === 'payment.success' && (status === 'SUCCESS' || status === 'success' || status === 'PAID' || status === 'subscription-active' || status === 'ACTIVE' || status === 'active' || !status);
-        const isFailure = eventType === 'payment.failed' || status === 'FAILED' || status === 'failed';
+        // Treat it as a success ONLY if the event object says so
+        const isSuccess = eventType === 'payment.success';
+        const isFailure = eventType === 'payment.failed';
 
         if (!userId && !buyerEmail) {
             console.error('[LAVA-WH] ❌ No user identifier (utm_content) or email found — cannot process event')
@@ -130,26 +124,8 @@ export async function POST(request: Request) {
                 }
             }
         } else if (isFailure) {
-            console.log(`[LAVA-WH] ❌ Payment failed event received. No upgrade for user. Initiating downgrade if applicable.`);
-
-            const downgradeData: Record<string, unknown> = {
-                plan: 'free',
-                is_pro: false,
-                subscription_status: 'failed',
-                generations_limit: 20,
-            }
-
-            if (userId && userId.length > 5) {
-                await supabaseAdmin.from('profiles').update(downgradeData).eq('id', userId);
-                console.log(`[LAVA-WH] 📉 User downgraded to FREE: ${userId}`);
-            } else if (buyerEmail) {
-                const { data: users } = await supabaseAdmin.auth.admin.listUsers()
-                const matchedUser = users?.users?.find(u => u.email === buyerEmail)
-                if (matchedUser) {
-                    await supabaseAdmin.from('profiles').update(downgradeData).eq('id', matchedUser.id);
-                    console.log(`[LAVA-WH] 📉 User downgraded to FREE via Email: ${buyerEmail}`);
-                }
-            }
+            const errorMessage = body.errorMessage || data.errorMessage || 'No error message provided in payload';
+            console.log(`[LAVA-WH] ❌ Payment failed event received. Error: ${errorMessage}`);
         } else {
             console.log(`[LAVA-WH] 🤷‍♂️ Ignored Event Type: ${eventType}`);
         }
