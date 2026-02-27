@@ -23,18 +23,27 @@ export function CheckoutTrigger() {
                     await new Promise(resolve => setTimeout(resolve, 1000));
 
                     const supabase = createClient();
-                    const { data: { session } } = await supabase.auth.getSession();
+                    let { data: { session } } = await supabase.auth.getSession();
 
-                    if (!session?.user?.email) {
-                        console.error('CheckoutTrigger: User email not yet hydrated.');
-                        setIsCheckingOut(false);
-                        return;
+                    if (!session?.user?.email && !session?.user?.user_metadata?.email) {
+                        console.log('CheckoutTrigger: User email not yet hydrated. Waiting 2000ms and refreshing session...');
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        const { data } = await supabase.auth.refreshSession();
+                        session = data.session;
+
+                        if (!session?.user?.email && !session?.user?.user_metadata?.email) {
+                            console.error('CheckoutTrigger: User email still not hydrated after refresh.');
+                            setIsCheckingOut(false);
+                            return;
+                        }
                     }
+
+                    const userEmail = session?.user?.email || session?.user?.user_metadata?.email;
 
                     const response = await fetch('/api/payments/create-invoice', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: session.user.email }),
+                        body: JSON.stringify({ email: userEmail }),
                     });
 
                     const data = await response.json();

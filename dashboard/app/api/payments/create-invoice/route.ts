@@ -27,11 +27,11 @@ export async function POST(request: Request) {
             console.error('[DEBUG] Failed to parse request body as JSON:', parseError);
         }
 
-        let finalEmail = reqBody.email || user.email;
+        let finalEmail = reqBody.email || user?.email || user?.user_metadata?.email;
 
         // Force fallback for debugging if email is somehow entirely missing
         if (!finalEmail) {
-            console.log('[DEBUG] No email provided in body or session. Using test fallback.');
+            console.error('[FATAL] No email found even with fallbacks in body, session, or metadata. Using test fallback.');
             finalEmail = 'test-email@atomix.guru';
         }
 
