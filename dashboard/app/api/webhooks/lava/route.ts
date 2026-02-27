@@ -62,17 +62,18 @@ export async function POST(request: Request) {
         const clientUtm = data.clientUtm || body.clientUtm
 
         // Deep email parsing
-        const buyerEmail = body.email || body.account || body.payerEmail || data.email || data.account || data.payerEmail || data.buyer?.email || data.customer_email || body.additional_data?.email || data.additional_data?.email || null
+        const buyerEmail = body.buyer?.email || body.email || body.account || body.payerEmail || data.email || data.account || data.payerEmail || data.buyer?.email || data.customer_email || body.additional_data?.email || data.additional_data?.email || null
 
+        console.log('[LAVA-DATA] Found User ID:', body.clientUtm?.utm_content, 'Email:', body.buyer?.email)
         console.log('[LAVA-WH] parsed eventType:', eventType, '| status:', status, '| contractId:', contractId)
         console.log('[LAVA-WH] clientUtm:', JSON.stringify(clientUtm))
         console.log('[LAVA-WH] extracted email:', buyerEmail)
 
         const supabaseAdmin = getSupabaseAdmin()
-        const userId = clientUtm?.utm_content || null
+        const userId = body.clientUtm?.utm_content || clientUtm?.utm_content || null
 
         // Treat it as a success if the payload explicitly says so, or if it's the default V3 structural assumption
-        const isSuccess = status === 'SUCCESS' || status === 'success' || status === 'PAID' || eventType === 'payment.success'
+        const isSuccess = eventType === 'payment.success' || status === 'SUCCESS' || status === 'success' || status === 'PAID'
 
         if (isSuccess) {
             if (!userId && !buyerEmail) {
