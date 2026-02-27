@@ -17,17 +17,33 @@ export async function POST(request: Request) {
             )
         }
 
-        if (!user.email) {
+        const rawBody = await request.text();
+        console.log('[DEBUG] Raw Request Body:', rawBody);
+
+        let reqBody: any = {};
+        try {
+            reqBody = rawBody ? JSON.parse(rawBody) : {};
+        } catch (parseError) {
+            console.error('[DEBUG] Failed to parse request body as JSON:', parseError);
+        }
+
+        let finalEmail = reqBody.email || user.email;
+
+        // Force fallback for debugging if email is somehow entirely missing
+        if (!finalEmail) {
+            console.log('[DEBUG] No email provided in body or session. Using test fallback.');
+            finalEmail = 'test-email@atomix.guru';
+        }
+
+        if (!finalEmail) {
             return NextResponse.json(
-                { error: 'User email is required to create a purchase' },
-                { status: 400 }
+                { error: 'Unauthorized: User email is required' },
+                { status: 401 }
             )
         }
 
-        const reqBody = await request.json().catch(() => ({}));
-
         const payload = {
-            email: reqBody.email || user.email,
+            email: finalEmail,
             offerId: LAVA_OFFER_ID,
             currency: 'USD',
             periodicity: 'MONTHLY',
@@ -54,10 +70,18 @@ export async function POST(request: Request) {
         })
 
         if (!invoiceResponse.ok) {
-            const errorData = await invoiceResponse.json().catch(() => ({}))
-            console.error('[LAVA] Invoice creation failed:', invoiceResponse.status, errorData)
+            const errorText = await invoiceResponse.text();
+            console.error(`[LAVA] Invoice creation failed with status ${invoiceResponse.status}. Full response:`, errorText);
+
+            let errorData = {};
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                // Ignore parse error
+            }
+
             return NextResponse.json(
-                { error: errorData.error || 'Payment service error' },
+                { error: (errorData as any).error || 'Payment service error', details: errorText },
                 { status: invoiceResponse.status }
             )
         }

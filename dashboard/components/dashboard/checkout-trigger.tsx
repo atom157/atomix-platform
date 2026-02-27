@@ -19,6 +19,9 @@ export function CheckoutTrigger() {
 
             const handleCheckout = async () => {
                 try {
+                    // Give the Supabase session 1000ms to fully hydrate after OAuth redirect
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
                     const supabase = createClient();
                     const { data: { session } } = await supabase.auth.getSession();
 
