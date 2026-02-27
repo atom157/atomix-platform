@@ -37,12 +37,14 @@ export async function POST(request: Request) {
 
         if (signature && webhookSecret) {
             if (!verifyLavaSignature(payload, signature, webhookSecret)) {
-                console.error('[WEBHOOK] Signature mismatch, but proceeding with update for testing...')
+                console.error('[LAVA-WH] ❌ Invalid HMAC Signature. Rejecting request.')
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
             } else {
                 console.log('[LAVA-WH] 🔒 Signature Verified')
             }
         } else {
-            console.warn('[LAVA-WH] ⚠️ Missing signature header or webhook secret environment variable')
+            console.error('[LAVA-WH] ❌ Missing signature header or webhook secret environment variable')
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
         let body: any = {}
@@ -54,8 +56,8 @@ export async function POST(request: Request) {
         }
 
         // Extremely flexible parsing to handle Lava.top's V2 vs V3 structure differences
-        const eventType = body.type || body.event || 'payment.success'
         const data = body.data || body.invoice || body
+        const eventType = body.eventType || body.type || body.event || data.eventType || data.type || data.event || 'unknown'
 
         const contractId = data.contractId || data.id || body.id
         const status = data.status || body.status
@@ -72,15 +74,16 @@ export async function POST(request: Request) {
         const supabaseAdmin = getSupabaseAdmin()
         const userId = body.clientUtm?.utm_content || clientUtm?.utm_content || null
 
-        // Treat it as a success if the payload explicitly says so, or if it's the default V3 structural assumption
-        const isSuccess = eventType === 'payment.success' || status === 'SUCCESS' || status === 'success' || status === 'PAID'
+        // Treat it as a success if the payload explicitly says so
+        const isSuccess = eventType === 'payment.success' && (status === 'SUCCESS' || status === 'success' || status === 'PAID' || status === 'subscription-active' || status === 'ACTIVE' || status === 'active' || !status);
+        const isFailure = eventType === 'payment.failed' || status === 'FAILED' || status === 'failed';
+
+        if (!userId && !buyerEmail) {
+            console.error('[LAVA-WH] ❌ No user identifier (utm_content) or email found — cannot process event')
+            return NextResponse.json({ received: true })
+        }
 
         if (isSuccess) {
-            if (!userId && !buyerEmail) {
-                console.error('[LAVA-WH] ❌ No user identifier (utm_content) or email found — cannot update profile')
-                return NextResponse.json({ received: true })
-            }
-
             const updateData: Record<string, unknown> = {
                 plan: 'pro',
                 is_pro: true, // Specific true flag for the database spec
@@ -120,6 +123,29 @@ export async function POST(request: Request) {
                     console.warn('[LAVA-WH] ⚠️ Supabase Auth listUsers() yielded no match for email:', buyerEmail)
                 }
             }
+        } else if (isFailure) {
+            console.log(`[LAVA-WH] ❌ Payment failed event received. No upgrade for user. Initiating downgrade if applicable.`);
+
+            const downgradeData: Record<string, unknown> = {
+                plan: 'free',
+                is_pro: false,
+                subscription_status: 'failed',
+                generations_limit: 20,
+            }
+
+            if (userId && userId.length > 5) {
+                await supabaseAdmin.from('profiles').update(downgradeData).eq('id', userId);
+                console.log(`[LAVA-WH] 📉 User downgraded to FREE: ${userId}`);
+            } else if (buyerEmail) {
+                const { data: users } = await supabaseAdmin.auth.admin.listUsers()
+                const matchedUser = users?.users?.find(u => u.email === buyerEmail)
+                if (matchedUser) {
+                    await supabaseAdmin.from('profiles').update(downgradeData).eq('id', matchedUser.id);
+                    console.log(`[LAVA-WH] 📉 User downgraded to FREE via Email: ${buyerEmail}`);
+                }
+            }
+        } else {
+            console.log(`[LAVA-WH] 🤷‍♂️ Ignored Event Type: ${eventType}`);
         }
 
         return NextResponse.json({ received: true }, { status: 200 })
