@@ -51,14 +51,21 @@ export default function TermsOfServicePage() {
                     </section>
 
                     <section>
-                        <h2 className="text-2xl font-bold text-white mb-4">5. Disclaimer of Warranties</h2>
+                        <h2 className="text-2xl font-bold text-white mb-4">5. Disclaimer of Warranties & Service Availability</h2>
                         <p className="leading-relaxed">
-                            The Service is provided on an "AS IS" and "AS AVAILABLE" basis. While we strive for accuracy, the AI-generated responses from AtomiX are suggestions. You are solely responsible for reviewing and editing the content before posting it to any public forum. We do not warrant that the AI will always produce error-free or perfectly context-aware results.
+                            The Service is provided on an "AS IS" and "AS AVAILABLE" basis. While we strive for accuracy, the AI-generated responses from AtomiX are suggestions. You are solely responsible for reviewing and editing the content before posting it to any public forum. We do not warrant that the AI will always produce error-free or perfectly context-aware results. We also reserve the right to temporarily suspend the Service for technical maintenance or during upstream API outages (e.g., OpenAI or X).
                         </p>
                     </section>
 
                     <section>
-                        <h2 className="text-2xl font-bold text-white mb-4">6. Changes to Terms</h2>
+                        <h2 className="text-2xl font-bold text-white mb-4">6. Account Liability</h2>
+                        <p className="leading-relaxed">
+                            AtomiX is a third-party tool and is not affiliated with X (formerly Twitter). You acknowledge that you use AtomiX entirely at your own risk. We are not responsible or liable for any account warnings, restrictions, suspensions, shadowbans, or permanent bans resulting from your use of the extension, misuse, spamming, or any violation of X's Terms of Service.
+                        </p>
+                    </section>
+
+                    <section>
+                        <h2 className="text-2xl font-bold text-white mb-4">7. Changes to Terms</h2>
                         <p className="leading-relaxed">
                             We reserve the right to modify or replace these Terms at any time. Material changes will be communicated via the email address associated with your account or a prominent notice on our website.
                         </p>

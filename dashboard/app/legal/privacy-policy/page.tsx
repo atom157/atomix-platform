@@ -45,29 +45,39 @@ export default function PrivacyPolicyPage() {
                     </section>
 
                     <section>
-                        <h2 className="text-2xl font-bold text-white mb-4">4. Third-Party Payment Processing</h2>
-                        <p className="leading-relaxed">
+                        <h2 className="text-2xl font-bold text-white mb-4">4. Third-Party Payment Processing & Subscriptions</h2>
+                        <p className="leading-relaxed mb-4">
                             All payments and subscriptions for AtomiX PRO are processed securely by our authorized third-party payment provider, <strong>Lava.top</strong>.
                             We do not collect, process, or store your credit card information or primary billing details on our servers. When you upgrade, you are redirected to Lava.top's secure checkout. Lava.top notifies our dashboard via a secure webhook only to confirm your payment success so we can grant you PRO access.
+                        </p>
+                        <p className="leading-relaxed">
+                            <strong>Subscription Cancellation:</strong> You may manage, pause, or cancel your PRO subscription at any time. Because billing is handled externally, all subscription management MUST be performed directly through your Lava.top billing portal: <a href="https://app.lava.top/my-purchases" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 transition-colors">https://app.lava.top/my-purchases</a>.
                         </p>
                     </section>
 
                     <section>
-                        <h2 className="text-2xl font-bold text-white mb-4">5. Use of Artificial Intelligence</h2>
+                        <h2 className="text-2xl font-bold text-white mb-4">5. Refund Policy</h2>
+                        <p className="leading-relaxed">
+                            AtomiX operates a robust Free tier that provides a generous allocation of replies allowing users to fully test the AI's capabilities prior to purchase. As such, <strong>refunds are generally not issued</strong>. However, we do honor a 14-day refund window strictly under the condition that the user has consumed fewer than twenty (20) AI generations since the time of their PRO upgrade.
+                        </p>
+                    </section>
+
+                    <section>
+                        <h2 className="text-2xl font-bold text-white mb-4">6. Use of Artificial Intelligence</h2>
                         <p className="leading-relaxed">
                             The text context you submit via the extension is processed securely through OpenAI APIs to generate your desired reply. Your input is processed amorphously and is specifically opted out of being used to train any foundational AI models.
                         </p>
                     </section>
 
                     <section>
-                        <h2 className="text-2xl font-bold text-white mb-4">6. Chrome Web Store Disclosures</h2>
+                        <h2 className="text-2xl font-bold text-white mb-4">7. Chrome Web Store Disclosures</h2>
                         <p className="leading-relaxed">
                             The AtomiX extension requires the <code>activeTab</code> and <code>host_permissions</code> for `x.com` and `twitter.com`. These permissions are strictly utilized solely to inject the AI UI button into the compose box and to read the text of the tweet you are interacting with. We do not operate on outside domains.
                         </p>
                     </section>
 
                     <section>
-                        <h2 className="text-2xl font-bold text-white mb-4">7. Contact Us</h2>
+                        <h2 className="text-2xl font-bold text-white mb-4">8. Contact Us</h2>
                         <p className="leading-relaxed">
                             If you have any questions or concerns about this Privacy Policy or our data practices, please contact us at support@atomix.guru.
                         </p>

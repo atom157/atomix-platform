@@ -1,2 +1,4 @@
 AtomiX needs access to x.com (and twitter.com) to inject the AI reply button seamlessly into the Twitter interface and read the context of the tweet being replied to, which is necessary for generating relevant AI responses. The extension injects a content script to identify tweet text and input fields, and communicates with our backend API (api.atomix.guru) to generate the replies.
 Payments and subscriptions for PRO features are handled securely via a third-party payment provider (Lava.top). We do not collect passwords or personal direct messages, only publicly visible tweet content when the user actively clicks the "Reply with AtomiX" button.
+
+Official Support URL: https://atomix.guru/dashboard/support
