@@ -89,3 +89,4 @@ Require stack:
 - /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/router-server.js
 - /Users/atom_157/Downloads/site ok/dashboard/node_modules/next/dist/server/lib/start-server.js
 [00:47:48.637] Server  ERROR   Error: ENOENT: no such file or directory, open '/Users/atom_157/Downloads/site ok/dashboard/.next/dev/routes-manifest.json'
+[02:48:17.386] Server  LOG      ✓ Compiled in 45ms

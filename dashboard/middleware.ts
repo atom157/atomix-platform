@@ -25,5 +25,6 @@ export const config = {
     '/auth/extension-connected',
     '/api/extension/:path*',
     '/api/lemonsqueezy/:path*',
+    '/api/webhooks/lava/:path*',
   ],
 }

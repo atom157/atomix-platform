@@ -19,7 +19,12 @@ function verifyLavaSignature(payload: string, signature: string, secret: string)
     }
 }
 
+export async function GET() {
+    return NextResponse.json({ status: 'Webhook active' }, { status: 200 })
+}
+
 export async function POST(request: Request) {
+    console.log('[LAVA-INCOMING] Something is hitting the webhook!')
     try {
         const payload = await request.text()
         const signature = request.headers.get('Authorization') || request.headers.get('Signature') || request.headers.get('x-signature') || request.headers.get('x-lava-signature')
