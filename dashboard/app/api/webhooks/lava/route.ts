@@ -32,10 +32,16 @@ export async function POST(request: Request) {
 
         // Log everything for debugging the V3 payload structure
         console.log('[WEBHOOK-RAW] Header Signature:', signature)
+        console.log('[DEBUG] All Headers:', JSON.stringify(Object.fromEntries(request.headers.entries())))
         console.log('[WEBHOOK-RAW] Body:', payload)
         console.log('[LAVA-WH] ===== INCOMING WEBHOOK =====')
 
-        if (signature && webhookSecret) {
+        if (!webhookSecret) {
+            console.error('[FATAL] LAVA_WEBHOOK_SECRET is not defined in Vercel')
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        if (signature) {
             if (!verifyLavaSignature(payload, signature, webhookSecret)) {
                 console.error('[LAVA-WH] ❌ Invalid HMAC Signature. Rejecting request.')
                 return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -43,7 +49,7 @@ export async function POST(request: Request) {
                 console.log('[LAVA-WH] 🔒 Signature Verified')
             }
         } else {
-            console.error('[LAVA-WH] ❌ Missing signature header or webhook secret environment variable')
+            console.error('[LAVA-WH] ❌ Missing signature header in the request')
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
