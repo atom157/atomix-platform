@@ -140,22 +140,10 @@ function checkAuthAndShowState(selectedPromptId) {
       console.log('[POPUP] ❌ Not authenticated');
       showDisconnectedState();
 
-      // Aggressively aggressively poll for token while disconnected
-      // BUT route it directly through the background script to bypass CSP blocks!
-      if (!authCheckInterval) {
-        authCheckInterval = setInterval(() => {
-          chrome.runtime.sendMessage({ type: 'EXTRACT_TOKEN' }, function (response) {
-            if (chrome.runtime.lastError) return;
-
-            if (response && response.ok && response.token && response.userId) {
-              console.log('[POPUP] ✅ Token extracted directly via background fetch API!');
-              clearInterval(authCheckInterval);
-              // Background already stored it, so we just run the checker again
-              checkAuthAndShowState(selectedPromptId);
-            }
-          });
-        }, 1500);
-      }
+      // Token arrives via extension-auth.js DOM handshake on /auth/extension-connected.
+      // The chrome.storage.onChanged listener (at the bottom of this file)
+      // automatically detects when the token is stored and triggers a reload.
+      console.log('[POPUP] Waiting for auth via extension-connected page...');
     }
   });
 }

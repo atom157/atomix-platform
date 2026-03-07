@@ -113,30 +113,18 @@ async function handleFetchPrompts({ extToken }, sendResponse) {
 }
 
 // ── Extract Token Directly via Background Fetch ──────────────────────────────
+// MV3 service workers cannot access web page cookies, so direct fetch with
+// credentials:'include' always returns 401.  Instead we check whether
+// extension-auth.js has already stored the token via the DOM handshake.
 async function handleExtractToken(sendResponse) {
   try {
-    const response = await fetch(`${API_BASE}/api/extension/token`, {
-      method: 'POST',
-      credentials: 'include' // CRITICAL: This passes the HTTP-only Supabase auth cookies!
+    chrome.storage.local.get(['extToken', 'userId'], (result) => {
+      if (result.extToken && result.userId) {
+        sendResponse({ ok: true, token: result.extToken, userId: result.userId });
+      } else {
+        sendResponse({ ok: false, error: 'Not connected. Please click Connect to log in.' });
+      }
     });
-
-    if (response.status === 401 || !response.ok) {
-      sendResponse({ ok: false, status: response.status, error: 'Not authenticated on atomix.guru' });
-      return;
-    }
-
-    const data = await response.json();
-
-    if (data && data.token && data.userId) {
-      // Background script stores it instantly
-      chrome.storage.local.set({ extToken: data.token, userId: data.userId }, () => {
-        chrome.storage.sync.set({ userId: data.userId, isConnected: true }, () => {
-          sendResponse({ ok: true, token: data.token, userId: data.userId });
-        });
-      });
-    } else {
-      sendResponse({ ok: false, error: 'Malformed token response' });
-    }
   } catch (err) {
     console.error('[BG] extractToken error:', err);
     sendResponse({ ok: false, error: err.message || 'Network error' });
