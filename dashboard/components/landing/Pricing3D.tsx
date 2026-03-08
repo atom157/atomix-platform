@@ -106,7 +106,7 @@ export function Pricing3D() {
                             </li>
                         </ul>
                         <a
-                            href="https://chrome.google.com/webstore"
+                            href="https://chromewebstore.google.com/detail/atomix-%E2%80%94-ai-replies-for-x/jajfflglndpaipninocbcaphhkgaapog"
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={() => posthog?.capture('pricing_clicked', { plan: 'free' })}

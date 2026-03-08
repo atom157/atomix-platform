@@ -81,10 +81,10 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-4">
             <Link href="/auth/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 hidden md:block">Log in</Link>
-            <Link href="/auth/sign-up" onClick={() => posthog?.capture('cta_clicked', { location: 'navbar' })} className="group bg-slate-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2">
+            <a href="https://chromewebstore.google.com/detail/atomix-%E2%80%94-ai-replies-for-x/jajfflglndpaipninocbcaphhkgaapog" target="_blank" rel="noopener noreferrer" onClick={() => posthog?.capture('cta_clicked', { location: 'navbar' })} className="group bg-slate-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2">
               <ChromeIcon className="w-[14px] h-[14px] transition-transform duration-300 group-hover:scale-[1.15]" />
               Get Extension
-            </Link>
+            </a>
           </div>
         </div>
       </header>
@@ -115,10 +115,10 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto pt-2">
-                <Link href="/auth/sign-up" onClick={() => posthog?.capture('cta_clicked', { location: 'hero' })} className="group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-blue-500/25 rounded-full px-8 h-14 text-base font-semibold flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                <a href="https://chromewebstore.google.com/detail/atomix-%E2%80%94-ai-replies-for-x/jajfflglndpaipninocbcaphhkgaapog" target="_blank" rel="noopener noreferrer" onClick={() => posthog?.capture('cta_clicked', { location: 'hero' })} className="group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-blue-500/25 rounded-full px-8 h-14 text-base font-semibold flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98]">
                   <ChromeIcon className="w-[20px] h-[20px] transition-transform duration-300 group-hover:scale-[1.12]" />
                   Add to Chrome — Free
-                </Link>
+                </a>
                 <a href="#how-it-works" className="rounded-full px-8 h-14 text-base font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center">
                   View Demo
                 </a>
