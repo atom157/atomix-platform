@@ -291,14 +291,14 @@
   // ── Visual typewriter overlay ──────────────────────────────────────────────
   // Shows the reply text appearing character-by-character in a div that
   // perfectly matches the editor's native styling (transparent background,
-  // same font/color/padding). The overlay sits directly on top of the editor
-  // so the animation is indistinguishable from real typing.
+  // same font/color/padding). Hides the placeholder and auto-expands the
+  // editor box as text wraps — indistinguishable from real typing.
   function showTypewriterOverlay(editor, text) {
     return new Promise(resolve => {
       // Read the editor's actual computed styles so the overlay matches exactly
       const editorStyles = getComputedStyle(editor);
 
-      // Create the overlay
+      // Create the overlay — no bottom:0 so it can grow naturally with content
       const overlay = document.createElement('div');
       overlay.className = 'xrg-typewriter-overlay';
       overlay.style.cssText = `
@@ -306,7 +306,6 @@
         top: 0;
         left: 0;
         right: 0;
-        bottom: 0;
         z-index: 9999;
         background: transparent;
         color: ${editorStyles.color};
@@ -320,16 +319,37 @@
         white-space: pre-wrap;
         word-wrap: break-word;
         box-sizing: border-box;
-        overflow: hidden;
       `;
 
-      // Hide the editor's placeholder text ("Post your reply") during animation
-      const placeholder = editor.closest('[data-testid="tweetTextarea_0_label"]')
-        ?.querySelector('[data-testid="tweetTextarea_0_placeholder"]')
-        || editor.parentElement?.querySelector('[class*="placeholder"]')
-        || editor.parentElement?.querySelector('[style*="pointer-events: none"]');
+      // ── Hide the placeholder text ("Post your reply") ──
+      // The placeholder is inside the <label> wrapper, not the editor's direct parent.
+      // Search broadly: walk up from the editor to find the label, then look inside.
+      const labelContainer = editor.closest('[data-testid="tweetTextarea_0_label"]')
+        || editor.closest('[data-contents]')?.parentElement
+        || editor.parentElement?.parentElement;
+
+      let placeholder = null;
+      if (labelContainer) {
+        // Try X's known test-id first
+        placeholder = labelContainer.querySelector('[data-testid="tweetTextarea_0_placeholder"]');
+        // Fallback: any element with "placeholder" in class or data attributes
+        if (!placeholder) {
+          placeholder = labelContainer.querySelector('[class*="placeholder" i]');
+        }
+        // Fallback: the pointer-events:none div that overlaps the editor
+        if (!placeholder) {
+          for (const child of labelContainer.children) {
+            if (child !== editor.parentElement && child !== editor
+              && getComputedStyle(child).pointerEvents === 'none') {
+              placeholder = child;
+              break;
+            }
+          }
+        }
+      }
+
+      const placeholderPrevDisplay = placeholder ? placeholder.style.display : null;
       if (placeholder) {
-        placeholder.dataset.xrgHidden = placeholder.style.display;
         placeholder.style.display = 'none';
       }
 
@@ -338,6 +358,9 @@
       const prevPosition = parent.style.position;
       parent.style.position = 'relative';
       parent.appendChild(overlay);
+
+      // Save the editor's original minHeight so we can restore it
+      const prevMinHeight = editor.style.minHeight;
 
       // Add blink keyframe if not yet present
       if (!document.getElementById('xrg-typewriter-style')) {
@@ -369,6 +392,13 @@
         if (i < text.length) {
           textNode.textContent += text[i];
           i++;
+
+          // ── Auto-expand: sync editor height to overlay content ──
+          const overlayHeight = overlay.scrollHeight;
+          if (overlayHeight > editor.offsetHeight) {
+            editor.style.minHeight = overlayHeight + 'px';
+          }
+
           const delay = Math.floor(Math.random() * 30) + 15;
           setTimeout(typeNext, delay);
         } else {
@@ -376,10 +406,10 @@
           setTimeout(() => {
             overlay.remove();
             parent.style.position = prevPosition;
-            // Restore placeholder (it will be hidden again by Draft.js after real insert)
+            editor.style.minHeight = prevMinHeight;
+            // Restore placeholder (Draft.js will re-hide it after single-shot insert)
             if (placeholder) {
-              placeholder.style.display = placeholder.dataset.xrgHidden || '';
-              delete placeholder.dataset.xrgHidden;
+              placeholder.style.display = placeholderPrevDisplay || '';
             }
             resolve();
           }, 150);
