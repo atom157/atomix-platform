@@ -227,10 +227,9 @@
     return result.reply;
   }
 
-  // Insert generated reply into Twitter's editor using a simulated paste event.
-  // Draft.js's strict internal state management breaks with character-by-character
-  // insertion (placeholder persists, Backspace fails, Reply button stays disabled).
-  // A DataTransfer paste is the only method that fully syncs Draft.js state.
+  // Insert generated reply into Twitter's editor using TextEvent('textInput').
+  // This is the most reliable way to trigger React's synthetic onChange in
+  // contenteditable Draft.js editors, making text fully editable afterward.
   async function insertReply(text) {
     const editor = document.querySelector('[data-testid="tweetTextarea_0"]') ||
       document.querySelector('[contenteditable="true"][role="textbox"]');
@@ -253,55 +252,52 @@
       document.execCommand('delete', false, null);
       await sleep(50);
 
-      // Re-focus and place caret
+      // Re-focus and collapse caret to start
       editor.focus();
       await sleep(30);
 
-      // --- Method 1: Simulated paste via DataTransfer (most reliable for Draft.js) ---
-      const dataTransfer = new DataTransfer();
-      dataTransfer.setData('text/plain', text);
+      // --- Method 1: TextEvent (fires React's onChange via synthetic event path) ---
+      let textInserted = false;
 
-      const pasteEvent = new ClipboardEvent('paste', {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-        clipboardData: dataTransfer,
-      });
+      // Try the legacy TextEvent (document.createEvent) — widely supported in Chrome
+      try {
+        const textEvent = document.createEvent('TextEvent');
+        textEvent.initTextEvent('textInput', true, true, window, text);
+        editor.dispatchEvent(textEvent);
+        await sleep(50);
 
-      editor.dispatchEvent(pasteEvent);
-      await sleep(100);
+        if (editor.textContent.includes(text.substring(0, 10))) {
+          textInserted = true;
+        }
+      } catch (e) {
+        console.warn('[XRG] TextEvent not supported, trying fallback');
+      }
 
-      // Check if the paste was handled by Draft.js
-      if (editor.textContent.includes(text.substring(0, 10))) {
+      // --- Method 2: execCommand + InputEvent fallback ---
+      if (!textInserted) {
+        editor.focus();
+        const inserted = document.execCommand('insertText', false, text);
+
+        if (inserted && editor.textContent.includes(text.substring(0, 10))) {
+          // Fire input event to nudge React state
+          editor.dispatchEvent(new InputEvent('input', {
+            data: text,
+            inputType: 'insertText',
+            bubbles: true,
+            cancelable: false,
+            composed: true,
+          }));
+          textInserted = true;
+        }
+      }
+
+      if (textInserted) {
         // Move cursor to end
         const endRange = document.createRange();
         endRange.selectNodeContents(editor);
         endRange.collapse(false);
         selection.removeAllRanges();
         selection.addRange(endRange);
-        return true;
-      }
-
-      // --- Method 2: execCommand insertText fallback ---
-      editor.focus();
-      const inserted = document.execCommand('insertText', false, text);
-
-      if (inserted && editor.textContent.includes(text.substring(0, 10))) {
-        const endRange = document.createRange();
-        endRange.selectNodeContents(editor);
-        endRange.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(endRange);
-
-        // Dispatch input event to nudge React
-        editor.dispatchEvent(new InputEvent('input', {
-          data: text,
-          inputType: 'insertText',
-          bubbles: true,
-          cancelable: false,
-          composed: true,
-        }));
-
         return true;
       }
 
