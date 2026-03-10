@@ -228,8 +228,8 @@
   }
 
   // Insert generated reply into Twitter's editor with a human-like typewriter effect.
-  // Uses execCommand('insertText') per character which is the most reliable method
-  // for contenteditable editors in Twitter/X (triggers React/Draft.js state updates).
+  // Dispatches the full keyboard event sequence per character so React/Draft.js
+  // correctly registers the input (placeholder disappears, Backspace works, etc.).
   async function insertReply(text) {
     const editor = document.querySelector('[data-testid="tweetTextarea_0"]') ||
       document.querySelector('[contenteditable="true"][role="textbox"]');
@@ -239,31 +239,58 @@
     }
 
     try {
+      // Ensure the editor is focused before typing
       editor.focus();
       await sleep(100);
 
-      // Select all existing content so the first character replaces it
+      // Select and delete any existing content
       const selection = window.getSelection();
       const range = document.createRange();
       range.selectNodeContents(editor);
       selection.removeAllRanges();
       selection.addRange(range);
-
-      // Clear existing content first
       document.execCommand('delete', false, null);
       await sleep(50);
 
-      // Type character by character with random human-like delays
+      // Re-focus after clearing to make sure caret is in the editor
+      editor.focus();
+      await sleep(30);
+
+      // Type character by character with full event simulation
       for (let i = 0; i < text.length; i++) {
         const char = text[i];
-        const inserted = document.execCommand('insertText', false, char);
+        const keyCode = char.charCodeAt(0);
 
-        if (!inserted) {
-          // If execCommand fails mid-way, insert the remainder at once
-          const remainder = text.substring(i);
-          document.execCommand('insertText', false, remainder);
-          break;
-        }
+        const eventDefaults = {
+          key: char,
+          code: `Key${char.toUpperCase()}`,
+          keyCode: keyCode,
+          which: keyCode,
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+        };
+
+        // 1. keydown
+        editor.dispatchEvent(new KeyboardEvent('keydown', eventDefaults));
+
+        // 2. keypress
+        editor.dispatchEvent(new KeyboardEvent('keypress', eventDefaults));
+
+        // 3. Insert the character via execCommand (updates the DOM)
+        document.execCommand('insertText', false, char);
+
+        // 4. input event (critical for React state sync)
+        editor.dispatchEvent(new InputEvent('input', {
+          data: char,
+          inputType: 'insertText',
+          bubbles: true,
+          cancelable: false,
+          composed: true,
+        }));
+
+        // 5. keyup
+        editor.dispatchEvent(new KeyboardEvent('keyup', eventDefaults));
 
         // Random delay between 15ms and 45ms to simulate human typing
         const delay = Math.floor(Math.random() * 30) + 15;
