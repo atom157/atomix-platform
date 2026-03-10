@@ -229,17 +229,17 @@
 
   // ── Insert reply into X's Draft.js editor ────────────────────────────────────
   //
-  // ROOT CAUSE of all previous failures:
-  //   Manual DOM selection manipulation (createRange / addRange) permanently
-  //   desyncs Draft.js's internal SelectionState. Draft.js then thinks the
-  //   editor is empty, so Backspace and the Reply button break.
+  // LESSON LEARNED (after 5 iterations):
+  //   Draft.js CANNOT accept character-by-character programmatic input.
+  //   Each execCommand('insertText', char) causes Draft.js to re-render and
+  //   desync its internal EditorState. The ONLY method that works is a
+  //   SINGLE-SHOT execCommand('insertText', false, fullText).
   //
-  // SOLUTION:  Never touch the DOM selection directly.
-  //   • Use ONLY execCommand() for select/delete/insert — these fire native
-  //     beforeinput events that Draft.js intercepts and handles properly.
-  //   • If execCommand fails, fall back to React Fiber introspection to call
-  //     Draft.js's internal handlers directly.
-  //   • Typewriter effect: insert character-by-character with random delays.
+  // SOLUTION: Visual typewriter + single-shot inject.
+  //   1. Show a floating overlay with the text appearing char-by-char
+  //   2. After the animation, inject the full text in one atomic operation
+  //   3. Draft.js handles the single insertion correctly: placeholder hides,
+  //      Reply button activates, Backspace works.
   //
   async function insertReply(text) {
     const editor = document.querySelector('[data-testid="tweetTextarea_0"]') ||
@@ -250,56 +250,35 @@
     }
 
     try {
-      // ── Step 1: Focus the editor (required for all methods) ──
+      // ── Step 1: Show visual typewriter animation ──
+      await showTypewriterOverlay(editor, text);
+
+      // ── Step 2: Focus editor and clear any existing content ──
       editor.focus();
-      await sleep(120);
+      await sleep(100);
 
-      // ── Step 2: Clear existing content using ONLY execCommand ──
-      // Do NOT use createRange / addRange — that desyncs Draft.js.
-      document.execCommand('selectAll', false, null);
-      await sleep(30);
-      document.execCommand('delete', false, null);
-      await sleep(60);
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      selection.removeAllRanges();
+      selection.addRange(range);
 
-      // Re-focus in case delete blurred
-      editor.focus();
-      await sleep(30);
+      await sleep(50);
 
-      // ── Step 3: Try character-by-character insertion ──
-      let success = false;
+      // ── Step 3: Single-shot insert (the ONLY method Draft.js accepts) ──
+      const inserted = document.execCommand('insertText', false, text);
 
-      // --- Approach A: Pure execCommand per character ---
-      // execCommand('insertText') fires a native beforeinput event in Chrome.
-      // Draft.js intercepts beforeinput, updates its EditorState, and re-renders.
-      // We must NOT dispatch any extra synthetic events — they interfere.
-      success = await typewriterExecCommand(editor, text);
-
-      // --- Approach B: React Fiber introspection fallback ---
-      if (!success) {
-        console.log('[XRG] execCommand failed, trying React Fiber approach...');
-        success = await typewriterReactFiber(editor, text);
-      }
-
-      // --- Approach C: Bulk TextEvent fallback ---
-      if (!success) {
-        console.log('[XRG] React Fiber failed, trying TextEvent...');
-        try {
-          editor.focus();
-          const textEvent = document.createEvent('TextEvent');
-          textEvent.initTextEvent('textInput', true, true, window, text);
-          editor.dispatchEvent(textEvent);
-          await sleep(50);
-          success = editor.textContent.includes(text.substring(0, 10));
-        } catch (e) {
-          console.warn('[XRG] TextEvent not supported');
-        }
-      }
-
-      if (success) {
+      if (inserted && editor.textContent.includes(text.substring(0, 10))) {
+        // Move cursor to end
+        const endRange = document.createRange();
+        endRange.selectNodeContents(editor);
+        endRange.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(endRange);
         return true;
       }
 
-      // --- Last resort: clipboard ---
+      // Fallback: clipboard
       await navigator.clipboard.writeText(text);
       return false;
     } catch (error) {
@@ -309,104 +288,95 @@
     }
   }
 
-  // ── Approach A: Pure execCommand typewriter ─────────────────────────────────
-  // No synthetic events, no manual selection. Just execCommand which fires
-  // native beforeinput that Draft.js handles.
-  async function typewriterExecCommand(editor, text) {
-    for (let i = 0; i < text.length; i++) {
-      // Ensure focus before each character (Draft.js may blur on re-render)
-      if (document.activeElement !== editor) {
-        editor.focus();
-        await sleep(10);
+  // ── Visual typewriter overlay ──────────────────────────────────────────────
+  // Shows the reply text appearing character-by-character in a floating div
+  // positioned over the editor, giving the illusion of typing without touching
+  // Draft.js state at all.
+  function showTypewriterOverlay(editor, text) {
+    return new Promise(resolve => {
+      // Create the overlay
+      const overlay = document.createElement('div');
+      overlay.className = 'xrg-typewriter-overlay';
+      overlay.style.cssText = `
+        position: absolute;
+        z-index: 9999;
+        background: var(--background-primary, rgb(255, 255, 255));
+        color: var(--text-primary, rgb(15, 20, 25));
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 15px;
+        line-height: 20px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        pointer-events: none;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        min-height: 24px;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+      `;
+
+      // Match dark mode
+      const isDark = document.documentElement.style.colorScheme === 'dark' ||
+        document.body.style.backgroundColor === 'rgb(0, 0, 0)' ||
+        getComputedStyle(document.body).backgroundColor === 'rgb(0, 0, 0)';
+      if (isDark) {
+        overlay.style.background = 'rgb(22, 24, 28)';
+        overlay.style.color = 'rgb(231, 233, 234)';
       }
 
-      const ok = document.execCommand('insertText', false, text[i]);
+      // Position over the editor
+      const editorRect = editor.getBoundingClientRect();
+      const parent = editor.closest('[data-testid="tweetTextarea_0_label"]') || editor.parentElement;
+      parent.style.position = 'relative';
+      parent.appendChild(overlay);
 
-      if (!ok) {
-        console.warn('[XRG] execCommand failed at char', i);
-        return false;
+      // Typing cursor element
+      const cursor = document.createElement('span');
+      cursor.style.cssText = `
+        display: inline-block;
+        width: 1px;
+        height: 1em;
+        background: currentColor;
+        margin-left: 1px;
+        vertical-align: text-bottom;
+        animation: xrg-blink 0.7s step-end infinite;
+      `;
+
+      // Add blink keyframe if not yet present
+      if (!document.getElementById('xrg-typewriter-style')) {
+        const style = document.createElement('style');
+        style.id = 'xrg-typewriter-style';
+        style.textContent = `
+          @keyframes xrg-blink {
+            50% { opacity: 0; }
+          }
+        `;
+        document.head.appendChild(style);
       }
 
-      // Random 15–45ms delay for human-like typing
-      await sleep(Math.floor(Math.random() * 30) + 15);
-    }
+      let i = 0;
+      const textNode = document.createTextNode('');
+      overlay.appendChild(textNode);
+      overlay.appendChild(cursor);
 
-    await sleep(50);
-    return editor.textContent.includes(text.substring(0, 10));
-  }
-
-  // ── Approach B: React Fiber introspection ───────────────────────────────────
-  // Finds Draft.js's internal React props on the DOM node and calls
-  // onBeforeInput directly, fully syncing the EditorState.
-  async function typewriterReactFiber(editor, text) {
-    // Find the React internal properties on the editor or its parent
-    const target = findReactPropsNode(editor);
-    if (!target) {
-      console.warn('[XRG] Could not find React props on editor');
-      return false;
-    }
-
-    const propsKey = Object.keys(target).find(k => k.startsWith('__reactProps$'));
-    const props = target[propsKey];
-
-    if (!props || !props.onBeforeInput) {
-      console.warn('[XRG] No onBeforeInput handler found');
-      return false;
-    }
-
-    console.log('[XRG] Found Draft.js onBeforeInput handler, using Fiber approach');
-
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-
-      editor.focus();
-
-      // Build a minimal event-like object that Draft.js's onBeforeInput expects
-      const fakeEvent = {
-        data: char,
-        preventDefault: () => { },
-        stopPropagation: () => { },
-        nativeEvent: { data: char, inputType: 'insertText', preventDefault: () => { } },
-        type: 'beforeinput',
-        target: editor,
-        currentTarget: editor,
-        bubbles: true,
-        cancelable: true,
-        defaultPrevented: false,
-        eventPhase: 0,
-        isTrusted: false,
-        timeStamp: Date.now(),
-        isDefaultPrevented: () => false,
-        isPropagationStopped: () => false,
-        persist: () => { },
-      };
-
-      try {
-        props.onBeforeInput(fakeEvent);
-      } catch (e) {
-        console.warn('[XRG] onBeforeInput threw:', e.message);
-        return false;
+      function typeNext() {
+        if (i < text.length) {
+          textNode.textContent += text[i];
+          i++;
+          const delay = Math.floor(Math.random() * 30) + 15;
+          setTimeout(typeNext, delay);
+        } else {
+          // Animation done — remove overlay after a brief pause
+          setTimeout(() => {
+            overlay.remove();
+            resolve();
+          }, 200);
+        }
       }
 
-      // Random 15–45ms delay for human-like typing
-      await sleep(Math.floor(Math.random() * 30) + 15);
-    }
-
-    await sleep(50);
-    return editor.textContent.includes(text.substring(0, 10));
-  }
-
-  // Walk up from the editor node to find the first element with __reactProps$
-  function findReactPropsNode(node) {
-    let current = node;
-    for (let i = 0; i < 10 && current; i++) {
-      const propsKey = Object.keys(current).find(k => k.startsWith('__reactProps$'));
-      if (propsKey && current[propsKey]?.onBeforeInput) {
-        return current;
-      }
-      current = current.parentElement;
-    }
-    return null;
+      typeNext();
+    });
   }
 
   function sleep(ms) {
