@@ -289,76 +289,81 @@
   }
 
   // ── Visual typewriter overlay ──────────────────────────────────────────────
-  // Shows the reply text appearing character-by-character in a floating div
-  // positioned over the editor, giving the illusion of typing without touching
-  // Draft.js state at all.
+  // Shows the reply text appearing character-by-character in a div that
+  // perfectly matches the editor's native styling (transparent background,
+  // same font/color/padding). The overlay sits directly on top of the editor
+  // so the animation is indistinguishable from real typing.
   function showTypewriterOverlay(editor, text) {
     return new Promise(resolve => {
+      // Read the editor's actual computed styles so the overlay matches exactly
+      const editorStyles = getComputedStyle(editor);
+
       // Create the overlay
       const overlay = document.createElement('div');
       overlay.className = 'xrg-typewriter-overlay';
       overlay.style.cssText = `
         position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         z-index: 9999;
-        background: var(--background-primary, rgb(255, 255, 255));
-        color: var(--text-primary, rgb(15, 20, 25));
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        font-size: 15px;
-        line-height: 20px;
-        padding: 12px 16px;
-        border-radius: 8px;
+        background: transparent;
+        color: ${editorStyles.color};
+        font-family: ${editorStyles.fontFamily};
+        font-size: ${editorStyles.fontSize};
+        font-weight: ${editorStyles.fontWeight};
+        line-height: ${editorStyles.lineHeight};
+        letter-spacing: ${editorStyles.letterSpacing};
+        padding: ${editorStyles.padding};
         pointer-events: none;
         white-space: pre-wrap;
         word-wrap: break-word;
-        min-height: 24px;
-        max-width: 100%;
         box-sizing: border-box;
         overflow: hidden;
       `;
 
-      // Match dark mode
-      const isDark = document.documentElement.style.colorScheme === 'dark' ||
-        document.body.style.backgroundColor === 'rgb(0, 0, 0)' ||
-        getComputedStyle(document.body).backgroundColor === 'rgb(0, 0, 0)';
-      if (isDark) {
-        overlay.style.background = 'rgb(22, 24, 28)';
-        overlay.style.color = 'rgb(231, 233, 234)';
+      // Hide the editor's placeholder text ("Post your reply") during animation
+      const placeholder = editor.closest('[data-testid="tweetTextarea_0_label"]')
+        ?.querySelector('[data-testid="tweetTextarea_0_placeholder"]')
+        || editor.parentElement?.querySelector('[class*="placeholder"]')
+        || editor.parentElement?.querySelector('[style*="pointer-events: none"]');
+      if (placeholder) {
+        placeholder.dataset.xrgHidden = placeholder.style.display;
+        placeholder.style.display = 'none';
       }
 
-      // Position over the editor
-      const editorRect = editor.getBoundingClientRect();
-      const parent = editor.closest('[data-testid="tweetTextarea_0_label"]') || editor.parentElement;
+      // Position the overlay relative to the editor's parent
+      const parent = editor.parentElement;
+      const prevPosition = parent.style.position;
       parent.style.position = 'relative';
       parent.appendChild(overlay);
-
-      // Typing cursor element
-      const cursor = document.createElement('span');
-      cursor.style.cssText = `
-        display: inline-block;
-        width: 1px;
-        height: 1em;
-        background: currentColor;
-        margin-left: 1px;
-        vertical-align: text-bottom;
-        animation: xrg-blink 0.7s step-end infinite;
-      `;
 
       // Add blink keyframe if not yet present
       if (!document.getElementById('xrg-typewriter-style')) {
         const style = document.createElement('style');
         style.id = 'xrg-typewriter-style';
-        style.textContent = `
-          @keyframes xrg-blink {
-            50% { opacity: 0; }
-          }
-        `;
+        style.textContent = `@keyframes xrg-blink { 50% { opacity: 0; } }`;
         document.head.appendChild(style);
       }
 
-      let i = 0;
+      // Typing cursor element (thin blinking line like X's native cursor)
+      const cursor = document.createElement('span');
+      cursor.style.cssText = `
+        display: inline-block;
+        width: 1px;
+        height: 1.2em;
+        background: ${editorStyles.caretColor || editorStyles.color};
+        margin-left: 1px;
+        vertical-align: text-bottom;
+        animation: xrg-blink 0.53s step-end infinite;
+      `;
+
       const textNode = document.createTextNode('');
       overlay.appendChild(textNode);
       overlay.appendChild(cursor);
+
+      let i = 0;
 
       function typeNext() {
         if (i < text.length) {
@@ -367,11 +372,17 @@
           const delay = Math.floor(Math.random() * 30) + 15;
           setTimeout(typeNext, delay);
         } else {
-          // Animation done — remove overlay after a brief pause
+          // Animation done — clean up and resolve
           setTimeout(() => {
             overlay.remove();
+            parent.style.position = prevPosition;
+            // Restore placeholder (it will be hidden again by Draft.js after real insert)
+            if (placeholder) {
+              placeholder.style.display = placeholder.dataset.xrgHidden || '';
+              delete placeholder.dataset.xrgHidden;
+            }
             resolve();
-          }, 200);
+          }, 150);
         }
       }
 
