@@ -227,9 +227,10 @@
     return result.reply;
   }
 
-  // Insert generated reply into Twitter's editor with a human-like typewriter effect.
-  // Dispatches the full keyboard event sequence per character so React/Draft.js
-  // correctly registers the input (placeholder disappears, Backspace works, etc.).
+  // Insert generated reply into Twitter's editor using a simulated paste event.
+  // Draft.js's strict internal state management breaks with character-by-character
+  // insertion (placeholder persists, Backspace fails, Reply button stays disabled).
+  // A DataTransfer paste is the only method that fully syncs Draft.js state.
   async function insertReply(text) {
     const editor = document.querySelector('[data-testid="tweetTextarea_0"]') ||
       document.querySelector('[contenteditable="true"][role="textbox"]');
@@ -239,7 +240,7 @@
     }
 
     try {
-      // Ensure the editor is focused before typing
+      // Ensure the editor is focused
       editor.focus();
       await sleep(100);
 
@@ -252,52 +253,25 @@
       document.execCommand('delete', false, null);
       await sleep(50);
 
-      // Re-focus after clearing to make sure caret is in the editor
+      // Re-focus and place caret
       editor.focus();
       await sleep(30);
 
-      // Type character by character with full event simulation
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const keyCode = char.charCodeAt(0);
+      // --- Method 1: Simulated paste via DataTransfer (most reliable for Draft.js) ---
+      const dataTransfer = new DataTransfer();
+      dataTransfer.setData('text/plain', text);
 
-        const eventDefaults = {
-          key: char,
-          code: `Key${char.toUpperCase()}`,
-          keyCode: keyCode,
-          which: keyCode,
-          bubbles: true,
-          cancelable: true,
-          composed: true,
-        };
+      const pasteEvent = new ClipboardEvent('paste', {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        clipboardData: dataTransfer,
+      });
 
-        // 1. keydown
-        editor.dispatchEvent(new KeyboardEvent('keydown', eventDefaults));
+      editor.dispatchEvent(pasteEvent);
+      await sleep(100);
 
-        // 2. keypress
-        editor.dispatchEvent(new KeyboardEvent('keypress', eventDefaults));
-
-        // 3. Insert the character via execCommand (updates the DOM)
-        document.execCommand('insertText', false, char);
-
-        // 4. input event (critical for React state sync)
-        editor.dispatchEvent(new InputEvent('input', {
-          data: char,
-          inputType: 'insertText',
-          bubbles: true,
-          cancelable: false,
-          composed: true,
-        }));
-
-        // 5. keyup
-        editor.dispatchEvent(new KeyboardEvent('keyup', eventDefaults));
-
-        // Random delay between 15ms and 45ms to simulate human typing
-        const delay = Math.floor(Math.random() * 30) + 15;
-        await sleep(delay);
-      }
-
-      // Verify text was inserted
+      // Check if the paste was handled by Draft.js
       if (editor.textContent.includes(text.substring(0, 10))) {
         // Move cursor to end
         const endRange = document.createRange();
@@ -308,7 +282,30 @@
         return true;
       }
 
-      // Fallback: copy to clipboard and let the user paste
+      // --- Method 2: execCommand insertText fallback ---
+      editor.focus();
+      const inserted = document.execCommand('insertText', false, text);
+
+      if (inserted && editor.textContent.includes(text.substring(0, 10))) {
+        const endRange = document.createRange();
+        endRange.selectNodeContents(editor);
+        endRange.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(endRange);
+
+        // Dispatch input event to nudge React
+        editor.dispatchEvent(new InputEvent('input', {
+          data: text,
+          inputType: 'insertText',
+          bubbles: true,
+          cancelable: false,
+          composed: true,
+        }));
+
+        return true;
+      }
+
+      // --- Method 3: Clipboard fallback ---
       await navigator.clipboard.writeText(text);
       return false;
     } catch (error) {
@@ -384,9 +381,6 @@
       const reply = await generateReply(tweetData);
 
       if (reply) {
-        // Show "Typing..." state while the typewriter effect runs
-        btn.innerHTML = `${createSpinner()}<span class="xrg-text">Typing...</span>`;
-
         const inserted = await insertReply(reply);
 
         if (inserted) {
