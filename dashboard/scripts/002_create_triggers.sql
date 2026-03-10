@@ -41,11 +41,12 @@ BEGIN
   -- Insert default prompts for new user
   INSERT INTO public.prompts (user_id, name, content, icon, tone, is_default, sort_order)
   VALUES 
-    (NEW.id, 'Friendly', 'Write a friendly and warm reply that shows genuine interest in the topic. Be supportive and positive.', 'heart', 'friendly', true, 1),
-    (NEW.id, 'Professional', 'Write a professional and business-like reply. Be concise, informative, and maintain a formal tone.', 'briefcase', 'professional', false, 2),
-    (NEW.id, 'Witty', 'Write a clever and witty reply with a touch of humor. Be creative but not offensive.', 'sparkles', 'witty', false, 3),
-    (NEW.id, 'Curious', 'Ask a thoughtful follow-up question that shows genuine curiosity about the topic.', 'help-circle', 'curious', false, 4),
-    (NEW.id, 'Supportive', 'Write an empathetic and supportive reply. Show understanding and offer encouragement.', 'thumbs-up', 'supportive', false, 5);
+    (NEW.id, 'PRO-human', E'Style:\n\u2022 start with lowercase\n\u2022 no period at the end\n\u2022 4\u201316 words (max 20)\n\u2022 human, casual tone\n\u2022 witty or slightly humorous\n\nGoal:\nmake the reply clever or relatable so it attracts likes.\n\nRules:\n\u2022 no hashtags\n\u2022 no emojis\n\u2022 no long explanations\n\u2022 avoid promotional tone\n\u2022 avoid any words with apostrophes (like whats, its, thats)\n\u2022 do not use '' or ?', 'zap', 'friendly', true, 1),
+    (NEW.id, 'Friendly', 'Write a friendly and warm reply that shows genuine interest in the topic. Be supportive and positive.', 'heart', 'friendly', false, 2),
+    (NEW.id, 'Professional', 'Write a professional and business-like reply. Be concise, informative, and maintain a formal tone.', 'briefcase', 'professional', false, 3),
+    (NEW.id, 'Witty', 'Write a clever and witty reply with a touch of humor. Be creative but not offensive.', 'sparkles', 'witty', false, 4),
+    (NEW.id, 'Curious', 'Ask a thoughtful follow-up question that shows genuine curiosity about the topic.', 'help-circle', 'curious', false, 5),
+    (NEW.id, 'Supportive', 'Write an empathetic and supportive reply. Show understanding and offer encouragement.', 'thumbs-up', 'supportive', false, 6);
 
   RETURN NEW;
 END;
