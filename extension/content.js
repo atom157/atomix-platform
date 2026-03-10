@@ -227,9 +227,9 @@
     return result.reply;
   }
 
-  // Insert generated reply into Twitter's editor.
-  // Uses execCommand('insertText') which is the most reliable method
-  // for contenteditable editors in Twitter/X. Falls back to clipboard.
+  // Insert generated reply into Twitter's editor with a human-like typewriter effect.
+  // Uses execCommand('insertText') per character which is the most reliable method
+  // for contenteditable editors in Twitter/X (triggers React/Draft.js state updates).
   async function insertReply(text) {
     const editor = document.querySelector('[data-testid="tweetTextarea_0"]') ||
       document.querySelector('[contenteditable="true"][role="textbox"]');
@@ -242,19 +242,36 @@
       editor.focus();
       await sleep(100);
 
-      // Select all existing content so insertText replaces it
+      // Select all existing content so the first character replaces it
       const selection = window.getSelection();
       const range = document.createRange();
       range.selectNodeContents(editor);
       selection.removeAllRanges();
       selection.addRange(range);
 
+      // Clear existing content first
+      document.execCommand('delete', false, null);
       await sleep(50);
 
-      // Primary method: execCommand insertText (works with React's Draft.js editor)
-      const inserted = document.execCommand('insertText', false, text);
+      // Type character by character with random human-like delays
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const inserted = document.execCommand('insertText', false, char);
 
-      if (inserted && editor.textContent.includes(text.substring(0, 10))) {
+        if (!inserted) {
+          // If execCommand fails mid-way, insert the remainder at once
+          const remainder = text.substring(i);
+          document.execCommand('insertText', false, remainder);
+          break;
+        }
+
+        // Random delay between 15ms and 45ms to simulate human typing
+        const delay = Math.floor(Math.random() * 30) + 15;
+        await sleep(delay);
+      }
+
+      // Verify text was inserted
+      if (editor.textContent.includes(text.substring(0, 10))) {
         // Move cursor to end
         const endRange = document.createRange();
         endRange.selectNodeContents(editor);
@@ -340,6 +357,9 @@
       const reply = await generateReply(tweetData);
 
       if (reply) {
+        // Show "Typing..." state while the typewriter effect runs
+        btn.innerHTML = `${createSpinner()}<span class="xrg-text">Typing...</span>`;
+
         const inserted = await insertReply(reply);
 
         if (inserted) {
