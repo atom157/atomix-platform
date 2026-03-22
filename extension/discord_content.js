@@ -115,42 +115,89 @@
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // ── SVG path anchor ───────────────────────────────────────────────────────
+  // ── Toolbar discovery (structural heuristic) ──────────────────────────────
   //
-  // Discord's native Reply icon SVG contains a distinctive `d` path.
-  // Matching on this path is 100% language-agnostic — it works regardless
-  // of the user's Discord locale (English, Ukrainian, etc.).
-  // The path is the curved reply-arrow that Discord uses.
+  // Discord's hover toolbar is a short-lived container with a few (3-5)
+  // child elements, each wrapping an SVG icon. It floats over the message
+  // via absolute/fixed positioning. We find it by structure, not by
+  // specific IDs, classes, or aria-labels — making this approach resilient
+  // to Discord updates and locale changes.
 
-  // Known `d` values for Discord's reply SVG icon (partial match to be safe)
-  const REPLY_SVG_PATH_FRAGMENT = 'M10 8.26667V4L3 11.4667L10 18.9333V14.56C15 14.56 18.5 16.2667 21 20C20 14.6667 17 9.33333 10 8.26667Z';
+  function findHoverToolbars() {
+    const toolbars = [];
 
-  /**
-   * Find ALL native Reply buttons on the page by checking every <path>
-   * element whose `d` attribute matches the known reply-arrow SVG.
-   * Returns the clickable ancestor (div[role="button"] or button) for each.
-   */
-  function findNativeReplyButtons() {
-    const results = [];
-    const paths = document.querySelectorAll('svg path');
+    // Strategy A: id="message-actions-{snowflake}" (most direct if present)
+    document.querySelectorAll('[id^="message-actions-"]').forEach(el => {
+      toolbars.push({ el, source: 'id:message-actions' });
+    });
 
-    for (const p of paths) {
-      const d = (p.getAttribute('d') || '').trim();
-      // Use startsWith on a unique prefix to tolerate minor Discord changes
-      if (d === REPLY_SVG_PATH_FRAGMENT || d.startsWith('M10 8.26667V4L3 11.4667')) {
-        // Walk up to the clickable wrapper
-        const clickable = p.closest('[role="button"], button, [class*="button"]');
-        if (clickable) results.push(clickable);
+    // Strategy B: Structural heuristic for the floating toolbar.
+    // Look for containers that:
+    //   1. Have 2-6 direct children
+    //   2. Most/all children contain an <svg>
+    //   3. Container or its parent has position: absolute or fixed
+    //   4. Container is NOT a <li>, <ol>, <ul>, <nav>, <main>
+    // This identifies the "icon button row" pattern.
+    const candidates = document.querySelectorAll('div[class]');
+    for (const div of candidates) {
+      const kids = div.children;
+      if (kids.length < 2 || kids.length > 8) continue;
+
+      // Skip if it's clearly not a toolbar
+      const tag = div.tagName.toLowerCase();
+      if (['li', 'ol', 'ul', 'nav', 'main', 'section', 'article'].includes(tag)) continue;
+
+      // Count how many children contain an SVG
+      let svgCount = 0;
+      for (const kid of kids) {
+        if (kid.querySelector('svg') || kid.tagName === 'SVG') svgCount++;
       }
+
+      // At least half the children should have SVGs (icon buttons)
+      if (svgCount < 2 || svgCount < kids.length * 0.5) continue;
+
+      // Check positioning — the toolbar floats
+      const style = getComputedStyle(div);
+      const parentStyle = div.parentElement ? getComputedStyle(div.parentElement) : null;
+      const isFloating = ['absolute', 'fixed'].includes(style.position)
+        || (parentStyle && ['absolute', 'fixed'].includes(parentStyle.position));
+
+      if (!isFloating) continue;
+
+      // Skip items already accounted for by Strategy A
+      if (div.id && div.id.startsWith('message-actions-')) continue;
+      if (div.closest('[id^="message-actions-"]')) continue;
+
+      toolbars.push({ el: div, source: 'structural-heuristic' });
     }
 
-    return results;
+    return toolbars;
   }
 
-  // ── Message extraction (list-item walk) ──────────────────────────────────
-  //
-  // From our injected AtomiX button, walk up the DOM to the nearest <li>
-  // (the message container), then search within it for content and username.
+  // Diagnostic: log toolbar details so user can debug
+  function dumpToolbarInfo(toolbar, source) {
+    const el = toolbar;
+    const kids = Array.from(el.children);
+    const info = {
+      source,
+      tag: el.tagName,
+      id: el.id || '(none)',
+      className: (el.className || '').toString().substring(0, 80),
+      childCount: kids.length,
+      children: kids.map((k, i) => ({
+        index: i,
+        tag: k.tagName,
+        ariaLabel: k.getAttribute('aria-label') || '(none)',
+        hasSvg: !!k.querySelector('svg'),
+        svgPaths: Array.from(k.querySelectorAll('svg path')).map(p =>
+          (p.getAttribute('d') || '').substring(0, 30) + '...'
+        )
+      }))
+    };
+    console.log(LOG, 'Toolbar found:', JSON.stringify(info, null, 2));
+  }
+
+  // ── Message extraction ───────────────────────────────────────────────────
 
   function extractMessageData(buttonElement) {
     console.log(LOG, 'Extracting message context...');
@@ -166,7 +213,7 @@
 
     console.log(LOG, 'Message container:', listItem.id || '(no id)');
 
-    // Extract message text via stable ID prefix
+    // Extract message text
     let messageText = '';
     const contentEl = listItem.querySelector('[id^="message-content-"]');
     if (contentEl) {
@@ -174,7 +221,6 @@
       console.log(LOG, 'Text found via [id^=message-content-]');
     }
 
-    // Fallback: obfuscated class patterns
     if (!messageText) {
       const markup = listItem.querySelector('[class*="markup_"], [class*="messageContent_"]');
       if (markup) {
@@ -183,7 +229,6 @@
       }
     }
 
-    // Last-resort: longest line heuristic
     if (!messageText) {
       const lines = listItem.innerText.split('\n').filter(l => l.trim().length > 3);
       if (lines.length > 0) {
@@ -192,23 +237,19 @@
       }
     }
 
-    // Extract author name
+    // Extract author
     let authorName = '';
     const usernameEl = listItem.querySelector('[id^="message-username-"]');
     if (usernameEl) {
       authorName = usernameEl.innerText.trim();
     }
 
-    // Grouped messages (no header) — walk backwards through siblings
     if (!authorName) {
       let sibling = listItem.previousElementSibling;
       let attempts = 0;
       while (sibling && attempts < 10) {
-        const prevHeader = sibling.querySelector('[id^="message-username-"]');
-        if (prevHeader) {
-          authorName = prevHeader.innerText.trim();
-          break;
-        }
+        const h = sibling.querySelector('[id^="message-username-"]');
+        if (h) { authorName = h.innerText.trim(); break; }
         sibling = sibling.previousElementSibling;
         attempts++;
       }
@@ -228,36 +269,56 @@
 
   // ── Trigger Discord's native Reply ───────────────────────────────────────
   //
-  // Finds the native Reply button in the SAME toolbar container as our
-  // AtomiX button and clicks it. Uses the SVG path anchor to identify it,
-  // so it works in any locale.
+  // The Reply button is typically the second-to-last icon in the toolbar
+  // (before "More"/"..."). We find it positionally among siblings that
+  // contain SVGs, which is locale-agnostic.
 
   async function triggerDiscordReply(buttonElement) {
     console.log(LOG, 'Triggering Discord native Reply...');
 
-    // Our button sits inside the same container as the native Reply button.
-    // Walk up to the container and search for the reply SVG within it.
     const container = buttonElement.parentElement;
     if (!container) return false;
 
+    // Collect all sibling elements (excluding our own button) that contain SVGs
+    const iconButtons = Array.from(container.children).filter(child =>
+      !child.hasAttribute('data-atomix-btn') && child.querySelector('svg')
+    );
+
+    console.log(LOG, 'Icon buttons in toolbar:', iconButtons.length,
+      iconButtons.map(b => b.getAttribute('aria-label') || '?'));
+
+    // The Reply button is usually the second-to-last (before "More/...")
+    // In a typical toolbar: [Add Reaction] [Reply] [Thread] [More]
+    // or: [Add Reaction] [Reply] [More]
+    // Find it by trying a few positions
+
     let replyBtn = null;
-    const paths = container.querySelectorAll('svg path');
-    for (const p of paths) {
-      const d = (p.getAttribute('d') || '').trim();
-      if (d === REPLY_SVG_PATH_FRAGMENT || d.startsWith('M10 8.26667V4L3 11.4667')) {
-        replyBtn = p.closest('[role="button"], button, [class*="button"]');
+
+    // First try: any button with a reply-ish aria-label (in any language)
+    for (const btn of iconButtons) {
+      const label = (btn.getAttribute('aria-label') || '').toLowerCase();
+      // Common translations: Reply, Відповісти, Antworten, Répondre, Responder, Ответить
+      if (/reply|відповіс|antwort|répond|respond|ответ/i.test(label)) {
+        replyBtn = btn;
         break;
       }
     }
 
+    // Second try: positional — the second icon button (index 1) is very
+    // often Reply in Discord's standard toolbar layout
+    if (!replyBtn && iconButtons.length >= 2) {
+      replyBtn = iconButtons[1];
+      console.log(LOG, 'Using positional fallback (index 1) for Reply');
+    }
+
     if (replyBtn) {
       replyBtn.click();
-      console.log(LOG, 'Reply button clicked — waiting for reply UI...');
+      console.log(LOG, 'Reply triggered:', replyBtn.getAttribute('aria-label') || '(no label)');
       await sleep(400);
       return true;
     }
 
-    console.warn(LOG, 'Native Reply button not found via SVG path');
+    console.warn(LOG, 'Could not find Reply button');
     return false;
   }
 
@@ -325,17 +386,6 @@
   }
 
   // ── Slate.js typewriter injection ────────────────────────────────────────
-  //
-  // FIX: Character-by-character insertion using execCommand('insertText')
-  // per character with randomised delays for a natural typewriter feel.
-  // Slate.js (unlike Draft.js) tolerates incremental execCommand calls
-  // because it hooks into the browser-native beforeinput event per keystroke.
-  //
-  // Fallback chain:
-  //   1. execCommand char-by-char  (typewriter + Slate state sync)
-  //   2. InputEvent('beforeinput') char-by-char
-  //   3. ClipboardEvent single-shot paste
-  //   4. Clipboard copy + user notification
 
   async function injectTextWithTypewriter(text) {
     console.log(LOG, 'Starting typewriter injection, length:', text.length);
@@ -349,19 +399,18 @@
     }
 
     try {
-      // Focus and place cursor at end of any existing content
       editor.focus();
       await sleep(150);
 
       const selection = window.getSelection();
       const range = document.createRange();
       range.selectNodeContents(editor);
-      range.collapse(false); // collapse to end
+      range.collapse(false);
       selection.removeAllRanges();
       selection.addRange(range);
       await sleep(50);
 
-      // ── Method 1: execCommand char-by-char (primary typewriter) ──
+      // Method 1: execCommand char-by-char
       let method1Works = true;
 
       for (let i = 0; i < text.length; i++) {
@@ -373,7 +422,6 @@
           break;
         }
 
-        // Natural typing delay: 15-40ms randomised
         const delay = Math.floor(Math.random() * 25) + 15;
         await sleep(delay);
       }
@@ -384,10 +432,8 @@
         return true;
       }
 
-      console.log(LOG, 'execCommand typewriter failed, trying InputEvent char-by-char...');
-
-      // ── Method 2: InputEvent('beforeinput') char-by-char ──
-      // Re-focus and position cursor
+      // Method 2: InputEvent char-by-char
+      console.log(LOG, 'Trying InputEvent char-by-char...');
       editor.focus();
       await sleep(100);
       range.selectNodeContents(editor);
@@ -396,57 +442,43 @@
       selection.addRange(range);
 
       for (let i = 0; i < text.length; i++) {
-        const inputEv = new InputEvent('beforeinput', {
-          bubbles: true,
-          cancelable: true,
-          inputType: 'insertText',
-          data: text[i],
-        });
-        editor.dispatchEvent(inputEv);
-
-        // Also fire the 'input' event that Slate expects after each keystroke
-        editor.dispatchEvent(new InputEvent('input', {
-          bubbles: true,
-          inputType: 'insertText',
-          data: text[i],
+        editor.dispatchEvent(new InputEvent('beforeinput', {
+          bubbles: true, cancelable: true, inputType: 'insertText', data: text[i],
         }));
-
+        editor.dispatchEvent(new InputEvent('input', {
+          bubbles: true, inputType: 'insertText', data: text[i],
+        }));
         const delay = Math.floor(Math.random() * 25) + 15;
         await sleep(delay);
       }
 
       if (editor.textContent.includes(text.substring(0, 20))) {
-        console.log(LOG, 'Typewriter injection complete via InputEvent');
+        console.log(LOG, 'Typewriter complete via InputEvent');
         return true;
       }
 
-      console.log(LOG, 'InputEvent typewriter failed, trying ClipboardEvent paste...');
-
-      // ── Method 3: Synthetic clipboard paste (single-shot, no typewriter) ──
-      const dataTransfer = new DataTransfer();
-      dataTransfer.setData('text/plain', text);
-
-      const pasteEvent = new ClipboardEvent('paste', {
-        bubbles: true,
-        cancelable: true,
-        clipboardData: dataTransfer,
-      });
-      editor.dispatchEvent(pasteEvent);
+      // Method 3: ClipboardEvent paste
+      console.log(LOG, 'Trying ClipboardEvent paste...');
+      const dt = new DataTransfer();
+      dt.setData('text/plain', text);
+      editor.dispatchEvent(new ClipboardEvent('paste', {
+        bubbles: true, cancelable: true, clipboardData: dt,
+      }));
       await sleep(150);
 
       if (editor.textContent.includes(text.substring(0, 20))) {
-        console.log(LOG, 'Text injected via ClipboardEvent paste');
+        console.log(LOG, 'Text injected via ClipboardEvent');
         fireInputEvents(editor);
         return true;
       }
 
-      // ── Method 4: Clipboard copy — user pastes manually ──
+      // Method 4: clipboard
       console.warn(LOG, 'All injection methods failed, copying to clipboard');
       await navigator.clipboard.writeText(text);
       return false;
 
     } catch (error) {
-      console.error(LOG, 'Text injection error:', error);
+      console.error(LOG, 'Injection error:', error);
       try { await navigator.clipboard.writeText(text); } catch (_) { }
       return false;
     }
@@ -468,7 +500,6 @@
     const btn = event.currentTarget;
     console.log(LOG, 'AtomiX button clicked');
 
-    // Step 1: Extract message context BEFORE the toolbar disappears
     const messageData = extractMessageData(btn);
 
     if (!messageData || !messageData.text) {
@@ -477,13 +508,9 @@
       return;
     }
 
-    // Step 2: Load settings fresh (ensures latest prompt/language/length)
     await loadSettings();
-
-    // Step 3: Trigger Discord's native reply
     await triggerDiscordReply(btn);
 
-    // Step 4: Generate and inject
     isGenerating = true;
     const originalContent = btn.innerHTML;
     btn.innerHTML = `${createSpinner()}<span class="atomix-label">Generating...</span>`;
@@ -500,10 +527,10 @@
 
         if (injected) {
           showNotification('Reply generated!', 'success');
-          console.log(LOG, 'Reply workflow complete — text injected successfully');
+          console.log(LOG, 'Reply workflow complete');
         } else {
           showNotification('Copied to clipboard! Press Ctrl+V', 'success');
-          console.log(LOG, 'Reply copied to clipboard as fallback');
+          console.log(LOG, 'Clipboard fallback used');
         }
       }
     } catch (error) {
@@ -516,36 +543,32 @@
     }
   }
 
-  // ── Button injection (anchor-based — Reply SVG path) ──────────────────
-  //
-  // STRATEGY: Find every native Reply button on the page via its SVG `d`
-  // path (language-agnostic). Get its parent container (the hover toolbar
-  // flex row). Inject our AtomiX button into that container if not already
-  // present. This is laser-targeted: no class names, no IDs, no aria-labels.
+  // ── Button injection ─────────────────────────────────────────────────────
 
   function tryInjectButtons() {
-    const replyButtons = findNativeReplyButtons();
+    const toolbars = findHoverToolbars();
 
-    for (const replyBtn of replyButtons) {
-      // The Reply button's parent is the toolbar container (a flex row
-      // holding the quick-action icon buttons)
-      const toolbar = replyBtn.parentElement;
-      if (!toolbar) continue;
-
-      // Dedup: skip if we already injected into this toolbar
+    for (const { el: toolbar, source } of toolbars) {
+      // Dedup
       if (toolbar.querySelector('[data-atomix-btn]')) continue;
+
+      // Skip context/dropdown menus
+      if (toolbar.querySelector('[role="menuitem"]')) continue;
+
+      // Log for diagnostics
+      dumpToolbarInfo(toolbar, source);
 
       const btn = createAtomixButton();
       btn.addEventListener('click', handleAtomixClick);
 
-      // Insert our button right before the native Reply button
-      toolbar.insertBefore(btn, replyBtn);
+      // Insert as the first child
+      toolbar.insertBefore(btn, toolbar.firstChild);
 
-      console.log(LOG, 'Button injected next to native Reply button');
+      console.log(LOG, 'Button injected via', source);
     }
   }
 
-  // ── MutationObserver (permissive — debounced sweep) ──────────────────────
+  // ── MutationObserver ─────────────────────────────────────────────────────
 
   function init() {
     console.log(LOG, 'Initializing Discord content script...');
@@ -553,36 +576,26 @@
     loadSettings();
     tryInjectButtons();
 
-    // Permissive observer: any element addition triggers a debounced
-    // injection sweep. The sweep itself is cheap (querySelectorAll on
-    // svg paths + dedup check).
     const observer = new MutationObserver((mutations) => {
-      let hasNewElements = false;
-
-      for (const mutation of mutations) {
-        if (mutation.addedNodes.length > 0) {
-          for (const node of mutation.addedNodes) {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              hasNewElements = true;
-              break;
-            }
+      let hasNew = false;
+      for (const m of mutations) {
+        if (m.addedNodes.length > 0) {
+          for (const n of m.addedNodes) {
+            if (n.nodeType === Node.ELEMENT_NODE) { hasNew = true; break; }
           }
         }
-        if (hasNewElements) break;
+        if (hasNew) break;
       }
 
-      if (hasNewElements) {
+      if (hasNew) {
         clearTimeout(window._atomixInjectTimeout);
         window._atomixInjectTimeout = setTimeout(tryInjectButtons, 120);
       }
     });
 
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+    observer.observe(document.body, { childList: true, subtree: true });
 
-    console.log(LOG, 'MutationObserver active — anchor-based (Reply SVG path)');
+    console.log(LOG, 'MutationObserver active — structural heuristic discovery');
     console.log(LOG, 'Extension loaded ✅');
   }
 
