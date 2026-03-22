@@ -115,86 +115,50 @@
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // ── Toolbar discovery (structural heuristic) ──────────────────────────────
+  // ── Toolbar discovery ─────────────────────────────────────────────────────
   //
-  // Discord's hover toolbar is a short-lived container with a few (3-5)
-  // child elements, each wrapping an SVG icon. It floats over the message
-  // via absolute/fixed positioning. We find it by structure, not by
-  // specific IDs, classes, or aria-labels — making this approach resilient
-  // to Discord updates and locale changes.
+  // VERIFIED via live DOM inspection (2026-03-23):
+  //   • Horizontal hover toolbar = div[role="group"] with class containing
+  //     "container_" (e.g. "buttons__5126c container__040f0")
+  //     aria-label = "Дії з повідомленнями" (UA) / "Message Actions" (EN)
+  //   • Context menu ("..." dropdown) = div[role="menu"] with children
+  //     having role="menuitem" and ids like "message-actions-reply"
+  //
+  // CRITICAL: id^="message-actions-" matches CONTEXT MENU ITEMS, not the
+  // toolbar! Never use that as a toolbar selector.
 
   function findHoverToolbars() {
     const toolbars = [];
 
-    // Strategy A: id="message-actions-{snowflake}" (most direct if present)
-    document.querySelectorAll('[id^="message-actions-"]').forEach(el => {
-      toolbars.push({ el, source: 'id:message-actions' });
-    });
+    // Primary: role="group" + class containing "container_" (verified pattern)
+    // The hover toolbar always has a class like "buttons__5126c container__040f0"
+    // while the server sidebar scroller is role="group" but lacks "container_"
+    document.querySelectorAll('div[role="group"][class*="container_"]').forEach(el => {
+      // STRICT EXCLUSION: never inject inside a menu or its descendants
+      if (el.closest('[role="menu"]')) return;
+      if (el.closest('[role="menuitem"]')) return;
+      if (el.querySelector('[role="menuitem"]')) return;
 
-    // Strategy B: Structural heuristic for the floating toolbar.
-    // Look for containers that:
-    //   1. Have 2-6 direct children
-    //   2. Most/all children contain an <svg>
-    //   3. Container or its parent has position: absolute or fixed
-    //   4. Container is NOT a <li>, <ol>, <ul>, <nav>, <main>
-    // This identifies the "icon button row" pattern.
-    const candidates = document.querySelectorAll('div[class]');
-    for (const div of candidates) {
-      const kids = div.children;
-      if (kids.length < 2 || kids.length > 8) continue;
+      // Size guard: the hover toolbar is a thin horizontal bar (≤44px tall)
+      // Exclude large containers like scrollers or channel lists
+      const rect = el.getBoundingClientRect();
+      if (rect.height > 50 || rect.width > 500) return;
+      if (rect.height === 0 || rect.width === 0) return; // hidden/offscreen
 
-      // Skip if it's clearly not a toolbar
-      const tag = div.tagName.toLowerCase();
-      if (['li', 'ol', 'ul', 'nav', 'main', 'section', 'article'].includes(tag)) continue;
+      // Must have at least 2 children with SVGs (icon buttons)
+      const kids = el.children;
+      if (kids.length < 2) return;
 
-      // Count how many children contain an SVG
       let svgCount = 0;
       for (const kid of kids) {
-        if (kid.querySelector('svg') || kid.tagName === 'SVG') svgCount++;
+        if (kid.querySelector('svg')) svgCount++;
       }
+      if (svgCount < 2) return;
 
-      // At least half the children should have SVGs (icon buttons)
-      if (svgCount < 2 || svgCount < kids.length * 0.5) continue;
-
-      // Check positioning — the toolbar floats
-      const style = getComputedStyle(div);
-      const parentStyle = div.parentElement ? getComputedStyle(div.parentElement) : null;
-      const isFloating = ['absolute', 'fixed'].includes(style.position)
-        || (parentStyle && ['absolute', 'fixed'].includes(parentStyle.position));
-
-      if (!isFloating) continue;
-
-      // Skip items already accounted for by Strategy A
-      if (div.id && div.id.startsWith('message-actions-')) continue;
-      if (div.closest('[id^="message-actions-"]')) continue;
-
-      toolbars.push({ el: div, source: 'structural-heuristic' });
-    }
+      toolbars.push(el);
+    });
 
     return toolbars;
-  }
-
-  // Diagnostic: log toolbar details so user can debug
-  function dumpToolbarInfo(toolbar, source) {
-    const el = toolbar;
-    const kids = Array.from(el.children);
-    const info = {
-      source,
-      tag: el.tagName,
-      id: el.id || '(none)',
-      className: (el.className || '').toString().substring(0, 80),
-      childCount: kids.length,
-      children: kids.map((k, i) => ({
-        index: i,
-        tag: k.tagName,
-        ariaLabel: k.getAttribute('aria-label') || '(none)',
-        hasSvg: !!k.querySelector('svg'),
-        svgPaths: Array.from(k.querySelectorAll('svg path')).map(p =>
-          (p.getAttribute('d') || '').substring(0, 30) + '...'
-        )
-      }))
-    };
-    console.log(LOG, 'Toolbar found:', JSON.stringify(info, null, 2));
   }
 
   // ── Message extraction ───────────────────────────────────────────────────
@@ -269,9 +233,8 @@
 
   // ── Trigger Discord's native Reply ───────────────────────────────────────
   //
-  // The Reply button is typically the second-to-last icon in the toolbar
-  // (before "More"/"..."). We find it positionally among siblings that
-  // contain SVGs, which is locale-agnostic.
+  // Finds the Reply button in the same toolbar as our AtomiX button.
+  // Uses multi-language aria-label matching, with positional fallback.
 
   async function triggerDiscordReply(buttonElement) {
     console.log(LOG, 'Triggering Discord native Reply...');
@@ -279,36 +242,32 @@
     const container = buttonElement.parentElement;
     if (!container) return false;
 
-    // Collect all sibling elements (excluding our own button) that contain SVGs
+    // All native icon buttons in the toolbar
     const iconButtons = Array.from(container.children).filter(child =>
       !child.hasAttribute('data-atomix-btn') && child.querySelector('svg')
     );
 
-    console.log(LOG, 'Icon buttons in toolbar:', iconButtons.length,
-      iconButtons.map(b => b.getAttribute('aria-label') || '?'));
-
-    // The Reply button is usually the second-to-last (before "More/...")
-    // In a typical toolbar: [Add Reaction] [Reply] [Thread] [More]
-    // or: [Add Reaction] [Reply] [More]
-    // Find it by trying a few positions
+    console.log(LOG, 'Toolbar buttons:', iconButtons.map(b =>
+      b.getAttribute('aria-label') || '(no label)'
+    ));
 
     let replyBtn = null;
 
-    // First try: any button with a reply-ish aria-label (in any language)
+    // Try 1: multi-language aria-label match
+    // UA: "Відповісти", EN: "Reply", DE: "Antworten", FR: "Répondre",
+    // ES: "Responder", RU: "Ответить", PL: "Odpowiedz"
     for (const btn of iconButtons) {
       const label = (btn.getAttribute('aria-label') || '').toLowerCase();
-      // Common translations: Reply, Відповісти, Antworten, Répondre, Responder, Ответить
-      if (/reply|відповіс|antwort|répond|respond|ответ/i.test(label)) {
+      if (/reply|відповіс|antwort|répond|respond|ответ|odpowied/i.test(label)) {
         replyBtn = btn;
         break;
       }
     }
 
-    // Second try: positional — the second icon button (index 1) is very
-    // often Reply in Discord's standard toolbar layout
-    if (!replyBtn && iconButtons.length >= 2) {
-      replyBtn = iconButtons[1];
-      console.log(LOG, 'Using positional fallback (index 1) for Reply');
+    // Try 2: positional fallback — Reply is typically the second-to-last
+    if (!replyBtn && iconButtons.length >= 3) {
+      replyBtn = iconButtons[iconButtons.length - 2];
+      console.log(LOG, 'Positional fallback: second-to-last button');
     }
 
     if (replyBtn) {
@@ -318,7 +277,7 @@
       return true;
     }
 
-    console.warn(LOG, 'Could not find Reply button');
+    console.warn(LOG, 'Reply button not found in toolbar');
     return false;
   }
 
@@ -548,23 +507,24 @@
   function tryInjectButtons() {
     const toolbars = findHoverToolbars();
 
-    for (const { el: toolbar, source } of toolbars) {
-      // Dedup
+    for (const toolbar of toolbars) {
+      // Dedup: already have our button
       if (toolbar.querySelector('[data-atomix-btn]')) continue;
 
-      // Skip context/dropdown menus
-      if (toolbar.querySelector('[role="menuitem"]')) continue;
-
-      // Log for diagnostics
-      dumpToolbarInfo(toolbar, source);
+      // STRICT: never inject inside menus or menu items
+      if (toolbar.closest('[role="menu"]')) continue;
+      if (toolbar.closest('[role="menuitem"]')) continue;
 
       const btn = createAtomixButton();
       btn.addEventListener('click', handleAtomixClick);
 
-      // Insert as the first child
+      // Insert as the first child of the toolbar
       toolbar.insertBefore(btn, toolbar.firstChild);
 
-      console.log(LOG, 'Button injected via', source);
+      console.log(LOG, 'Button injected into toolbar',
+        'role=' + toolbar.getAttribute('role'),
+        'aria-label=' + (toolbar.getAttribute('aria-label') || '?'),
+        'children=' + toolbar.children.length);
     }
   }
 
@@ -589,13 +549,13 @@
 
       if (hasNew) {
         clearTimeout(window._atomixInjectTimeout);
-        window._atomixInjectTimeout = setTimeout(tryInjectButtons, 120);
+        window._atomixInjectTimeout = setTimeout(tryInjectButtons, 80);
       }
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
 
-    console.log(LOG, 'MutationObserver active — structural heuristic discovery');
+    console.log(LOG, 'MutationObserver active — targeting div[role=group] toolbars');
     console.log(LOG, 'Extension loaded ✅');
   }
 
