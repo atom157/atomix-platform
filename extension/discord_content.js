@@ -1,7 +1,8 @@
 // AtomiX — Discord Content Script
 // Injects an "AtomiX" button into Discord's message hover toolbar,
 // extracts message context, triggers native Reply, generates an AI reply
-// via background.js, and injects the result into Discord's Slate.js editor.
+// via background.js, and injects the result into Discord's Slate.js editor
+// with a character-by-character typewriter effect.
 
 (function () {
   'use strict';
@@ -34,16 +35,21 @@
   async function loadSettings() {
     console.log(LOG, 'Loading settings...');
 
+    // Non-sensitive settings from sync storage (mirrors content.js exactly)
     const syncResult = await chrome.storage.sync.get([
       'language', 'length', 'bannedWords', 'includeHashtags',
       'mentionAuthor', 'addEmoji', 'selectedPromptId', 'customPromptContent'
     ]);
 
+    // Token + userId from local storage
     const secureResult = await secureStorage.get(['extToken', 'userId']);
 
-    console.log(LOG, 'Token loaded:', {
+    console.log(LOG, 'Settings loaded:', {
       hasToken: !!secureResult.extToken,
-      hasUserId: !!secureResult.userId
+      hasUserId: !!secureResult.userId,
+      language: syncResult.language || '(default)',
+      length: syncResult.length || '(default)',
+      promptId: syncResult.selectedPromptId || '(none)',
     });
 
     settings = {
@@ -109,91 +115,95 @@
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // ── Message extraction ───────────────────────────────────────────────────
+  // ── Message extraction (ID-based) ────────────────────────────────────────
+  //
+  // FIX: Instead of vague DOM walking, extract the message ID directly from
+  // the toolbar's own id ("message-actions-{messageId}") and use it to
+  // precisely locate the content and username elements by their stable IDs.
 
   function extractMessageData(buttonElement) {
     console.log(LOG, 'Extracting message context...');
 
-    // Walk up from the button to find the message list item.
-    // Discord wraps each message in an <li> with id starting "chat-messages-".
-    let messageItem = buttonElement.closest('[id^="chat-messages-"]');
-
-    // Fallback: walk up to any list item inside the chat
-    if (!messageItem) {
-      messageItem = buttonElement.closest('li[class]');
-    }
-
-    // Broader fallback: look for the message container near the button
-    if (!messageItem) {
-      // The hover toolbar is rendered as a sibling/overlay to the message.
-      // Try to find the message container relative to the toolbar's parent.
-      const toolbar = buttonElement.closest('[id^="message-actions-"]')
-        || buttonElement.closest('[role="group"]');
-      if (toolbar) {
-        // The toolbar's parent or nearest <li> ancestor
-        messageItem = toolbar.closest('li') || toolbar.parentElement;
-      }
-    }
-
-    if (!messageItem) {
-      console.warn(LOG, 'Could not find message container');
+    // Step 1: Find the hover toolbar and extract the message snowflake ID
+    const toolbar = buttonElement.closest('[id^="message-actions-"]');
+    if (!toolbar) {
+      console.warn(LOG, 'Could not find message-actions toolbar');
       return null;
     }
 
-    // Extract message text
-    // Discord message content lives in elements with id "message-content-{id}"
-    const contentEl = messageItem.querySelector('[id^="message-content-"]');
-    let messageText = '';
+    const messageId = toolbar.id.replace('message-actions-', '');
+    console.log(LOG, 'Target message ID:', messageId);
 
+    // Step 2: Find message content by its stable ID
+    let messageText = '';
+    const contentEl = document.getElementById(`message-content-${messageId}`);
     if (contentEl) {
       messageText = contentEl.innerText.trim();
-    } else {
-      // Fallback: look for any text content divs within the message
-      const textDivs = messageItem.querySelectorAll('[class*="messageContent_"], [class*="markup_"]');
-      for (const div of textDivs) {
-        const text = div.innerText.trim();
-        if (text) {
-          messageText = text;
-          break;
+      console.log(LOG, 'Text found via message-content-' + messageId);
+    }
+
+    // Fallback: walk up to the parent <li> and search within it
+    if (!messageText) {
+      const listItem = toolbar.closest('[id^="chat-messages-"]') || toolbar.closest('li');
+      if (listItem) {
+        const fallback = listItem.querySelector('[id^="message-content-"]');
+        if (fallback) {
+          messageText = fallback.innerText.trim();
+          console.log(LOG, 'Text found via li fallback');
         }
       }
     }
 
-    // If still nothing, try to get any substantial text from the message item
+    // Last-resort fallback: grab the longest text block from the message area
     if (!messageText) {
-      // Grab all text, filter out timestamps and usernames
-      const allText = messageItem.innerText;
-      const lines = allText.split('\n').filter(line => line.trim().length > 2);
-      // Usually the message text is the longest line or after the username
-      if (lines.length > 0) {
-        messageText = lines[lines.length - 1].trim();
+      const listItem = toolbar.closest('[id^="chat-messages-"]') || toolbar.closest('li');
+      if (listItem) {
+        const lines = listItem.innerText.split('\n').filter(l => l.trim().length > 3);
+        if (lines.length > 0) {
+          // Pick the longest line (most likely the actual message content)
+          messageText = lines.reduce((a, b) => a.length >= b.length ? a : b).trim();
+          console.log(LOG, 'Text found via innerText heuristic');
+        }
       }
     }
 
-    // Extract author name from the message header
+    // Step 3: Find author name by stable ID
     let authorName = '';
-    const headerEl = messageItem.querySelector('[id^="message-username-"]')
-      || messageItem.querySelector('[class*="username_"]')
-      || messageItem.querySelector('h3 span, h2 span');
-
-    if (headerEl) {
-      authorName = headerEl.innerText.trim();
+    const usernameEl = document.getElementById(`message-username-${messageId}`);
+    if (usernameEl) {
+      authorName = usernameEl.innerText.trim();
     }
 
-    // If this is a "grouped" message (no header), look at the previous sibling
-    if (!authorName && messageItem.previousElementSibling) {
-      const prevHeader = messageItem.previousElementSibling.querySelector(
-        '[id^="message-username-"]'
-      );
-      if (prevHeader) {
-        authorName = prevHeader.innerText.trim();
+    // Fallback for grouped messages (consecutive messages from same author
+    // don't repeat the header — look at previous siblings)
+    if (!authorName) {
+      const listItem = toolbar.closest('[id^="chat-messages-"]') || toolbar.closest('li');
+      if (listItem) {
+        // Check this item first
+        const localHeader = listItem.querySelector('[id^="message-username-"]');
+        if (localHeader) {
+          authorName = localHeader.innerText.trim();
+        } else {
+          // Walk backwards through siblings to find the nearest header
+          let sibling = listItem.previousElementSibling;
+          let attempts = 0;
+          while (sibling && attempts < 10) {
+            const prevHeader = sibling.querySelector('[id^="message-username-"]');
+            if (prevHeader) {
+              authorName = prevHeader.innerText.trim();
+              break;
+            }
+            sibling = sibling.previousElementSibling;
+            attempts++;
+          }
+        }
       }
     }
 
     const result = {
       text: messageText,
       author: authorName,
-      handle: '', // Discord doesn't expose handles in the message DOM easily
+      handle: '',
       metrics: {},
       threadContext: []
     };
@@ -207,26 +217,21 @@
   async function triggerDiscordReply(buttonElement) {
     console.log(LOG, 'Triggering Discord native Reply...');
 
-    // Find the hover toolbar container
-    const toolbar = buttonElement.closest('[id^="message-actions-"]')
-      || buttonElement.closest('[role="group"]')
-      || buttonElement.parentElement;
-
+    const toolbar = buttonElement.closest('[id^="message-actions-"]');
     if (!toolbar) {
       console.warn(LOG, 'Could not find toolbar for Reply trigger');
       return false;
     }
 
-    // Look for Discord's native Reply button
-    // It typically has aria-label="Reply" or a tooltip "Reply"
+    // Look for the Reply button by aria-label
     let replyBtn = toolbar.querySelector('[aria-label="Reply"]');
 
-    // Fallback: look for button with a reply icon (the SVG path for reply arrow)
+    // Fallback: scan all clickable elements in the toolbar
     if (!replyBtn) {
-      const buttons = toolbar.querySelectorAll('div[role="button"], button');
+      const buttons = toolbar.querySelectorAll('[role="button"], button');
       for (const b of buttons) {
-        const label = b.getAttribute('aria-label') || b.textContent || '';
-        if (label.toLowerCase().includes('reply')) {
+        const label = (b.getAttribute('aria-label') || '').toLowerCase();
+        if (label.includes('reply')) {
           replyBtn = b;
           break;
         }
@@ -257,7 +262,13 @@
 
     recordRequest();
 
-    console.log(LOG, 'Sending generation request to background...');
+    console.log(LOG, 'Sending generation request to background...', {
+      textLength: messageData.text?.length,
+      author: messageData.author,
+      language: settings.language,
+      length: settings.length,
+      promptId: settings.selectedPromptId,
+    });
 
     const result = await new Promise((resolve, reject) => {
       chrome.runtime.sendMessage(
@@ -301,18 +312,22 @@
     return result.reply;
   }
 
-  // ── Slate.js text injection ──────────────────────────────────────────────
+  // ── Slate.js typewriter injection ────────────────────────────────────────
   //
-  // Discord uses Slate.js for its text editor. Like Draft.js, it maintains
-  // internal state that must be synced. Strategy:
-  //   1. Try execCommand('insertText') — same single-shot that works for Draft.js
-  //   2. Fallback: synthetic ClipboardEvent('paste') with DataTransfer
-  //   3. Last resort: copy to clipboard + notify user
+  // FIX: Character-by-character insertion using execCommand('insertText')
+  // per character with randomised delays for a natural typewriter feel.
+  // Slate.js (unlike Draft.js) tolerates incremental execCommand calls
+  // because it hooks into the browser-native beforeinput event per keystroke.
+  //
+  // Fallback chain:
+  //   1. execCommand char-by-char  (typewriter + Slate state sync)
+  //   2. InputEvent('beforeinput') char-by-char
+  //   3. ClipboardEvent single-shot paste
+  //   4. Clipboard copy + user notification
 
-  async function injectTextIntoSlate(text) {
-    console.log(LOG, 'Injecting text into Slate.js editor...');
+  async function injectTextWithTypewriter(text) {
+    console.log(LOG, 'Starting typewriter injection, length:', text.length);
 
-    // Find the Slate.js editor
     const editor = document.querySelector('[role="textbox"][data-slate-editor="true"]')
       || document.querySelector('[role="textbox"][contenteditable="true"]');
 
@@ -322,11 +337,10 @@
     }
 
     try {
-      // Focus the editor
+      // Focus and place cursor at end of any existing content
       editor.focus();
-      await sleep(100);
+      await sleep(150);
 
-      // Select any existing content (e.g., @mention from reply) and move cursor to end
       const selection = window.getSelection();
       const range = document.createRange();
       range.selectNodeContents(editor);
@@ -335,55 +349,86 @@
       selection.addRange(range);
       await sleep(50);
 
-      // ── Method 1: execCommand insertText ──
-      const inserted = document.execCommand('insertText', false, text);
+      // ── Method 1: execCommand char-by-char (primary typewriter) ──
+      let method1Works = true;
 
-      if (inserted && editor.textContent.includes(text.substring(0, 20))) {
-        console.log(LOG, 'Text injected successfully via execCommand');
+      for (let i = 0; i < text.length; i++) {
+        const ok = document.execCommand('insertText', false, text[i]);
+
+        if (!ok && i === 0) {
+          console.warn(LOG, 'execCommand not supported, falling back...');
+          method1Works = false;
+          break;
+        }
+
+        // Natural typing delay: 15-40ms randomised
+        const delay = Math.floor(Math.random() * 25) + 15;
+        await sleep(delay);
+      }
+
+      if (method1Works && editor.textContent.includes(text.substring(0, 20))) {
+        console.log(LOG, 'Typewriter injection complete via execCommand');
         fireInputEvents(editor);
         return true;
       }
 
-      console.log(LOG, 'execCommand failed, trying ClipboardEvent fallback...');
+      console.log(LOG, 'execCommand typewriter failed, trying InputEvent char-by-char...');
 
-      // ── Method 2: Synthetic paste event with DataTransfer ──
+      // ── Method 2: InputEvent('beforeinput') char-by-char ──
+      // Re-focus and position cursor
+      editor.focus();
+      await sleep(100);
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      for (let i = 0; i < text.length; i++) {
+        const inputEv = new InputEvent('beforeinput', {
+          bubbles: true,
+          cancelable: true,
+          inputType: 'insertText',
+          data: text[i],
+        });
+        editor.dispatchEvent(inputEv);
+
+        // Also fire the 'input' event that Slate expects after each keystroke
+        editor.dispatchEvent(new InputEvent('input', {
+          bubbles: true,
+          inputType: 'insertText',
+          data: text[i],
+        }));
+
+        const delay = Math.floor(Math.random() * 25) + 15;
+        await sleep(delay);
+      }
+
+      if (editor.textContent.includes(text.substring(0, 20))) {
+        console.log(LOG, 'Typewriter injection complete via InputEvent');
+        return true;
+      }
+
+      console.log(LOG, 'InputEvent typewriter failed, trying ClipboardEvent paste...');
+
+      // ── Method 3: Synthetic clipboard paste (single-shot, no typewriter) ──
       const dataTransfer = new DataTransfer();
       dataTransfer.setData('text/plain', text);
 
       const pasteEvent = new ClipboardEvent('paste', {
         bubbles: true,
         cancelable: true,
-        clipboardData: dataTransfer
+        clipboardData: dataTransfer,
       });
-
       editor.dispatchEvent(pasteEvent);
-      await sleep(100);
+      await sleep(150);
 
       if (editor.textContent.includes(text.substring(0, 20))) {
-        console.log(LOG, 'Text injected successfully via ClipboardEvent');
+        console.log(LOG, 'Text injected via ClipboardEvent paste');
         fireInputEvents(editor);
         return true;
       }
 
-      console.log(LOG, 'ClipboardEvent failed, trying InputEvent fallback...');
-
-      // ── Method 3: InputEvent with insertText ──
-      const inputEvent = new InputEvent('beforeinput', {
-        bubbles: true,
-        cancelable: true,
-        inputType: 'insertText',
-        data: text,
-      });
-      editor.dispatchEvent(inputEvent);
-      await sleep(100);
-
-      if (editor.textContent.includes(text.substring(0, 20))) {
-        console.log(LOG, 'Text injected successfully via InputEvent');
-        fireInputEvents(editor);
-        return true;
-      }
-
-      // ── Last resort: clipboard ──
+      // ── Method 4: Clipboard copy — user pastes manually ──
       console.warn(LOG, 'All injection methods failed, copying to clipboard');
       await navigator.clipboard.writeText(text);
       return false;
@@ -396,7 +441,6 @@
   }
 
   function fireInputEvents(editor) {
-    // Fire events to ensure Slate.js picks up the change
     editor.dispatchEvent(new Event('input', { bubbles: true }));
     editor.dispatchEvent(new Event('change', { bubbles: true }));
   }
@@ -410,37 +454,41 @@
     if (isGenerating) return;
 
     const btn = event.currentTarget;
-
     console.log(LOG, 'AtomiX button clicked');
 
-    // Extract message context
+    // Step 1: Extract message context BEFORE the toolbar disappears
     const messageData = extractMessageData(btn);
 
     if (!messageData || !messageData.text) {
       showNotification('Could not read message text', 'error');
+      console.warn(LOG, 'Extraction failed — no text found');
       return;
     }
 
-    // Trigger Discord's native reply
+    // Step 2: Load settings fresh (ensures latest prompt/language/length)
+    await loadSettings();
+
+    // Step 3: Trigger Discord's native reply
     await triggerDiscordReply(btn);
 
+    // Step 4: Generate and inject
     isGenerating = true;
     const originalContent = btn.innerHTML;
     btn.innerHTML = `${createSpinner()}<span class="atomix-label">Generating...</span>`;
     btn.classList.add('atomix-loading');
 
     try {
-      await loadSettings();
       const reply = await generateReply(messageData);
 
       if (reply) {
         btn.innerHTML = `${createSpinner()}<span class="atomix-label">Typing...</span>`;
+        console.log(LOG, 'Starting text injection...');
 
-        const injected = await injectTextIntoSlate(reply);
+        const injected = await injectTextWithTypewriter(reply);
 
         if (injected) {
           showNotification('Reply generated!', 'success');
-          console.log(LOG, 'Reply workflow complete — text injected');
+          console.log(LOG, 'Reply workflow complete — text injected successfully');
         } else {
           showNotification('Copied to clipboard! Press Ctrl+V', 'success');
           console.log(LOG, 'Reply copied to clipboard as fallback');
@@ -456,89 +504,73 @@
     }
   }
 
-  // ── Button injection ─────────────────────────────────────────────────────
+  // ── Button injection (FIXED — hover toolbar only) ────────────────────────
+  //
+  // FIX: ONLY target the primary message hover toolbar identified by its
+  // stable id="message-actions-{snowflake}". Removed Strategy 2 which used
+  // [role="group"][aria-label] — that selector was catching Discord's "..."
+  // context menu items and causing duplicate button injection.
 
   function tryInjectButtons() {
-    // Discord's message hover toolbar appears when hovering a message.
-    // It uses id="message-actions-{id}" containers with button groups inside.
+    const toolbars = document.querySelectorAll('[id^="message-actions-"]');
 
-    // Strategy 1: Look for message action containers by ID prefix
-    const actionContainers = document.querySelectorAll('[id^="message-actions-"]');
+    toolbars.forEach(toolbar => {
+      // Skip if this toolbar already has our button
+      if (toolbar.querySelector('[data-atomix-btn]')) return;
 
-    actionContainers.forEach(container => {
-      if (container.querySelector('[data-atomix-btn]')) return; // already injected
-
-      // Find the buttons group inside (usually a div with role="group" or flex container)
-      let buttonsGroup = container.querySelector('[role="group"]')
-        || container.querySelector('[class*="buttons_"]');
-
-      // If no inner group, use the container itself
-      if (!buttonsGroup) {
-        buttonsGroup = container;
+      // Verify this is a hover toolbar and NOT a context/popover menu.
+      // Hover toolbars are positioned absolutely over messages as small bars.
+      // Context menus are in a portal layer (inside [class*="layerContainer"])
+      if (toolbar.closest('[class*="layerContainer"]') || toolbar.closest('[role="dialog"]')) {
+        return; // This is inside a popover/modal — skip
       }
 
-      const btn = createAtomixButton();
-      btn.addEventListener('click', handleAtomixClick);
-
-      // Insert as the first button in the toolbar
-      buttonsGroup.insertBefore(btn, buttonsGroup.firstChild);
-
-      console.log(LOG, 'Button injected into message actions toolbar');
-    });
-
-    // Strategy 2: Look for role="group" with aria-label containing "actions"
-    const roleGroups = document.querySelectorAll('[role="group"][aria-label]');
-
-    roleGroups.forEach(group => {
-      const label = (group.getAttribute('aria-label') || '').toLowerCase();
-      if (!label.includes('action') && !label.includes('message')) return;
-      if (group.querySelector('[data-atomix-btn]')) return; // already injected
+      // Find the direct button wrapper (first child div) or use toolbar itself
+      const wrapper = toolbar.firstElementChild || toolbar;
 
       const btn = createAtomixButton();
       btn.addEventListener('click', handleAtomixClick);
-      group.insertBefore(btn, group.firstChild);
 
-      console.log(LOG, 'Button injected via role="group" fallback');
+      // Insert as the first action in the toolbar
+      wrapper.insertBefore(btn, wrapper.firstChild);
+
+      console.log(LOG, 'Button injected into hover toolbar:', toolbar.id);
     });
   }
 
-  // ── MutationObserver ─────────────────────────────────────────────────────
+  // ── MutationObserver (FIXED — no [role="group"] matching) ────────────────
 
   function init() {
     console.log(LOG, 'Initializing Discord content script...');
 
     loadSettings();
-
-    // Initial injection attempt
     tryInjectButtons();
 
-    // Observe DOM for dynamically appearing hover toolbars
     const observer = new MutationObserver((mutations) => {
       let shouldInject = false;
 
       for (const mutation of mutations) {
-        if (mutation.addedNodes.length > 0) {
-          for (const node of mutation.addedNodes) {
-            if (node.nodeType !== Node.ELEMENT_NODE) continue;
+        if (mutation.addedNodes.length === 0) continue;
 
-            // Check if the added node is or contains a message actions toolbar
-            if (
-              (node.id && node.id.startsWith('message-actions-')) ||
-              node.querySelector?.('[id^="message-actions-"]') ||
-              node.querySelector?.('[role="group"][aria-label]')
-            ) {
-              shouldInject = true;
-              break;
-            }
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType !== Node.ELEMENT_NODE) continue;
+
+          // ONLY trigger when a message-actions toolbar is added to the DOM.
+          // Do NOT match [role="group"] — that catches context menus.
+          if (
+            (node.id && node.id.startsWith('message-actions-')) ||
+            node.querySelector?.('[id^="message-actions-"]')
+          ) {
+            shouldInject = true;
+            break;
           }
-          if (shouldInject) break;
         }
+        if (shouldInject) break;
       }
 
       if (shouldInject) {
-        // Debounce to avoid excessive DOM queries
         clearTimeout(window._atomixInjectTimeout);
-        window._atomixInjectTimeout = setTimeout(tryInjectButtons, 150);
+        window._atomixInjectTimeout = setTimeout(tryInjectButtons, 100);
       }
     });
 
@@ -547,7 +579,7 @@
       subtree: true
     });
 
-    console.log(LOG, 'MutationObserver active — watching for hover toolbars');
+    console.log(LOG, 'MutationObserver active — watching for hover toolbars only');
     console.log(LOG, 'Extension loaded ✅');
   }
 
