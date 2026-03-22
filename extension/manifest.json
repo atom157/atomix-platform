@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AtomiX — AI Replies for X",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "AI-powered writing assistant for X (Twitter) that helps you generate authentic, human-like replies in seconds.",
   "homepage_url": "https://atomix.guru",
   "privacy_policy": "https://atomix.guru/privacy",
@@ -17,6 +17,8 @@
   "host_permissions": [
     "https://x.com/*",
     "https://twitter.com/*",
+    "https://discord.com/*",
+    "https://canary.discord.com/*",
     "https://www.atomix.guru/*",
     "https://atomix.guru/*"
   ],
@@ -54,6 +56,19 @@
       "css": [
         "content.css"
       ]
+    },
+    {
+      "matches": [
+        "*://discord.com/channels/*",
+        "*://canary.discord.com/channels/*"
+      ],
+      "js": [
+        "discord_content.js"
+      ],
+      "css": [
+        "discord_content.css"
+      ],
+      "run_at": "document_idle"
     },
     {
       "matches": [
