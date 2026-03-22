@@ -504,41 +504,52 @@
     }
   }
 
-  // ── Button injection (FIXED — hover toolbar only) ────────────────────────
+  // ── Button injection (relaxed — multiple detection strategies) ─────────
   //
-  // FIX: ONLY target the primary message hover toolbar identified by its
-  // stable id="message-actions-{snowflake}". Removed Strategy 2 which used
-  // [role="group"][aria-label] — that selector was catching Discord's "..."
-  // context menu items and causing duplicate button injection.
+  // Discord renders the message hover toolbar dynamically on hover.
+  // Its internal class names and wrapper structure vary between updates,
+  // so we use several fallback strategies and NO restrictive ancestor
+  // guards (the previous layerContainer/dialog check was blocking the
+  // toolbar itself). Deduplication is handled solely via [data-atomix-btn].
 
   function tryInjectButtons() {
-    const toolbars = document.querySelectorAll('[id^="message-actions-"]');
+    // Collect candidate toolbar elements from multiple selectors
+    const candidates = new Set();
 
-    toolbars.forEach(toolbar => {
-      // Skip if this toolbar already has our button
+    // Strategy 1: id="message-actions-{snowflake}" (most stable)
+    document.querySelectorAll('[id^="message-actions-"]').forEach(el => candidates.add(el));
+
+    // Strategy 2: aria-label containing "Message Actions"
+    document.querySelectorAll('[aria-label*="Message Actions"]').forEach(el => candidates.add(el));
+
+    // Strategy 3: wrapper divs near message list items that contain
+    // native action buttons (Reply, Reactions, Thread, More)
+    document.querySelectorAll('[aria-label="Reply"], [aria-label="Add Reaction"]').forEach(actionBtn => {
+      const wrapper = actionBtn.closest('[class*="wrapper_"]')
+        || actionBtn.closest('[class*="buttons_"]')
+        || actionBtn.closest('[role="group"]')
+        || actionBtn.parentElement;
+      if (wrapper) candidates.add(wrapper);
+    });
+
+    candidates.forEach(toolbar => {
+      // Dedup: skip if already injected
       if (toolbar.querySelector('[data-atomix-btn]')) return;
 
-      // Verify this is a hover toolbar and NOT a context/popover menu.
-      // Hover toolbars are positioned absolutely over messages as small bars.
-      // Context menus are in a portal layer (inside [class*="layerContainer"])
-      if (toolbar.closest('[class*="layerContainer"]') || toolbar.closest('[role="dialog"]')) {
-        return; // This is inside a popover/modal — skip
-      }
-
-      // Find the direct button wrapper (first child div) or use toolbar itself
-      const wrapper = toolbar.firstElementChild || toolbar;
+      // Skip context menus: they contain role="menuitem" children
+      if (toolbar.querySelector('[role="menuitem"]')) return;
 
       const btn = createAtomixButton();
       btn.addEventListener('click', handleAtomixClick);
 
-      // Insert as the first action in the toolbar
-      wrapper.insertBefore(btn, wrapper.firstChild);
+      // Insert as the first child of the toolbar
+      toolbar.insertBefore(btn, toolbar.firstChild);
 
-      console.log(LOG, 'Button injected into hover toolbar:', toolbar.id);
+      console.log(LOG, 'Button injected into toolbar', toolbar.id || '(no id)');
     });
   }
 
-  // ── MutationObserver (FIXED — no [role="group"] matching) ────────────────
+  // ── MutationObserver (permissive — debounced sweep) ──────────────────────
 
   function init() {
     console.log(LOG, 'Initializing Discord content script...');
@@ -546,31 +557,27 @@
     loadSettings();
     tryInjectButtons();
 
+    // Use a permissive observer: any element added anywhere in the page
+    // triggers a debounced injection sweep. The sweep itself is lightweight
+    // (querySelectorAll + dedup check), so the cost is minimal.
     const observer = new MutationObserver((mutations) => {
-      let shouldInject = false;
+      let dominated = false;
 
       for (const mutation of mutations) {
-        if (mutation.addedNodes.length === 0) continue;
-
-        for (const node of mutation.addedNodes) {
-          if (node.nodeType !== Node.ELEMENT_NODE) continue;
-
-          // ONLY trigger when a message-actions toolbar is added to the DOM.
-          // Do NOT match [role="group"] — that catches context menus.
-          if (
-            (node.id && node.id.startsWith('message-actions-')) ||
-            node.querySelector?.('[id^="message-actions-"]')
-          ) {
-            shouldInject = true;
-            break;
+        if (mutation.addedNodes.length > 0) {
+          for (const node of mutation.addedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              dominated = true;
+              break;
+            }
           }
         }
-        if (shouldInject) break;
+        if (dominated) break;
       }
 
-      if (shouldInject) {
+      if (dominated) {
         clearTimeout(window._atomixInjectTimeout);
-        window._atomixInjectTimeout = setTimeout(tryInjectButtons, 100);
+        window._atomixInjectTimeout = setTimeout(tryInjectButtons, 120);
       }
     });
 
@@ -579,7 +586,7 @@
       subtree: true
     });
 
-    console.log(LOG, 'MutationObserver active — watching for hover toolbars only');
+    console.log(LOG, 'MutationObserver active — watching for toolbar appearance');
     console.log(LOG, 'Extension loaded ✅');
   }
 
