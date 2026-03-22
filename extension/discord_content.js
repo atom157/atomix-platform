@@ -115,88 +115,102 @@
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // ── Message extraction (ID-based) ────────────────────────────────────────
+  // ── SVG path anchor ───────────────────────────────────────────────────────
   //
-  // FIX: Instead of vague DOM walking, extract the message ID directly from
-  // the toolbar's own id ("message-actions-{messageId}") and use it to
-  // precisely locate the content and username elements by their stable IDs.
+  // Discord's native Reply icon SVG contains a distinctive `d` path.
+  // Matching on this path is 100% language-agnostic — it works regardless
+  // of the user's Discord locale (English, Ukrainian, etc.).
+  // The path is the curved reply-arrow that Discord uses.
+
+  // Known `d` values for Discord's reply SVG icon (partial match to be safe)
+  const REPLY_SVG_PATH_FRAGMENT = 'M10 8.26667V4L3 11.4667L10 18.9333V14.56C15 14.56 18.5 16.2667 21 20C20 14.6667 17 9.33333 10 8.26667Z';
+
+  /**
+   * Find ALL native Reply buttons on the page by checking every <path>
+   * element whose `d` attribute matches the known reply-arrow SVG.
+   * Returns the clickable ancestor (div[role="button"] or button) for each.
+   */
+  function findNativeReplyButtons() {
+    const results = [];
+    const paths = document.querySelectorAll('svg path');
+
+    for (const p of paths) {
+      const d = (p.getAttribute('d') || '').trim();
+      // Use startsWith on a unique prefix to tolerate minor Discord changes
+      if (d === REPLY_SVG_PATH_FRAGMENT || d.startsWith('M10 8.26667V4L3 11.4667')) {
+        // Walk up to the clickable wrapper
+        const clickable = p.closest('[role="button"], button, [class*="button"]');
+        if (clickable) results.push(clickable);
+      }
+    }
+
+    return results;
+  }
+
+  // ── Message extraction (list-item walk) ──────────────────────────────────
+  //
+  // From our injected AtomiX button, walk up the DOM to the nearest <li>
+  // (the message container), then search within it for content and username.
 
   function extractMessageData(buttonElement) {
     console.log(LOG, 'Extracting message context...');
 
-    // Step 1: Find the hover toolbar and extract the message snowflake ID
-    const toolbar = buttonElement.closest('[id^="message-actions-"]');
-    if (!toolbar) {
-      console.warn(LOG, 'Could not find message-actions toolbar');
+    // Walk up to the message list item
+    const listItem = buttonElement.closest('[id^="chat-messages-"]')
+      || buttonElement.closest('li');
+
+    if (!listItem) {
+      console.warn(LOG, 'Could not find message list item');
       return null;
     }
 
-    const messageId = toolbar.id.replace('message-actions-', '');
-    console.log(LOG, 'Target message ID:', messageId);
+    console.log(LOG, 'Message container:', listItem.id || '(no id)');
 
-    // Step 2: Find message content by its stable ID
+    // Extract message text via stable ID prefix
     let messageText = '';
-    const contentEl = document.getElementById(`message-content-${messageId}`);
+    const contentEl = listItem.querySelector('[id^="message-content-"]');
     if (contentEl) {
       messageText = contentEl.innerText.trim();
-      console.log(LOG, 'Text found via message-content-' + messageId);
+      console.log(LOG, 'Text found via [id^=message-content-]');
     }
 
-    // Fallback: walk up to the parent <li> and search within it
+    // Fallback: obfuscated class patterns
     if (!messageText) {
-      const listItem = toolbar.closest('[id^="chat-messages-"]') || toolbar.closest('li');
-      if (listItem) {
-        const fallback = listItem.querySelector('[id^="message-content-"]');
-        if (fallback) {
-          messageText = fallback.innerText.trim();
-          console.log(LOG, 'Text found via li fallback');
-        }
+      const markup = listItem.querySelector('[class*="markup_"], [class*="messageContent_"]');
+      if (markup) {
+        messageText = markup.innerText.trim();
+        console.log(LOG, 'Text found via class fallback');
       }
     }
 
-    // Last-resort fallback: grab the longest text block from the message area
+    // Last-resort: longest line heuristic
     if (!messageText) {
-      const listItem = toolbar.closest('[id^="chat-messages-"]') || toolbar.closest('li');
-      if (listItem) {
-        const lines = listItem.innerText.split('\n').filter(l => l.trim().length > 3);
-        if (lines.length > 0) {
-          // Pick the longest line (most likely the actual message content)
-          messageText = lines.reduce((a, b) => a.length >= b.length ? a : b).trim();
-          console.log(LOG, 'Text found via innerText heuristic');
-        }
+      const lines = listItem.innerText.split('\n').filter(l => l.trim().length > 3);
+      if (lines.length > 0) {
+        messageText = lines.reduce((a, b) => a.length >= b.length ? a : b).trim();
+        console.log(LOG, 'Text found via innerText heuristic');
       }
     }
 
-    // Step 3: Find author name by stable ID
+    // Extract author name
     let authorName = '';
-    const usernameEl = document.getElementById(`message-username-${messageId}`);
+    const usernameEl = listItem.querySelector('[id^="message-username-"]');
     if (usernameEl) {
       authorName = usernameEl.innerText.trim();
     }
 
-    // Fallback for grouped messages (consecutive messages from same author
-    // don't repeat the header — look at previous siblings)
+    // Grouped messages (no header) — walk backwards through siblings
     if (!authorName) {
-      const listItem = toolbar.closest('[id^="chat-messages-"]') || toolbar.closest('li');
-      if (listItem) {
-        // Check this item first
-        const localHeader = listItem.querySelector('[id^="message-username-"]');
-        if (localHeader) {
-          authorName = localHeader.innerText.trim();
-        } else {
-          // Walk backwards through siblings to find the nearest header
-          let sibling = listItem.previousElementSibling;
-          let attempts = 0;
-          while (sibling && attempts < 10) {
-            const prevHeader = sibling.querySelector('[id^="message-username-"]');
-            if (prevHeader) {
-              authorName = prevHeader.innerText.trim();
-              break;
-            }
-            sibling = sibling.previousElementSibling;
-            attempts++;
-          }
+      let sibling = listItem.previousElementSibling;
+      let attempts = 0;
+      while (sibling && attempts < 10) {
+        const prevHeader = sibling.querySelector('[id^="message-username-"]');
+        if (prevHeader) {
+          authorName = prevHeader.innerText.trim();
+          break;
         }
+        sibling = sibling.previousElementSibling;
+        attempts++;
       }
     }
 
@@ -213,28 +227,26 @@
   }
 
   // ── Trigger Discord's native Reply ───────────────────────────────────────
+  //
+  // Finds the native Reply button in the SAME toolbar container as our
+  // AtomiX button and clicks it. Uses the SVG path anchor to identify it,
+  // so it works in any locale.
 
   async function triggerDiscordReply(buttonElement) {
     console.log(LOG, 'Triggering Discord native Reply...');
 
-    const toolbar = buttonElement.closest('[id^="message-actions-"]');
-    if (!toolbar) {
-      console.warn(LOG, 'Could not find toolbar for Reply trigger');
-      return false;
-    }
+    // Our button sits inside the same container as the native Reply button.
+    // Walk up to the container and search for the reply SVG within it.
+    const container = buttonElement.parentElement;
+    if (!container) return false;
 
-    // Look for the Reply button by aria-label
-    let replyBtn = toolbar.querySelector('[aria-label="Reply"]');
-
-    // Fallback: scan all clickable elements in the toolbar
-    if (!replyBtn) {
-      const buttons = toolbar.querySelectorAll('[role="button"], button');
-      for (const b of buttons) {
-        const label = (b.getAttribute('aria-label') || '').toLowerCase();
-        if (label.includes('reply')) {
-          replyBtn = b;
-          break;
-        }
+    let replyBtn = null;
+    const paths = container.querySelectorAll('svg path');
+    for (const p of paths) {
+      const d = (p.getAttribute('d') || '').trim();
+      if (d === REPLY_SVG_PATH_FRAGMENT || d.startsWith('M10 8.26667V4L3 11.4667')) {
+        replyBtn = p.closest('[role="button"], button, [class*="button"]');
+        break;
       }
     }
 
@@ -245,7 +257,7 @@
       return true;
     }
 
-    console.warn(LOG, 'Native Reply button not found in toolbar');
+    console.warn(LOG, 'Native Reply button not found via SVG path');
     return false;
   }
 
@@ -504,49 +516,33 @@
     }
   }
 
-  // ── Button injection (relaxed — multiple detection strategies) ─────────
+  // ── Button injection (anchor-based — Reply SVG path) ──────────────────
   //
-  // Discord renders the message hover toolbar dynamically on hover.
-  // Its internal class names and wrapper structure vary between updates,
-  // so we use several fallback strategies and NO restrictive ancestor
-  // guards (the previous layerContainer/dialog check was blocking the
-  // toolbar itself). Deduplication is handled solely via [data-atomix-btn].
+  // STRATEGY: Find every native Reply button on the page via its SVG `d`
+  // path (language-agnostic). Get its parent container (the hover toolbar
+  // flex row). Inject our AtomiX button into that container if not already
+  // present. This is laser-targeted: no class names, no IDs, no aria-labels.
 
   function tryInjectButtons() {
-    // Collect candidate toolbar elements from multiple selectors
-    const candidates = new Set();
+    const replyButtons = findNativeReplyButtons();
 
-    // Strategy 1: id="message-actions-{snowflake}" (most stable)
-    document.querySelectorAll('[id^="message-actions-"]').forEach(el => candidates.add(el));
+    for (const replyBtn of replyButtons) {
+      // The Reply button's parent is the toolbar container (a flex row
+      // holding the quick-action icon buttons)
+      const toolbar = replyBtn.parentElement;
+      if (!toolbar) continue;
 
-    // Strategy 2: aria-label containing "Message Actions"
-    document.querySelectorAll('[aria-label*="Message Actions"]').forEach(el => candidates.add(el));
-
-    // Strategy 3: wrapper divs near message list items that contain
-    // native action buttons (Reply, Reactions, Thread, More)
-    document.querySelectorAll('[aria-label="Reply"], [aria-label="Add Reaction"]').forEach(actionBtn => {
-      const wrapper = actionBtn.closest('[class*="wrapper_"]')
-        || actionBtn.closest('[class*="buttons_"]')
-        || actionBtn.closest('[role="group"]')
-        || actionBtn.parentElement;
-      if (wrapper) candidates.add(wrapper);
-    });
-
-    candidates.forEach(toolbar => {
-      // Dedup: skip if already injected
-      if (toolbar.querySelector('[data-atomix-btn]')) return;
-
-      // Skip context menus: they contain role="menuitem" children
-      if (toolbar.querySelector('[role="menuitem"]')) return;
+      // Dedup: skip if we already injected into this toolbar
+      if (toolbar.querySelector('[data-atomix-btn]')) continue;
 
       const btn = createAtomixButton();
       btn.addEventListener('click', handleAtomixClick);
 
-      // Insert as the first child of the toolbar
-      toolbar.insertBefore(btn, toolbar.firstChild);
+      // Insert our button right before the native Reply button
+      toolbar.insertBefore(btn, replyBtn);
 
-      console.log(LOG, 'Button injected into toolbar', toolbar.id || '(no id)');
-    });
+      console.log(LOG, 'Button injected next to native Reply button');
+    }
   }
 
   // ── MutationObserver (permissive — debounced sweep) ──────────────────────
@@ -557,25 +553,25 @@
     loadSettings();
     tryInjectButtons();
 
-    // Use a permissive observer: any element added anywhere in the page
-    // triggers a debounced injection sweep. The sweep itself is lightweight
-    // (querySelectorAll + dedup check), so the cost is minimal.
+    // Permissive observer: any element addition triggers a debounced
+    // injection sweep. The sweep itself is cheap (querySelectorAll on
+    // svg paths + dedup check).
     const observer = new MutationObserver((mutations) => {
-      let dominated = false;
+      let hasNewElements = false;
 
       for (const mutation of mutations) {
         if (mutation.addedNodes.length > 0) {
           for (const node of mutation.addedNodes) {
             if (node.nodeType === Node.ELEMENT_NODE) {
-              dominated = true;
+              hasNewElements = true;
               break;
             }
           }
         }
-        if (dominated) break;
+        if (hasNewElements) break;
       }
 
-      if (dominated) {
+      if (hasNewElements) {
         clearTimeout(window._atomixInjectTimeout);
         window._atomixInjectTimeout = setTimeout(tryInjectButtons, 120);
       }
@@ -586,7 +582,7 @@
       subtree: true
     });
 
-    console.log(LOG, 'MutationObserver active — watching for toolbar appearance');
+    console.log(LOG, 'MutationObserver active — anchor-based (Reply SVG path)');
     console.log(LOG, 'Extension loaded ✅');
   }
 
