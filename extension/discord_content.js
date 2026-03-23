@@ -115,68 +115,77 @@
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // ── Toolbar discovery ─────────────────────────────────────────────────────
+  // ── Toolbar discovery + injection ──────────────────────────────────────────
   //
-  // VERIFIED via live DOM inspection (2026-03-23):
-  //   • Hover toolbar = div[role="group"] with class containing "buttons_"
-  //     (e.g. "buttons__5126c container__040f0")
-  //   • Context menu = div[role="menu"] with role="menuitem" children
-  //   • Sidebar channels use "channel_" class — never "buttons_"
+  // Discord's hover toolbar is EPHEMERAL — it appears on hover and vanishes
+  // when the mouse moves. A debounced querySelectorAll sweep often misses it.
   //
-  // We use TWO strategies for maximum resilience:
-  //   A. div[role="group"][class*="buttons_"] — most precise
-  //   B. div[role="group"] + child count + aria-label heuristic — fallback
+  // Approach: The MutationObserver inspects each added node IMMEDIATELY.
+  // We check if the node (or any descendant) is a toolbar candidate:
+  //   - div[role="group"] with ≥3 children
+  //   - NOT inside role="menu" or role="menuitem"
+  //   - Has multiple children with aria-label attributes (icon buttons)
+  //
+  // VERIFIED classes (2026-03-23):
+  //   Toolbar: "buttons__5126c container__040f0" — but class names change,
+  //   so we rely on role="group" + structural shape instead.
 
-  function findHoverToolbars() {
-    const toolbars = [];
-    const seen = new WeakSet();
+  function isToolbarCandidate(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+    if (el.tagName !== 'DIV') return false;
+    if (el.getAttribute('role') !== 'group') return false;
+    if (el.children.length < 3) return false;
 
-    // Strategy A: class contains "buttons_" (unique to hover toolbar)
-    document.querySelectorAll('div[role="group"][class*="buttons_"]').forEach(el => {
-      if (el.closest('[role="menu"]')) return;
-      if (el.closest('[role="menuitem"]')) return;
-      if (el.querySelector('[role="menuitem"]')) return;
-      if (el.children.length < 2) return;
-      toolbars.push(el);
-      seen.add(el);
-    });
+    // STRICT: never inject inside menus
+    if (el.closest('[role="menu"]')) return false;
+    if (el.closest('[role="menuitem"]')) return false;
 
-    // Strategy B: any div[role="group"] that has 3-10 children,
-    // most of which are clickable icon-like elements (div/button with SVG or aria-label)
-    if (toolbars.length === 0) {
-      document.querySelectorAll('div[role="group"]').forEach(el => {
-        if (seen.has(el)) return;
-        if (el.closest('[role="menu"]')) return;
-        if (el.closest('[role="menuitem"]')) return;
-        if (el.querySelector('[role="menuitem"]')) return;
+    // Must have children with aria-labels (action buttons have them)
+    let labeledCount = 0;
+    for (const kid of el.children) {
+      if (kid.getAttribute('aria-label')) labeledCount++;
+    }
+    if (labeledCount < 2) return false;
 
-        const kids = el.children;
-        if (kids.length < 3 || kids.length > 12) return;
+    // Already have our button?
+    if (el.querySelector('[data-atomix-btn]')) return false;
 
-        // Count children that look like action buttons (have aria-label or SVG)
-        let actionCount = 0;
-        for (const kid of kids) {
-          if (kid.querySelector('svg') || kid.getAttribute('aria-label')) actionCount++;
-        }
-        if (actionCount < 3) return;
+    return true;
+  }
 
-        // Exclude large containers (sidebar, channel lists)
-        const rect = el.getBoundingClientRect();
-        if (rect.height > 60) return;
-        if (rect.width === 0 || rect.height === 0) return;
+  function injectIntoToolbar(toolbar) {
+    // Double-check dedup
+    if (toolbar.querySelector('[data-atomix-btn]')) return;
 
-        toolbars.push(el);
-      });
+    const btn = createAtomixButton();
+    btn.addEventListener('click', handleAtomixClick);
+    toolbar.insertBefore(btn, toolbar.firstChild);
+
+    console.log(LOG, '✅ Button injected!',
+      'class=' + (toolbar.className || '').substring(0, 80),
+      'aria-label=' + (toolbar.getAttribute('aria-label') || '?'),
+      'children=' + toolbar.children.length);
+  }
+
+  // Process a single DOM node: check itself and all descendant divs
+  function processAddedNode(node) {
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+    // Check the node itself
+    if (isToolbarCandidate(node)) {
+      injectIntoToolbar(node);
+      return;
     }
 
-    console.log(LOG, `findHoverToolbars: found ${toolbars.length} toolbar(s)`,
-      toolbars.map(t => ({
-        cls: (t.className || '').substring(0, 80),
-        label: t.getAttribute('aria-label') || '?',
-        kids: t.children.length
-      })));
-
-    return toolbars;
+    // Check descendants (toolbar might be nested inside the added node)
+    if (node.querySelectorAll) {
+      const candidates = node.querySelectorAll('div[role="group"]');
+      for (const el of candidates) {
+        if (isToolbarCandidate(el)) {
+          injectIntoToolbar(el);
+        }
+      }
+    }
   }
 
   // ── Message extraction ───────────────────────────────────────────────────
@@ -520,60 +529,38 @@
     }
   }
 
-  // ── Button injection ─────────────────────────────────────────────────────
+  // ── Button injection (sweep for already-visible toolbars) ─────────────────
 
   function tryInjectButtons() {
-    const toolbars = findHoverToolbars();
-
-    for (const toolbar of toolbars) {
-      // Dedup: already have our button
-      if (toolbar.querySelector('[data-atomix-btn]')) continue;
-
-      // STRICT: never inject inside menus or menu items
-      if (toolbar.closest('[role="menu"]')) continue;
-      if (toolbar.closest('[role="menuitem"]')) continue;
-
-      const btn = createAtomixButton();
-      btn.addEventListener('click', handleAtomixClick);
-
-      // Insert as the first child of the toolbar
-      toolbar.insertBefore(btn, toolbar.firstChild);
-
-      console.log(LOG, 'Button injected into toolbar',
-        'role=' + toolbar.getAttribute('role'),
-        'aria-label=' + (toolbar.getAttribute('aria-label') || '?'),
-        'children=' + toolbar.children.length);
-    }
+    document.querySelectorAll('div[role="group"]').forEach(el => {
+      if (isToolbarCandidate(el)) {
+        injectIntoToolbar(el);
+      }
+    });
   }
 
-  // ── MutationObserver ─────────────────────────────────────────────────────
+  // ── MutationObserver (direct node inspection) ─────────────────────────────
 
   function init() {
     console.log(LOG, 'Initializing Discord content script...');
 
     loadSettings();
+
+    // Initial sweep
     tryInjectButtons();
 
+    // Watch for new nodes — process IMMEDIATELY (no debounce)
     const observer = new MutationObserver((mutations) => {
-      let hasNew = false;
       for (const m of mutations) {
-        if (m.addedNodes.length > 0) {
-          for (const n of m.addedNodes) {
-            if (n.nodeType === Node.ELEMENT_NODE) { hasNew = true; break; }
-          }
+        for (const node of m.addedNodes) {
+          processAddedNode(node);
         }
-        if (hasNew) break;
-      }
-
-      if (hasNew) {
-        clearTimeout(window._atomixInjectTimeout);
-        window._atomixInjectTimeout = setTimeout(tryInjectButtons, 80);
       }
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
 
-    console.log(LOG, 'MutationObserver active — targeting div[role=group] toolbars');
+    console.log(LOG, 'MutationObserver active — direct node inspection mode');
     console.log(LOG, 'Extension loaded ✅');
   }
 
