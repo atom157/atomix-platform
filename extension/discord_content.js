@@ -158,12 +158,49 @@
       // Dedup: already injected
       if (toolbar.querySelector('[data-atomix-btn]')) continue;
 
-      // Inject our button
-      const btn = createAtomixButton();
-      btn.addEventListener('click', handleAtomixClick);
+      // Inject our button by dynamically cloning the exact native wrapper
+      const wrapper = replyBtn.cloneNode(false);
+      wrapper.innerHTML = '';
+      wrapper.removeAttribute('aria-label');
+      wrapper.removeAttribute('id');
+
+      wrapper.setAttribute('data-atomix-btn', 'true');
+      wrapper.setAttribute('aria-label', 'Generate AI reply with AtomiX');
+      wrapper.title = 'Generate AI Reply with AtomiX';
+
+      // Preserve native classes, but add ours for spinner/hover styles
+      wrapper.classList.add('atomix-discord-btn');
+
+      // Ensure flex behavior
+      wrapper.style.display = 'flex';
+      wrapper.style.alignItems = 'center';
+      wrapper.style.justifyContent = 'center';
+      wrapper.style.cursor = 'pointer';
+
+      wrapper.innerHTML = `
+        <svg class="atomix-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="atomix-orb-discord" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#8B9FFF"/>
+              <stop offset="100%" stop-color="#5865F2"/>
+            </linearGradient>
+          </defs>
+          <ellipse cx="12" cy="12" rx="9" ry="3.5" stroke="url(#atomix-orb-discord)" stroke-width="1.3" fill="none"/>
+          <ellipse cx="12" cy="12" rx="9" ry="3.5" stroke="url(#atomix-orb-discord)" stroke-width="1.3" fill="none" transform="rotate(60 12 12)"/>
+          <ellipse cx="12" cy="12" rx="9" ry="3.5" stroke="url(#atomix-orb-discord)" stroke-width="1.3" fill="none" transform="rotate(-60 12 12)"/>
+          <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
+        </svg>
+        <span class="atomix-label" style="display:none;">AtomiX</span>
+      `;
+
+      wrapper.addEventListener('click', handleAtomixClick);
 
       // Task 1: Exact UI Placement — inject exactly between Reply and Forward arrows
-      toolbar.insertBefore(btn, replyBtn.nextSibling);
+      toolbar.insertBefore(wrapper, replyBtn.nextSibling);
+
+      // Force nowrap on toolbar to prevent wrapping
+      toolbar.style.flexWrap = 'nowrap';
+      toolbar.style.whiteSpace = 'nowrap';
 
       console.log(LOG, '✅ Button injected!',
         'toolbar-class=' + (toolbar.className || '').substring(0, 80),
@@ -381,20 +418,28 @@
       selection.addRange(range);
       await sleep(50);
 
-      // Task 2: Strategy 1 (Paste Simulation) — most reliable for Slate.js React state
-      // This completely bypasses char-by-char DOM sync issues and ghost overlays.
-      console.log(LOG, 'Dispatching synthetic React-compatible paste event...');
+      // Task 2: Restore Typewriter Effect
+      // Wrap the successful React/Slate paste simulation in an async loop
+      console.log(LOG, 'Dispatching char-by-char React-compatible paste events...');
 
-      const dt = new DataTransfer();
-      dt.setData('text/plain', text);
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
 
-      const pasteEvent = new ClipboardEvent('paste', {
-        bubbles: true,
-        cancelable: true,
-        clipboardData: dt
-      });
+        const dt = new DataTransfer();
+        dt.setData('text/plain', char);
 
-      editor.dispatchEvent(pasteEvent);
+        const pasteEvent = new ClipboardEvent('paste', {
+          bubbles: true,
+          cancelable: true,
+          clipboardData: dt
+        });
+
+        editor.dispatchEvent(pasteEvent);
+
+        // Wait for human-like typing effect
+        await sleep(20 + Math.random() * 30);
+      }
+
       await sleep(150);
 
       // If paste simulation fails to update DOM, fallback to strict beforeinput chain
