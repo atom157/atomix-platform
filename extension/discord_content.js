@@ -118,45 +118,63 @@
   // ── Toolbar discovery ─────────────────────────────────────────────────────
   //
   // VERIFIED via live DOM inspection (2026-03-23):
-  //   • Horizontal hover toolbar = div[role="group"] with class containing
-  //     "container_" (e.g. "buttons__5126c container__040f0")
-  //     aria-label = "Дії з повідомленнями" (UA) / "Message Actions" (EN)
-  //   • Context menu ("..." dropdown) = div[role="menu"] with children
-  //     having role="menuitem" and ids like "message-actions-reply"
+  //   • Hover toolbar = div[role="group"] with class containing "buttons_"
+  //     (e.g. "buttons__5126c container__040f0")
+  //   • Context menu = div[role="menu"] with role="menuitem" children
+  //   • Sidebar channels use "channel_" class — never "buttons_"
   //
-  // CRITICAL: id^="message-actions-" matches CONTEXT MENU ITEMS, not the
-  // toolbar! Never use that as a toolbar selector.
+  // We use TWO strategies for maximum resilience:
+  //   A. div[role="group"][class*="buttons_"] — most precise
+  //   B. div[role="group"] + child count + aria-label heuristic — fallback
 
   function findHoverToolbars() {
     const toolbars = [];
+    const seen = new WeakSet();
 
-    // Primary: role="group" + class containing "container_" (verified pattern)
-    // The hover toolbar always has a class like "buttons__5126c container__040f0"
-    // while the server sidebar scroller is role="group" but lacks "container_"
-    document.querySelectorAll('div[role="group"][class*="container_"]').forEach(el => {
-      // STRICT EXCLUSION: never inject inside a menu or its descendants
+    // Strategy A: class contains "buttons_" (unique to hover toolbar)
+    document.querySelectorAll('div[role="group"][class*="buttons_"]').forEach(el => {
       if (el.closest('[role="menu"]')) return;
       if (el.closest('[role="menuitem"]')) return;
       if (el.querySelector('[role="menuitem"]')) return;
-
-      // Size guard: the hover toolbar is a thin horizontal bar (≤44px tall)
-      // Exclude large containers like scrollers or channel lists
-      const rect = el.getBoundingClientRect();
-      if (rect.height > 50 || rect.width > 500) return;
-      if (rect.height === 0 || rect.width === 0) return; // hidden/offscreen
-
-      // Must have at least 2 children with SVGs (icon buttons)
-      const kids = el.children;
-      if (kids.length < 2) return;
-
-      let svgCount = 0;
-      for (const kid of kids) {
-        if (kid.querySelector('svg')) svgCount++;
-      }
-      if (svgCount < 2) return;
-
+      if (el.children.length < 2) return;
       toolbars.push(el);
+      seen.add(el);
     });
+
+    // Strategy B: any div[role="group"] that has 3-10 children,
+    // most of which are clickable icon-like elements (div/button with SVG or aria-label)
+    if (toolbars.length === 0) {
+      document.querySelectorAll('div[role="group"]').forEach(el => {
+        if (seen.has(el)) return;
+        if (el.closest('[role="menu"]')) return;
+        if (el.closest('[role="menuitem"]')) return;
+        if (el.querySelector('[role="menuitem"]')) return;
+
+        const kids = el.children;
+        if (kids.length < 3 || kids.length > 12) return;
+
+        // Count children that look like action buttons (have aria-label or SVG)
+        let actionCount = 0;
+        for (const kid of kids) {
+          if (kid.querySelector('svg') || kid.getAttribute('aria-label')) actionCount++;
+        }
+        if (actionCount < 3) return;
+
+        // Exclude large containers (sidebar, channel lists)
+        const rect = el.getBoundingClientRect();
+        if (rect.height > 60) return;
+        if (rect.width === 0 || rect.height === 0) return;
+
+        toolbars.push(el);
+      });
+    }
+
+    console.log(LOG, `findHoverToolbars: found ${toolbars.length} toolbar(s)`,
+      toolbars.map(t => ({
+        cls: (t.className || '').substring(0, 80),
+        label: t.getAttribute('aria-label') || '?',
+        kids: t.children.length
+      })));
 
     return toolbars;
   }
