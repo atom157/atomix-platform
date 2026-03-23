@@ -115,98 +115,61 @@
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // ── Toolbar discovery + injection (Mouse Event Delegation) ──────────────────
+  // ── Toolbar discovery + injection (Brute-Force Polling) ──────────────────
   //
-  // React reuses DOM nodes and toggles visibility rather than inserting
-  // new elements. MutationObserver misses this entirely. Instead, we use
-  // mouse event delegation:
-  //   1. Listen for mouseover on document
-  //   2. Walk up to the nearest message container
-  //   3. Wait 60ms for React to render/reveal the toolbar
-  //   4. querySelector inside that container for div[role="group"]
-  //   5. Check structural shape and inject
+  // MutationObserver and mouseover delegation both failed because React
+  // reuses DOM nodes and toggles visibility, and synthetic events swallow
+  // propagation. Brute-force polling bypasses all React lifecycle issues.
+  //
+  // Every 500ms:
+  //   1. Query for native Reply buttons via multi-language aria-labels
+  //   2. Walk up to parent container (the hover toolbar)
+  //   3. Skip if inside role="menu" (context menu)
+  //   4. Skip if already has [data-atomix-btn]
+  //   5. Inject AtomiX button
 
-  function isToolbarCandidate(el) {
-    if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
-    if (el.tagName !== 'DIV') return false;
-    if (el.getAttribute('role') !== 'group') return false;
-    if (el.children.length < 3) return false;
+  // Multi-language Reply button aria-label selector
+  const REPLY_SELECTOR = [
+    '[aria-label="Reply"]',
+    '[aria-label="Відповісти"]',
+    '[aria-label="Ответить"]',
+    '[aria-label="Antworten"]',
+    '[aria-label="Répondre"]',
+    '[aria-label="Responder"]',
+    '[aria-label="Odpowiedz"]',
+    '[aria-label="Rispondi"]',
+    '[aria-label="Odpovědět"]'
+  ].join(', ');
 
-    // STRICT: never inject inside menus
-    if (el.closest('[role="menu"]')) return false;
-    if (el.closest('[role="menuitem"]')) return false;
+  function pollForToolbars() {
+    const replyButtons = document.querySelectorAll(REPLY_SELECTOR);
 
-    // Must have children with aria-labels (action buttons have them)
-    let labeledCount = 0;
-    for (const kid of el.children) {
-      if (kid.getAttribute('aria-label')) labeledCount++;
+    for (const replyBtn of replyButtons) {
+      // The toolbar container is the reply button's parent
+      const toolbar = replyBtn.parentElement;
+      if (!toolbar) continue;
+
+      // STRICT: never inject inside menus
+      if (toolbar.closest('[role="menu"]')) continue;
+      if (toolbar.closest('[role="menuitem"]')) continue;
+      if (replyBtn.closest('[role="menu"]')) continue;
+      if (replyBtn.closest('[role="menuitem"]')) continue;
+
+      // Dedup: already injected
+      if (toolbar.querySelector('[data-atomix-btn]')) continue;
+
+      // Inject our button
+      const btn = createAtomixButton();
+      btn.addEventListener('click', handleAtomixClick);
+
+      // Insert before the reply button (or as first child)
+      toolbar.insertBefore(btn, toolbar.firstChild);
+
+      console.log(LOG, '✅ Button injected!',
+        'toolbar-class=' + (toolbar.className || '').substring(0, 80),
+        'toolbar-role=' + (toolbar.getAttribute('role') || '?'),
+        'reply-label=' + replyBtn.getAttribute('aria-label'));
     }
-    if (labeledCount < 2) return false;
-
-    // Already have our button?
-    if (el.querySelector('[data-atomix-btn]')) return false;
-
-    return true;
-  }
-
-  function injectIntoToolbar(toolbar) {
-    if (toolbar.querySelector('[data-atomix-btn]')) return;
-
-    const btn = createAtomixButton();
-    btn.addEventListener('click', handleAtomixClick);
-    toolbar.insertBefore(btn, toolbar.firstChild);
-
-    console.log(LOG, '✅ Button injected!',
-      'class=' + (toolbar.className || '').substring(0, 80),
-      'aria-label=' + (toolbar.getAttribute('aria-label') || '?'),
-      'children=' + toolbar.children.length);
-  }
-
-  // Find the message container from any element inside a message
-  function findMessageContainer(target) {
-    // Try specific Discord message selectors
-    const msg = target.closest('[id^="chat-messages-"]')
-      || target.closest('li[class*="messageListItem"]')
-      || target.closest('[class*="message_"]');
-    return msg;
-  }
-
-  // Search for toolbar candidates inside a container
-  function scanForToolbar(container) {
-    if (!container) return;
-    const candidates = container.querySelectorAll('div[role="group"]');
-    for (const el of candidates) {
-      if (isToolbarCandidate(el)) {
-        injectIntoToolbar(el);
-      }
-    }
-  }
-
-  // Throttled hover handler
-  let _lastHoverTarget = null;
-  let _hoverTimer = null;
-
-  function handleMouseOver(e) {
-    const msgContainer = findMessageContainer(e.target);
-    if (!msgContainer) return;
-
-    // Don't re-process the same message container
-    if (msgContainer === _lastHoverTarget) return;
-    _lastHoverTarget = msgContainer;
-
-    // Wait for React to render/reveal the toolbar
-    clearTimeout(_hoverTimer);
-    _hoverTimer = setTimeout(() => {
-      scanForToolbar(msgContainer);
-
-      // Also scan document-level portals (Discord might render toolbar outside message)
-      // Check for any un-injected toolbars in the entire document as fallback
-      document.querySelectorAll('div[role="group"]').forEach(el => {
-        if (isToolbarCandidate(el)) {
-          injectIntoToolbar(el);
-        }
-      });
-    }, 60);
   }
 
   // ── Message extraction ───────────────────────────────────────────────────
@@ -550,37 +513,20 @@
     }
   }
 
-  // ── Init (Mouse delegation + fallback MutationObserver) ───────────────────
+  // ── Init (Brute-Force Polling) ───────────────────────────────────────
 
   function init() {
     console.log(LOG, 'Initializing Discord content script...');
 
     loadSettings();
 
-    // PRIMARY: Mouse event delegation on the document
-    document.addEventListener('mouseover', handleMouseOver, { passive: true });
+    // Poll every 500ms for reply buttons → inject AtomiX
+    setInterval(pollForToolbars, 500);
 
-    // FALLBACK: MutationObserver for toolbar nodes that React inserts fresh
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        for (const node of m.addedNodes) {
-          if (node.nodeType !== Node.ELEMENT_NODE) continue;
-          // Quick check: does this node or a descendant look like a toolbar?
-          if (node.getAttribute && node.getAttribute('role') === 'group') {
-            if (isToolbarCandidate(node)) injectIntoToolbar(node);
-          }
-          if (node.querySelectorAll) {
-            node.querySelectorAll('div[role="group"]').forEach(el => {
-              if (isToolbarCandidate(el)) injectIntoToolbar(el);
-            });
-          }
-        }
-      }
-    });
+    // Also run once immediately
+    pollForToolbars();
 
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    console.log(LOG, 'Mouse delegation + MutationObserver active');
+    console.log(LOG, '500ms polling active — anchoring on Reply button aria-labels');
     console.log(LOG, 'Extension loaded ✅');
   }
 
