@@ -1,26 +1,25 @@
 /* AtomiX — Discord Content Script Styles (injected into discord.com) */
 
-/* ── AtomiX Button in Discord hover toolbar ── */
+/* ── AtomiX Button — matches native toolbar icon buttons exactly ── */
 .atomix-discord-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 4px 8px;
-  margin: 0 2px;
+  padding: 4px;
+  margin: 0;
   background: transparent;
   border: none;
   border-radius: 4px;
   color: #b5bac1;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
-  white-space: nowrap;
   line-height: 1;
-  height: 24px;
-  min-width: 24px;
+  height: 32px;
+  width: 32px;
+  min-width: 32px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  position: relative;
 }
 
 .atomix-discord-btn:hover {
@@ -40,27 +39,32 @@
 
 /* ── Atom Icon (SVG) ── */
 .atomix-discord-btn .atomix-icon {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 
+/* Hidden label — only for screen readers / tooltip */
 .atomix-discord-btn .atomix-label {
-  font-size: 11px;
-  line-height: 1;
+  display: none;
 }
 
 /* ── Loading Spinner ── */
 .atomix-discord-spinner {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   animation: atomix-discord-spin 0.9s linear infinite;
   flex-shrink: 0;
 }
 
 @keyframes atomix-discord-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Notification Toast ── */
@@ -94,11 +98,25 @@
 }
 
 @keyframes atomix-discord-slideUp {
-  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 @keyframes atomix-discord-slideDown {
-  from { opacity: 1; transform: translateX(-50%) translateY(0); }
-  to   { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
 }

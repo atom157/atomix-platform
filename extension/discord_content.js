@@ -162,8 +162,8 @@
       const btn = createAtomixButton();
       btn.addEventListener('click', handleAtomixClick);
 
-      // Insert before the reply button (or as first child)
-      toolbar.insertBefore(btn, toolbar.firstChild);
+      // Task 1: Exact UI Placement — inject exactly between Reply and Forward arrows
+      toolbar.insertBefore(btn, replyBtn.nextSibling);
 
       console.log(LOG, '✅ Button injected!',
         'toolbar-class=' + (toolbar.className || '').substring(0, 80),
@@ -355,10 +355,10 @@
     return result.reply;
   }
 
-  // ── Slate.js typewriter injection ────────────────────────────────────────
+  // ── Slate.js injection (React State Sync) ───────────────────────────────
 
   async function injectTextWithTypewriter(text) {
-    console.log(LOG, 'Starting typewriter injection, length:', text.length);
+    console.log(LOG, 'Starting robust Slate.js injection, length:', text.length);
 
     const editor = document.querySelector('[role="textbox"][data-slate-editor="true"]')
       || document.querySelector('[role="textbox"][contenteditable="true"]');
@@ -372,6 +372,7 @@
       editor.focus();
       await sleep(150);
 
+      // Clear any existing range/selection and focus at the end
       const selection = window.getSelection();
       const range = document.createRange();
       range.selectNodeContents(editor);
@@ -380,76 +381,54 @@
       selection.addRange(range);
       await sleep(50);
 
-      // Method 1: execCommand char-by-char
-      let method1Works = true;
+      // Task 2: Strategy 1 (Paste Simulation) — most reliable for Slate.js React state
+      // This completely bypasses char-by-char DOM sync issues and ghost overlays.
+      console.log(LOG, 'Dispatching synthetic React-compatible paste event...');
 
-      for (let i = 0; i < text.length; i++) {
-        const ok = document.execCommand('insertText', false, text[i]);
-
-        if (!ok && i === 0) {
-          console.warn(LOG, 'execCommand not supported, falling back...');
-          method1Works = false;
-          break;
-        }
-
-        const delay = Math.floor(Math.random() * 25) + 15;
-        await sleep(delay);
-      }
-
-      if (method1Works && editor.textContent.includes(text.substring(0, 20))) {
-        console.log(LOG, 'Typewriter injection complete via execCommand');
-        fireInputEvents(editor);
-        return true;
-      }
-
-      // Method 2: InputEvent char-by-char
-      console.log(LOG, 'Trying InputEvent char-by-char...');
-      editor.focus();
-      await sleep(100);
-      range.selectNodeContents(editor);
-      range.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(range);
-
-      for (let i = 0; i < text.length; i++) {
-        editor.dispatchEvent(new InputEvent('beforeinput', {
-          bubbles: true, cancelable: true, inputType: 'insertText', data: text[i],
-        }));
-        editor.dispatchEvent(new InputEvent('input', {
-          bubbles: true, inputType: 'insertText', data: text[i],
-        }));
-        const delay = Math.floor(Math.random() * 25) + 15;
-        await sleep(delay);
-      }
-
-      if (editor.textContent.includes(text.substring(0, 20))) {
-        console.log(LOG, 'Typewriter complete via InputEvent');
-        return true;
-      }
-
-      // Method 3: ClipboardEvent paste
-      console.log(LOG, 'Trying ClipboardEvent paste...');
       const dt = new DataTransfer();
       dt.setData('text/plain', text);
-      editor.dispatchEvent(new ClipboardEvent('paste', {
-        bubbles: true, cancelable: true, clipboardData: dt,
-      }));
+
+      const pasteEvent = new ClipboardEvent('paste', {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: dt
+      });
+
+      editor.dispatchEvent(pasteEvent);
       await sleep(150);
 
-      if (editor.textContent.includes(text.substring(0, 20))) {
-        console.log(LOG, 'Text injected via ClipboardEvent');
-        fireInputEvents(editor);
+      // If paste simulation fails to update DOM, fallback to strict beforeinput chain
+      if (!editor.textContent.includes(text.substring(0, 10))) {
+        console.warn(LOG, 'Paste simulation failed, trying strict beforeinput chain...');
+
+        for (let i = 0; i < text.length; i++) {
+          const char = text[i];
+
+          editor.dispatchEvent(new InputEvent('beforeinput', {
+            bubbles: true, cancelable: true, inputType: 'insertText', data: char
+          }));
+
+          editor.dispatchEvent(new InputEvent('input', {
+            bubbles: true, cancelable: true, inputType: 'insertText', data: char
+          }));
+
+          await sleep(Math.floor(Math.random() * 20) + 15);
+        }
+      }
+
+      if (editor.textContent.includes(text.substring(0, 10))) {
+        console.log(LOG, 'Injection complete and synced with Slate.js');
+        // Extra assurance for React state
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+        editor.dispatchEvent(new Event('change', { bubbles: true }));
         return true;
       }
 
-      // Method 4: clipboard
-      console.warn(LOG, 'All injection methods failed, copying to clipboard');
-      await navigator.clipboard.writeText(text);
+      console.warn(LOG, 'All DOM injection methods failed.');
       return false;
 
     } catch (error) {
       console.error(LOG, 'Injection error:', error);
-      try { await navigator.clipboard.writeText(text); } catch (_) { }
       return false;
     }
   }
