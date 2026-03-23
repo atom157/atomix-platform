@@ -227,17 +227,25 @@
 
     // Extract message text
     let messageText = '';
-    const contentEl = listItem.querySelector('[id^="message-content-"]');
-    if (contentEl) {
-      messageText = contentEl.innerText.trim();
-      console.log(LOG, 'Text found via [id^=message-content-]');
+    const allContentEls = listItem.querySelectorAll('[id^="message-content-"]');
+    for (const el of allContentEls) {
+      if (el.closest('[class*="repliedMessage_"]')) continue;
+      messageText = el.innerText.trim();
+      if (messageText) {
+        console.log(LOG, 'Text found via [id^=message-content-]');
+        break;
+      }
     }
 
     if (!messageText) {
-      const markup = listItem.querySelector('[class*="markup_"], [class*="messageContent_"]');
-      if (markup) {
-        messageText = markup.innerText.trim();
-        console.log(LOG, 'Text found via class fallback');
+      const allMarkupEls = listItem.querySelectorAll('[class*="markup_"], [class*="messageContent_"]');
+      for (const el of allMarkupEls) {
+        if (el.closest('[class*="repliedMessage_"]')) continue;
+        messageText = el.innerText.trim();
+        if (messageText) {
+          console.log(LOG, 'Text found via class fallback');
+          break;
+        }
       }
     }
 
@@ -251,9 +259,11 @@
 
     // Extract author
     let authorName = '';
-    const usernameEl = listItem.querySelector('[id^="message-username-"]');
-    if (usernameEl) {
-      authorName = usernameEl.innerText.trim();
+    const allUsernameEls = listItem.querySelectorAll('[id^="message-username-"]');
+    for (const el of allUsernameEls) {
+      if (el.closest('[class*="repliedMessage_"]')) continue;
+      authorName = el.innerText.trim();
+      if (authorName) break;
     }
 
     if (!authorName) {
