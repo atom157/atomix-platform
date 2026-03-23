@@ -115,20 +115,16 @@
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // ── Toolbar discovery + injection ──────────────────────────────────────────
+  // ── Toolbar discovery + injection (Mouse Event Delegation) ──────────────────
   //
-  // Discord's hover toolbar is EPHEMERAL — it appears on hover and vanishes
-  // when the mouse moves. A debounced querySelectorAll sweep often misses it.
-  //
-  // Approach: The MutationObserver inspects each added node IMMEDIATELY.
-  // We check if the node (or any descendant) is a toolbar candidate:
-  //   - div[role="group"] with ≥3 children
-  //   - NOT inside role="menu" or role="menuitem"
-  //   - Has multiple children with aria-label attributes (icon buttons)
-  //
-  // VERIFIED classes (2026-03-23):
-  //   Toolbar: "buttons__5126c container__040f0" — but class names change,
-  //   so we rely on role="group" + structural shape instead.
+  // React reuses DOM nodes and toggles visibility rather than inserting
+  // new elements. MutationObserver misses this entirely. Instead, we use
+  // mouse event delegation:
+  //   1. Listen for mouseover on document
+  //   2. Walk up to the nearest message container
+  //   3. Wait 60ms for React to render/reveal the toolbar
+  //   4. querySelector inside that container for div[role="group"]
+  //   5. Check structural shape and inject
 
   function isToolbarCandidate(el) {
     if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
@@ -154,7 +150,6 @@
   }
 
   function injectIntoToolbar(toolbar) {
-    // Double-check dedup
     if (toolbar.querySelector('[data-atomix-btn]')) return;
 
     const btn = createAtomixButton();
@@ -167,25 +162,51 @@
       'children=' + toolbar.children.length);
   }
 
-  // Process a single DOM node: check itself and all descendant divs
-  function processAddedNode(node) {
-    if (node.nodeType !== Node.ELEMENT_NODE) return;
+  // Find the message container from any element inside a message
+  function findMessageContainer(target) {
+    // Try specific Discord message selectors
+    const msg = target.closest('[id^="chat-messages-"]')
+      || target.closest('li[class*="messageListItem"]')
+      || target.closest('[class*="message_"]');
+    return msg;
+  }
 
-    // Check the node itself
-    if (isToolbarCandidate(node)) {
-      injectIntoToolbar(node);
-      return;
+  // Search for toolbar candidates inside a container
+  function scanForToolbar(container) {
+    if (!container) return;
+    const candidates = container.querySelectorAll('div[role="group"]');
+    for (const el of candidates) {
+      if (isToolbarCandidate(el)) {
+        injectIntoToolbar(el);
+      }
     }
+  }
 
-    // Check descendants (toolbar might be nested inside the added node)
-    if (node.querySelectorAll) {
-      const candidates = node.querySelectorAll('div[role="group"]');
-      for (const el of candidates) {
+  // Throttled hover handler
+  let _lastHoverTarget = null;
+  let _hoverTimer = null;
+
+  function handleMouseOver(e) {
+    const msgContainer = findMessageContainer(e.target);
+    if (!msgContainer) return;
+
+    // Don't re-process the same message container
+    if (msgContainer === _lastHoverTarget) return;
+    _lastHoverTarget = msgContainer;
+
+    // Wait for React to render/reveal the toolbar
+    clearTimeout(_hoverTimer);
+    _hoverTimer = setTimeout(() => {
+      scanForToolbar(msgContainer);
+
+      // Also scan document-level portals (Discord might render toolbar outside message)
+      // Check for any un-injected toolbars in the entire document as fallback
+      document.querySelectorAll('div[role="group"]').forEach(el => {
         if (isToolbarCandidate(el)) {
           injectIntoToolbar(el);
         }
-      }
-    }
+      });
+    }, 60);
   }
 
   // ── Message extraction ───────────────────────────────────────────────────
@@ -529,38 +550,37 @@
     }
   }
 
-  // ── Button injection (sweep for already-visible toolbars) ─────────────────
-
-  function tryInjectButtons() {
-    document.querySelectorAll('div[role="group"]').forEach(el => {
-      if (isToolbarCandidate(el)) {
-        injectIntoToolbar(el);
-      }
-    });
-  }
-
-  // ── MutationObserver (direct node inspection) ─────────────────────────────
+  // ── Init (Mouse delegation + fallback MutationObserver) ───────────────────
 
   function init() {
     console.log(LOG, 'Initializing Discord content script...');
 
     loadSettings();
 
-    // Initial sweep
-    tryInjectButtons();
+    // PRIMARY: Mouse event delegation on the document
+    document.addEventListener('mouseover', handleMouseOver, { passive: true });
 
-    // Watch for new nodes — process IMMEDIATELY (no debounce)
+    // FALLBACK: MutationObserver for toolbar nodes that React inserts fresh
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
         for (const node of m.addedNodes) {
-          processAddedNode(node);
+          if (node.nodeType !== Node.ELEMENT_NODE) continue;
+          // Quick check: does this node or a descendant look like a toolbar?
+          if (node.getAttribute && node.getAttribute('role') === 'group') {
+            if (isToolbarCandidate(node)) injectIntoToolbar(node);
+          }
+          if (node.querySelectorAll) {
+            node.querySelectorAll('div[role="group"]').forEach(el => {
+              if (isToolbarCandidate(el)) injectIntoToolbar(el);
+            });
+          }
         }
       }
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
 
-    console.log(LOG, 'MutationObserver active — direct node inspection mode');
+    console.log(LOG, 'Mouse delegation + MutationObserver active');
     console.log(LOG, 'Extension loaded ✅');
   }
 
