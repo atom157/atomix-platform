@@ -158,15 +158,16 @@
       // Dedup: already injected next to this button
       if (toolbar.querySelector('[data-atomix-btn]')) continue;
 
-      // The "Step-Up" DOM Fix: Find the explicit outer wrapper/block for the Reply button
-      let replyBlock = replyBtn;
-      while (replyBlock.parentElement && replyBlock.parentElement !== toolbar) {
-        replyBlock = replyBlock.parentElement;
-      }
-      if (!replyBlock || replyBlock.parentElement !== toolbar) continue;
+      // The "Precise Single-Node Cloning" Strategy
+      let targetNode = replyBtn;
 
-      // The "Surgical Clone" Strategy: deep clone the entire native nested structure
-      const clonedBlock = replyBlock.cloneNode(true);
+      // Check if the parent is a dedicated single-button wrapper
+      if (replyBtn.parentElement && replyBtn.parentElement.children.length === 1) {
+        targetNode = replyBtn.parentElement;
+      }
+
+      // Clone the exact, single flex node (preserving deep visual classes)
+      const clonedBlock = targetNode.cloneNode(true);
       clonedBlock.removeAttribute('id');
       clonedBlock.setAttribute('data-atomix-btn', 'true');
 
@@ -195,10 +196,10 @@
 
       clonedBlock.addEventListener('click', handleAtomixClick);
 
-      // Insert exactly between Reply and Forward arrows inside the MAIN container
-      toolbar.insertBefore(clonedBlock, replyBlock.nextSibling);
+      // Insert exactly between Reply and Forward arrows inside the container
+      targetNode.parentNode.insertBefore(clonedBlock, targetNode.nextSibling);
 
-      console.log(LOG, '✅ Button injected at Step-Up clone depth!',
+      console.log(LOG, '✅ Button injected at Single-Node clone depth!',
         'toolbar-class=' + (toolbar.className || '').substring(0, 60),
         'block-class=' + (clonedBlock.className || '').substring(0, 60));
     }
