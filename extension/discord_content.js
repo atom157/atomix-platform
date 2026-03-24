@@ -265,15 +265,82 @@
       }
     }
 
+    // Phase 2: Web3 Hunter Context Matrix
+    // 1. Identity (Server & Channel via document.title)
+    const titleParts = document.title.split(' | ');
+    const channelName = titleParts[0] || '';
+    const serverName = titleParts.length > 2 ? titleParts[1] : '';
+
+    // 2. Target Message Quoted Context
+    let quotedContext = null;
+    const replyBlock = listItem.querySelector('[class*="repliedMessage_"]');
+    if (replyBlock) {
+      let rAuthor = replyBlock.querySelector('[class*="username_"], [class*="author_"]')?.innerText?.trim() || '';
+      let rText = replyBlock.querySelector('[class*="repliedTextPreview_"], [class*="messageContent_"], [class*="content_"]')?.innerText?.trim() || '';
+      if (rText) {
+        rAuthor = rAuthor.replace(/^@/, '');
+        quotedContext = { author: rAuthor, text: rText };
+        console.log(LOG, 'Extracted quoted reply context:', quotedContext);
+      }
+    }
+
+    // Helper to parse sibling history nodes
+    function parseMessageNode(node) {
+      if (!node) return null;
+      if (node.querySelector('[class*="divider_"]')) return null; // skip date dividers
+      if (!node.id || !node.id.startsWith('chat-messages-')) return null;
+
+      let text = '';
+      for (const el of node.querySelectorAll('[id^="message-content-"], [class*="markup_"]')) {
+        if (el.closest('[class*="repliedMessage_"]')) continue;
+        text = el.innerText.trim();
+        if (text) break;
+      }
+      if (!text) return null;
+
+      let author = '';
+      for (const el of node.querySelectorAll('[id^="message-username-"], [class*="username_"]')) {
+        if (el.closest('[class*="repliedMessage_"]')) continue;
+        author = el.innerText.trim();
+        if (author) break;
+      }
+
+      // If continuation message, look up for author
+      if (!author) {
+        let p = node.previousElementSibling;
+        for (let i = 0; i < 15 && p; p = p.previousElementSibling, i++) {
+          const u = p.querySelector('[id^="message-username-"], [class*="username_"]');
+          if (u && !u.closest('[class*="repliedMessage_"]')) { author = u.innerText.trim(); break; }
+        }
+      }
+      return { author, text };
+    }
+
+    // 3. Conversation History (Last 3 messages)
+    const threadContext = [];
+    let sibling = listItem.previousElementSibling;
+    let attempts = 0;
+    while (sibling && threadContext.length < 3 && attempts < 15) {
+      const msg = parseMessageNode(sibling);
+      if (msg) threadContext.unshift(msg); // Prepend to keep chronological order
+      sibling = sibling.previousElementSibling;
+      attempts++;
+    }
+
+    console.log(LOG, `Extracted ${threadContext.length} history messages for context window.`);
+
     const result = {
       text: messageText,
       author: authorName,
       handle: '',
       metrics: {},
-      threadContext: []
+      threadContext: threadContext,
+      quotedContext: quotedContext,
+      channelName: channelName,
+      serverName: serverName
     };
 
-    console.log(LOG, 'Context extracted:', JSON.stringify(result, null, 2));
+    console.log(LOG, 'Context Matrix extracted:', JSON.stringify(result, null, 2));
     return result;
   }
 
