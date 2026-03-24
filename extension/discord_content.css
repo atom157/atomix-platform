@@ -25,9 +25,10 @@
 
 /* ── Atom Icon (SVG) ── */
 .atomix-discord-btn .atomix-icon {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
+  display: block;
 }
 
 /* Hidden label — only for screen readers / tooltip */

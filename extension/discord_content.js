@@ -178,7 +178,7 @@
       wrapper.style.cursor = 'pointer';
 
       wrapper.innerHTML = `
-        <svg class="atomix-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg class="atomix-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="atomix-orb-discord" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
               <stop offset="0%" stop-color="#8B9FFF"/>
@@ -517,14 +517,14 @@
 
     isGenerating = true;
     const originalContent = btn.innerHTML;
-    btn.innerHTML = `${createSpinner()}<span class="atomix-label">Generating...</span>`;
+    btn.innerHTML = `${createSpinner()} <span class="atomix-label">Generating...</span>`;
     btn.classList.add('atomix-loading');
 
     try {
       const reply = await generateReply(messageData);
 
       if (reply) {
-        btn.innerHTML = `${createSpinner()}<span class="atomix-label">Typing...</span>`;
+        btn.innerHTML = `${createSpinner()} <span class="atomix-label">Typing...</span>`;
         console.log(LOG, 'Starting text injection...');
 
         const injected = await injectTextWithTypewriter(reply);
