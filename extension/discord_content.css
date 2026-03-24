@@ -8,21 +8,19 @@
   transition: background-color 0.15s ease, color 0.15s ease !important;
 }
 
-.atomix-discord-btn:hover,
-.atomix-discord-btn:hover *,
-.atomix-discord-btn:hover svg,
-.atomix-discord-btn:hover svg * {
-  background-color: rgba(88, 101, 242, 0.15) !important;
+.atomix-discord-btn:hover {
   color: #5865f2 !important;
-  fill: #5865f2 !important;
-  stroke: #5865f2 !important;
 }
 
-/* Only the outermost wrapper should have background; reset children */
-.atomix-discord-btn:hover *,
-.atomix-discord-btn:hover svg,
-.atomix-discord-btn:hover svg * {
-  background-color: transparent !important;
+/* Target ONLY the SVG stroke/fill paths — no background anywhere */
+.atomix-discord-btn:hover .atomix-icon ellipse {
+  stroke: #5865f2 !important;
+  transition: stroke 0.15s ease;
+}
+
+.atomix-discord-btn:hover .atomix-icon circle {
+  fill: #5865f2 !important;
+  transition: fill 0.15s ease;
 }
 
 .atomix-discord-btn:active {

@@ -455,8 +455,8 @@
 
         editor.dispatchEvent(pasteEvent);
 
-        // Longer delay to let React Fiber complete its re-render cycle
-        await sleep(30 + Math.random() * 40);
+        // Snappy delay — fast enough to feel responsive, slow enough for React Fiber sync
+        await sleep(18 + Math.random() * 20);
       }
 
       if (editor.textContent.includes(text.substring(0, 10))) {
