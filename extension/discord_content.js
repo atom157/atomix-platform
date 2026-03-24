@@ -145,21 +145,29 @@
     const replyButtons = document.querySelectorAll(REPLY_SELECTOR);
 
     for (const replyBtn of replyButtons) {
-      // The toolbar container is the reply button's parent
-      const toolbar = replyBtn.parentElement;
-      if (!toolbar) continue;
-
       // STRICT: never inject inside menus
-      if (toolbar.closest('[role="menu"]')) continue;
-      if (toolbar.closest('[role="menuitem"]')) continue;
       if (replyBtn.closest('[role="menu"]')) continue;
       if (replyBtn.closest('[role="menuitem"]')) continue;
+
+      // Find the REAL toolbar flex container: the nearest div[role="group"]
+      const toolbar = replyBtn.closest('[role="group"]');
+      if (!toolbar) continue;
+      if (toolbar.closest('[role="menu"]')) continue;
 
       // Dedup: already injected
       if (toolbar.querySelector('[data-atomix-btn]')) continue;
 
-      // Inject our button by dynamically cloning the exact native wrapper
-      const wrapper = replyBtn.cloneNode(false);
+      // Walk UP from replyBtn to find the direct flex-child of toolbar.
+      // Structure: toolbar > wrapperDiv > ... > replyBtn
+      // We need to clone wrapperDiv (the direct flex child), not replyBtn.
+      let replyFlexChild = replyBtn;
+      while (replyFlexChild.parentElement && replyFlexChild.parentElement !== toolbar) {
+        replyFlexChild = replyFlexChild.parentElement;
+      }
+      if (!replyFlexChild || replyFlexChild.parentElement !== toolbar) continue;
+
+      // Clone the EXACT flex-child wrapper (preserves all native flex-item classes)
+      const wrapper = replyFlexChild.cloneNode(false);
       wrapper.innerHTML = '';
       wrapper.removeAttribute('aria-label');
       wrapper.removeAttribute('id');
@@ -167,12 +175,7 @@
       wrapper.setAttribute('data-atomix-btn', 'true');
       wrapper.setAttribute('aria-label', 'Generate AI reply with AtomiX');
       wrapper.title = 'Generate AI Reply with AtomiX';
-
-      // Preserve native classes, but add ours ONLY for specific hover styles
       wrapper.classList.add('atomix-discord-btn');
-
-      // We DO NOT set inline styles (display, alignItems, etc.) because 
-      // the cloned native wrapper inherently possesses the perfect layout classes.
 
       wrapper.innerHTML = `
         <svg class="atomix-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -191,19 +194,15 @@
 
       wrapper.addEventListener('click', handleAtomixClick);
 
-      // Task 1: Exact UI Placement — inject exactly between Reply and Forward arrows
-      toolbar.insertBefore(wrapper, replyBtn.nextSibling);
+      // Insert the cloned flex-child AFTER the reply flex-child (between Reply and Forward)
+      toolbar.insertBefore(wrapper, replyFlexChild.nextSibling);
 
-      // Force nowrap on toolbar to prevent wrapping
-      toolbar.style.flexWrap = 'nowrap';
-      toolbar.style.whiteSpace = 'nowrap';
-
-      console.log(LOG, '✅ Button injected!',
-        'toolbar-class=' + (toolbar.className || '').substring(0, 80),
-        'toolbar-role=' + (toolbar.getAttribute('role') || '?'),
-        'reply-label=' + replyBtn.getAttribute('aria-label'));
+      console.log(LOG, '✅ Button injected at flex-child level!',
+        'toolbar=' + (toolbar.className || '').substring(0, 60),
+        'flexChild=' + (replyFlexChild.className || '').substring(0, 60));
     }
   }
+
 
   // ── Message extraction ───────────────────────────────────────────────────
 
