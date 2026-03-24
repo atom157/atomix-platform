@@ -145,31 +145,38 @@
     const replyButtons = document.querySelectorAll(REPLY_SELECTOR);
 
     for (const replyBtn of replyButtons) {
-      // The direct flex container for the icons
-      const toolbar = replyBtn.parentNode;
+      // Find the MAIN horizontal flex container that holds ALL icons
+      const toolbar = replyBtn.closest('[role="group"]') || replyBtn.closest('[class*="buttons_"]');
       if (!toolbar) continue;
 
       // STRICT: never inject inside menus
+      if (toolbar.closest('[role="menu"]')) continue;
+      if (toolbar.closest('[role="menuitem"]')) continue;
       if (replyBtn.closest('[role="menu"]')) continue;
       if (replyBtn.closest('[role="menuitem"]')) continue;
 
       // Dedup: already injected next to this button
       if (toolbar.querySelector('[data-atomix-btn]')) continue;
 
-      // The "Perfect Clone" Strategy:
-      // The 'replyBtn' itself is exactly the wrapper node we need to clone.
-      // It inherently possesses Discord's exact utility classes for inline layout.
-      const wrapper = replyBtn.cloneNode(false);
-      wrapper.innerHTML = '';
-      wrapper.removeAttribute('aria-label');
-      wrapper.removeAttribute('id');
+      // The "Step-Up" DOM Fix: Find the explicit outer wrapper/block for the Reply button
+      let replyBlock = replyBtn;
+      while (replyBlock.parentElement && replyBlock.parentElement !== toolbar) {
+        replyBlock = replyBlock.parentElement;
+      }
+      if (!replyBlock || replyBlock.parentElement !== toolbar) continue;
 
-      wrapper.setAttribute('data-atomix-btn', 'true');
-      wrapper.setAttribute('aria-label', 'Generate AI reply with AtomiX');
-      wrapper.title = 'Generate AI Reply with AtomiX';
-      wrapper.classList.add('atomix-discord-btn');
+      // Clone THAT direct child to inherit perfect flex row spacing
+      const clonedBlock = replyBlock.cloneNode(false);
+      clonedBlock.innerHTML = '';
+      clonedBlock.removeAttribute('aria-label');
+      clonedBlock.removeAttribute('id');
 
-      wrapper.innerHTML = `
+      clonedBlock.setAttribute('data-atomix-btn', 'true');
+      clonedBlock.setAttribute('aria-label', 'Generate AI reply with AtomiX');
+      clonedBlock.title = 'Generate AI Reply with AtomiX';
+      clonedBlock.classList.add('atomix-discord-btn');
+
+      clonedBlock.innerHTML = `
         <svg class="atomix-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <ellipse cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
           <ellipse cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none" transform="rotate(60 12 12)"/>
@@ -178,14 +185,14 @@
         </svg>
       `;
 
-      wrapper.addEventListener('click', handleAtomixClick);
+      clonedBlock.addEventListener('click', handleAtomixClick);
 
-      // Insert exactly between Reply and Forward arrows inside their direct container
-      toolbar.insertBefore(wrapper, replyBtn.nextSibling);
+      // Insert exactly between Reply and Forward arrows inside the MAIN container
+      toolbar.insertBefore(clonedBlock, replyBlock.nextSibling);
 
-      console.log(LOG, '✅ Button injected at perfect clone depth!',
+      console.log(LOG, '✅ Button injected at Step-Up clone depth!',
         'toolbar-class=' + (toolbar.className || '').substring(0, 60),
-        'wrapper-class=' + (wrapper.className || '').substring(0, 60));
+        'block-class=' + (clonedBlock.className || '').substring(0, 60));
     }
   }
 
