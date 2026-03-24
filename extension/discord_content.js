@@ -455,8 +455,9 @@
 
         editor.dispatchEvent(pasteEvent);
 
-        // Snappy delay — fast enough to feel responsive, slow enough for React Fiber sync
-        await sleep(18 + Math.random() * 20);
+        // Slightly relaxed delay — giving React Fiber the exact fraction of a second
+        // it needs to ensure absolutely zero dropped characters.
+        await sleep(45 + Math.random() * 25);
       }
 
       if (editor.textContent.includes(text.substring(0, 10))) {
