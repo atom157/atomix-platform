@@ -3,6 +3,11 @@
 /* ── AtomiX Button — matches native toolbar icon buttons exactly ── */
 /* We rely ENTIRELY on Discord's native cloned wrapper classes for baseline/dimensions/padding */
 
+.atomix-discord-btn {
+  /* Only dictate the smooth color transition for our custom hover state */
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
 .atomix-discord-btn:hover {
   background-color: rgba(88, 101, 242, 0.15) !important;
   color: #5865f2 !important;

@@ -401,7 +401,7 @@
 
   // ── Slate.js injection (React State Sync) ───────────────────────────────
 
-  async function injectTextWithTypewriter(text) {
+  async function injectTextAtomically(text) {
     console.log(LOG, 'Starting robust Slate.js injection, length:', text.length);
 
     const editor = document.querySelector('[role="textbox"][data-slate-editor="true"]')
@@ -425,27 +425,23 @@
       selection.addRange(range);
       await sleep(50);
 
-      // Task 2: Restore Typewriter Effect
-      // Wrap the successful React/Slate paste simulation in an async loop
-      console.log(LOG, 'Dispatching char-by-char React-compatible paste events...');
+      // Task 1: Stabilize Text Sync (React Race Condition)
+      // We abandon the character-by-character loop because Slate.js asynchronous re-renders
+      // frequently cause cursor position desyncs (swallowing characters).
+      // Instead, we use a single, atomic DataTransfer paste payload which guarantees
+      // 100% sync reliability with the internal React Fiber state.
+      console.log(LOG, 'Dispatching single atomic React-compatible paste event...');
 
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
+      const dt = new DataTransfer();
+      dt.setData('text/plain', text);
 
-        const dt = new DataTransfer();
-        dt.setData('text/plain', char);
+      const pasteEvent = new ClipboardEvent('paste', {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: dt
+      });
 
-        const pasteEvent = new ClipboardEvent('paste', {
-          bubbles: true,
-          cancelable: true,
-          clipboardData: dt
-        });
-
-        editor.dispatchEvent(pasteEvent);
-
-        // Wait for human-like typing effect
-        await sleep(20 + Math.random() * 30);
-      }
+      editor.dispatchEvent(pasteEvent);
 
       await sleep(150);
 
@@ -524,7 +520,7 @@
         btn.innerHTML = `${createSpinner()} <span class="atomix-label">Typing...</span>`;
         console.log(LOG, 'Starting text injection...');
 
-        const injected = await injectTextWithTypewriter(reply);
+        const injected = await injectTextAtomically(reply);
 
         if (injected) {
           showNotification('Reply generated!', 'success');
