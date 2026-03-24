@@ -35,11 +35,29 @@
   pointer-events: none;
 }
 
-/* ── Atom Icon (SVG) ── */
+/* ── Atom Icon (SVG) Base ── */
 .atomix-discord-btn .atomix-icon {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
+  overflow: visible;
+}
+
+/* Static layout for orbits */
+.atomix-discord-btn .atom-orbit {
+  transform-origin: 12px 12px;
+}
+
+.atomix-discord-btn .orbit-1 {
+  transform: rotate(0deg);
+}
+
+.atomix-discord-btn .orbit-2 {
+  transform: rotate(60deg);
+}
+
+.atomix-discord-btn .orbit-3 {
+  transform: rotate(-60deg);
 }
 
 /* Hidden label — only for screen readers / tooltip */
@@ -47,23 +65,82 @@
   display: none;
 }
 
-/* ── Breathing Animation (Loading State) ── */
-@keyframes atomix-discord-breathe {
+/* ── Atomic Orbit Animation (Loading State) ── */
+@keyframes atomix-breathe-core {
   0% {
-    opacity: 0.4;
+    transform: scale(1);
+    opacity: 0.8;
   }
 
   50% {
+    transform: scale(1.2);
     opacity: 1.0;
   }
 
   100% {
-    opacity: 0.4;
+    transform: scale(1);
+    opacity: 0.8;
   }
 }
 
-.atomix-discord-btn.atomix-loading .atomix-icon {
-  animation: atomix-discord-breathe 1.8s ease-in-out infinite;
+@keyframes atomix-orbit-1 {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  50% {
+    transform: rotate(180deg) scale(1.1);
+  }
+
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes atomix-orbit-2 {
+  0% {
+    transform: rotate(60deg) scale(1);
+  }
+
+  50% {
+    transform: rotate(240deg) scale(1.1);
+  }
+
+  100% {
+    transform: rotate(420deg) scale(1);
+  }
+}
+
+@keyframes atomix-orbit-3 {
+  0% {
+    transform: rotate(-60deg) scale(1);
+  }
+
+  50% {
+    transform: rotate(120deg) scale(1.1);
+  }
+
+  100% {
+    transform: rotate(300deg) scale(1);
+  }
+}
+
+/* Apply staggered orbits to the rings */
+.atomix-discord-btn.atomix-loading .orbit-1 {
+  animation: atomix-orbit-1 2s linear infinite;
+}
+
+.atomix-discord-btn.atomix-loading .orbit-2 {
+  animation: atomix-orbit-2 2.2s linear infinite;
+}
+
+.atomix-discord-btn.atomix-loading .orbit-3 {
+  animation: atomix-orbit-3 2.5s linear infinite;
+}
+
+.atomix-discord-btn.atomix-loading .atom-core {
+  animation: atomix-breathe-core 2s ease-in-out infinite;
+  transform-origin: 12px 12px;
 }
 
 /* ── Notification Toast ── */
