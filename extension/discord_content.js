@@ -165,25 +165,33 @@
       }
       if (!replyBlock || replyBlock.parentElement !== toolbar) continue;
 
-      // Clone THAT direct child to inherit perfect flex row spacing
-      const clonedBlock = replyBlock.cloneNode(false);
-      clonedBlock.innerHTML = '';
-      clonedBlock.removeAttribute('aria-label');
+      // The "Surgical Clone" Strategy: deep clone the entire native nested structure
+      const clonedBlock = replyBlock.cloneNode(true);
       clonedBlock.removeAttribute('id');
-
       clonedBlock.setAttribute('data-atomix-btn', 'true');
-      clonedBlock.setAttribute('aria-label', 'Generate AI reply with AtomiX');
-      clonedBlock.title = 'Generate AI Reply with AtomiX';
+
+      // Update tooltip labels anywhere inside the cloned hierarchy
+      const tooltipElements = clonedBlock.querySelectorAll('[aria-label], [title]');
+      for (const el of tooltipElements) {
+        if (el.hasAttribute('aria-label')) el.setAttribute('aria-label', 'AtomiX Reply');
+        if (el.hasAttribute('title')) el.setAttribute('title', 'AtomiX Reply');
+      }
+      if (clonedBlock.hasAttribute('aria-label')) clonedBlock.setAttribute('aria-label', 'AtomiX Reply');
+
       clonedBlock.classList.add('atomix-discord-btn');
 
-      clonedBlock.innerHTML = `
+      // Find the deeply nested native SVG and surgically swap it
+      const nativeSvg = clonedBlock.querySelector('svg');
+      if (nativeSvg) {
+        nativeSvg.outerHTML = `
         <svg class="atomix-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <ellipse cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
           <ellipse cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none" transform="rotate(60 12 12)"/>
           <ellipse cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none" transform="rotate(-60 12 12)"/>
           <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
         </svg>
-      `;
+        `;
+      }
 
       clonedBlock.addEventListener('click', handleAtomixClick);
 
