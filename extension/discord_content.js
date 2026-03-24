@@ -145,29 +145,21 @@
     const replyButtons = document.querySelectorAll(REPLY_SELECTOR);
 
     for (const replyBtn of replyButtons) {
+      // The direct flex container for the icons
+      const toolbar = replyBtn.parentNode;
+      if (!toolbar) continue;
+
       // STRICT: never inject inside menus
       if (replyBtn.closest('[role="menu"]')) continue;
       if (replyBtn.closest('[role="menuitem"]')) continue;
 
-      // Find the REAL toolbar flex container: the nearest div[role="group"]
-      const toolbar = replyBtn.closest('[role="group"]');
-      if (!toolbar) continue;
-      if (toolbar.closest('[role="menu"]')) continue;
-
-      // Dedup: already injected
+      // Dedup: already injected next to this button
       if (toolbar.querySelector('[data-atomix-btn]')) continue;
 
-      // Walk UP from replyBtn to find the direct flex-child of toolbar.
-      // Structure: toolbar > wrapperDiv > ... > replyBtn
-      // We need to clone wrapperDiv (the direct flex child), not replyBtn.
-      let replyFlexChild = replyBtn;
-      while (replyFlexChild.parentElement && replyFlexChild.parentElement !== toolbar) {
-        replyFlexChild = replyFlexChild.parentElement;
-      }
-      if (!replyFlexChild || replyFlexChild.parentElement !== toolbar) continue;
-
-      // Clone the EXACT flex-child wrapper (preserves all native flex-item classes)
-      const wrapper = replyFlexChild.cloneNode(false);
+      // The "Perfect Clone" Strategy:
+      // The 'replyBtn' itself is exactly the wrapper node we need to clone.
+      // It inherently possesses Discord's exact utility classes for inline layout.
+      const wrapper = replyBtn.cloneNode(false);
       wrapper.innerHTML = '';
       wrapper.removeAttribute('aria-label');
       wrapper.removeAttribute('id');
@@ -194,12 +186,12 @@
 
       wrapper.addEventListener('click', handleAtomixClick);
 
-      // Insert the cloned flex-child AFTER the reply flex-child (between Reply and Forward)
-      toolbar.insertBefore(wrapper, replyFlexChild.nextSibling);
+      // Insert exactly between Reply and Forward arrows inside their direct container
+      toolbar.insertBefore(wrapper, replyBtn.nextSibling);
 
-      console.log(LOG, '✅ Button injected at flex-child level!',
-        'toolbar=' + (toolbar.className || '').substring(0, 60),
-        'flexChild=' + (replyFlexChild.className || '').substring(0, 60));
+      console.log(LOG, '✅ Button injected at perfect clone depth!',
+        'toolbar-class=' + (toolbar.className || '').substring(0, 60),
+        'wrapper-class=' + (wrapper.className || '').substring(0, 60));
     }
   }
 
