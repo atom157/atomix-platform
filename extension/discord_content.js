@@ -168,14 +168,11 @@
       wrapper.setAttribute('aria-label', 'Generate AI reply with AtomiX');
       wrapper.title = 'Generate AI Reply with AtomiX';
 
-      // Preserve native classes, but add ours for spinner/hover styles
+      // Preserve native classes, but add ours ONLY for specific hover styles
       wrapper.classList.add('atomix-discord-btn');
 
-      // Ensure flex behavior
-      wrapper.style.display = 'flex';
-      wrapper.style.alignItems = 'center';
-      wrapper.style.justifyContent = 'center';
-      wrapper.style.cursor = 'pointer';
+      // We DO NOT set inline styles (display, alignItems, etc.) because 
+      // the cloned native wrapper inherently possesses the perfect layout classes.
 
       wrapper.innerHTML = `
         <svg class="atomix-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -190,7 +187,6 @@
           <ellipse cx="12" cy="12" rx="9" ry="3.5" stroke="url(#atomix-orb-discord)" stroke-width="1.3" fill="none" transform="rotate(-60 12 12)"/>
           <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
         </svg>
-        <span class="atomix-label" style="display:none;">AtomiX</span>
       `;
 
       wrapper.addEventListener('click', handleAtomixClick);

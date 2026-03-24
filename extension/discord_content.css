@@ -1,16 +1,11 @@
 /* AtomiX — Discord Content Script Styles (injected into discord.com) */
 
 /* ── AtomiX Button — matches native toolbar icon buttons exactly ── */
-.atomix-discord-btn {
-  background: transparent;
-  color: #b5bac1;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
+/* We rely ENTIRELY on Discord's native cloned wrapper classes for baseline/dimensions/padding */
 
 .atomix-discord-btn:hover {
-  background-color: rgba(88, 101, 242, 0.15);
-  color: #5865f2;
+  background-color: rgba(88, 101, 242, 0.15) !important;
+  color: #5865f2 !important;
 }
 
 .atomix-discord-btn:active {
@@ -28,7 +23,6 @@
   width: 24px;
   height: 24px;
   flex-shrink: 0;
-  display: block;
 }
 
 /* Hidden label — only for screen readers / tooltip */
