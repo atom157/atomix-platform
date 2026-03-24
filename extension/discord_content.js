@@ -87,15 +87,6 @@
     return btn;
   }
 
-  function createSpinner() {
-    return `
-      <svg class="atomix-discord-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
-        <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
-      </svg>
-    `;
-  }
-
   function showNotification(message, type = 'info') {
     const existing = document.querySelector('.atomix-discord-notification');
     if (existing) existing.remove();
@@ -505,15 +496,16 @@
     await triggerDiscordReply(btn);
 
     isGenerating = true;
-    const originalContent = btn.innerHTML;
-    btn.innerHTML = `${createSpinner()} <span class="atomix-label">Generating...</span>`;
     btn.classList.add('atomix-loading');
+
+    const labelSpan = btn.querySelector('.atomix-label');
+    if (labelSpan) labelSpan.textContent = 'Generating...';
 
     try {
       const reply = await generateReply(messageData);
 
       if (reply) {
-        btn.innerHTML = `${createSpinner()} <span class="atomix-label">Typing...</span>`;
+        if (labelSpan) labelSpan.textContent = 'Typing...';
         console.log(LOG, 'Starting text injection...');
 
         const injected = await injectTextWithTypewriter(reply);
@@ -531,8 +523,8 @@
       showNotification(error.message, 'error');
     } finally {
       isGenerating = false;
-      btn.innerHTML = originalContent;
       btn.classList.remove('atomix-loading');
+      if (labelSpan) labelSpan.textContent = 'AtomiX';
     }
   }
 

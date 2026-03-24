@@ -47,22 +47,23 @@
   display: none;
 }
 
-/* ── Loading Spinner ── */
-.atomix-discord-spinner {
-  width: 16px;
-  height: 16px;
-  animation: atomix-discord-spin 0.9s linear infinite;
-  flex-shrink: 0;
+/* ── Breathing Animation (Loading State) ── */
+@keyframes atomix-discord-breathe {
+  0% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 1.0;
+  }
+
+  100% {
+    opacity: 0.4;
+  }
 }
 
-@keyframes atomix-discord-spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
+.atomix-discord-btn.atomix-loading .atomix-icon {
+  animation: atomix-discord-breathe 1.8s ease-in-out infinite;
 }
 
 /* ── Notification Toast ── */
