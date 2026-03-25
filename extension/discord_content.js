@@ -492,12 +492,20 @@
       for (let i = 0; i < text.length; i++) {
         const char = text[i];
 
-        // CRITICAL: Force cursor to the very end before each character
+        // CRITICAL: Deeply find the last text node to prevent Slate from swallowing spaces
         const sel = window.getSelection();
-        if (sel && editor.lastChild) {
+        if (sel) {
+          let deepest = editor;
+          while (deepest.lastChild) {
+            deepest = deepest.lastChild;
+          }
           const endRange = document.createRange();
-          endRange.selectNodeContents(editor);
-          endRange.collapse(false); // collapse to END
+          if (deepest.nodeType === Node.TEXT_NODE) {
+            endRange.setStart(deepest, deepest.nodeValue.length);
+          } else {
+            endRange.selectNodeContents(deepest);
+          }
+          endRange.collapse(true);
           sel.removeAllRanges();
           sel.addRange(endRange);
         }
