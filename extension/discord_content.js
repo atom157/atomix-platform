@@ -747,20 +747,12 @@
 
     try {
       let messageData;
-      let customPrompt;
-
-      // The User Custom Prompt block MUST be prioritized strongly
-      const userCustomPrompt = settings.customPromptContent 
-        ? `\n\nUSER'S STRICT CUSTOM INSTRUCTIONS:\n"""\n${settings.customPromptContent}\n"""\nCRITICAL: You MUST prioritize this custom instruction above all default formatting and style rules.` 
-        : '';
+      const generateMode = hasExistingText ? 'polish' : 'starter';
 
       if (hasExistingText) {
         // Case B: Polish/Continue mode
         console.log(LOG, 'Mode: POLISH — existing text detected:', existingText.substring(0, 50));
         const { history, channelName, serverName } = extractChannelHistory(3);
-
-        const historyStr = history.map(m => `${m.author}: ${m.text}`).join('\n');
-        customPrompt = `The user has started writing: "${existingText}". Given the context of the chat:\n${historyStr}\nFinish their thought, improve the phrasing, and complete the message naturally.${userCustomPrompt}\n\nReturn ONLY the final complete message text, without any prefixes or explanations.`;
 
         messageData = {
           text: existingText,
@@ -776,11 +768,8 @@
         console.log(LOG, 'Mode: STARTER — empty editor, generating conversation starter');
         const { history, channelName, serverName } = extractChannelHistory(5);
 
-        const historyStr = history.map(m => `${m.author}: ${m.text}`).join('\n');
-        customPrompt = `Analyze the recent conversation:\n${historyStr}\nGenerate a natural, engaging conversation starter or continuation in the style of a Discord user, matching the language of the chat.${userCustomPrompt}\n\nReturn ONLY the message text, without any prefixes or explanations.`;
-
         messageData = {
-          text: historyStr || 'Start a conversation',
+          text: 'Start a conversation',
           author: 'me',
           handle: '',
           metrics: {},
@@ -790,7 +779,7 @@
         };
       }
 
-      // Send to background with custom prompt override
+      // Send to background
       const result = await new Promise((resolve, reject) => {
         chrome.runtime.sendMessage(
           {
@@ -800,6 +789,7 @@
               extToken: settings.extToken,
               promptId: settings.selectedPromptId || null,
               settings: {
+                generateMode: generateMode,
                 model: 'gpt-4o-mini',
                 language: settings.language || 'same',
                 length: settings.length || 'medium',
@@ -807,7 +797,7 @@
                 includeHashtags: settings.includeHashtags || false,
                 mentionAuthor: false,
                 addEmoji: settings.addEmoji || false,
-                customPrompt: customPrompt
+                customPrompt: settings.customPromptContent || null
               },
             },
           },

@@ -197,7 +197,8 @@ export async function POST(request: Request) {
 
     // Build the system prompt
     const systemPrompt = buildSystemPrompt(promptContent, safeSettings)
-    const userPrompt = buildUserPrompt(safeTweetData)
+    const generateMode = (safeSettings as Record<string, unknown>)?.generateMode as string || 'reply'
+    const userPrompt = buildUserPrompt(safeTweetData, generateMode)
 
     // Use user's API key if available, otherwise use default
     const apiKey = profile.openai_api_key || process.env.OPENAI_API_KEY
@@ -293,7 +294,7 @@ function buildSystemPrompt(customPrompt: string, settings: Record<string, unknow
   }
 
   const languageDescriptions: Record<string, string> = {
-    same: 'the same language as the original tweet',
+    same: 'the same language as the original context',
     uk: 'Ukrainian',
     en: 'English',
     ru: 'Russian',
@@ -306,8 +307,26 @@ function buildSystemPrompt(customPrompt: string, settings: Record<string, unknow
   const addEmoji = settings?.addEmoji === true
   const includeHashtags = settings?.includeHashtags === true
   const bannedWords = settings?.bannedWords as string
+  const generateMode = (settings?.generateMode as string) || 'reply'
 
-  let basePrompt = `You are a real person replying on Twitter/X. Your goal is to write a reply that feels completely human and natural - as if typed quickly on a phone.
+  let basePrompt = '';
+
+  if (generateMode === 'starter' || generateMode === 'polish') {
+    // Minimal generic instructions to avoid overriding the user's custom persona (e.g. "lazy degen")
+    basePrompt = `You are a real person participating in a chat environment.
+
+STYLE RULES:
+1. Tone: ${toneDescriptions[tone] || 'friendly'}
+2. Length: ${lengthDescriptions[length] || '1-2 sentences'}
+3. Language: Write in ${languageDescriptions[language] || 'the same language as the original context'}
+4. ${addEmoji ? 'Integrate expressive and relevant emojis naturally into the text' : 'STRICT RULE: Do NOT use any emojis, emoticons, or Unicode symbols whatsoever'}
+5. ${includeHashtags ? 'Include 1-3 relevant and trending hashtags at the end of the response' : 'STRICT RULE: Do NOT include any hashtags'}
+
+OUTPUT:
+- Return ONLY the final message text. No quotes, no labels, no conversational filler prefixes.`
+  } else {
+    // Normal Reply Mode
+    basePrompt = `You are a real person replying on Twitter/X. Your goal is to write a reply that feels completely human and natural - as if typed quickly on a phone.
 
 SENTIMENT AWARENESS:
 - First, detect the emotional tone of the original tweet (happy, frustrated, sad, excited, angry, neutral, sarcastic, informative).
@@ -343,6 +362,7 @@ CONTENT RULES:
 
 OUTPUT:
 - Return ONLY the reply text. No quotes, no labels, no "Reply:" prefix.`
+  }
 
   if (bannedWords) {
     basePrompt += `\n\nSTRICT RULE — FORBIDDEN WORDS: Do not use any of the following words or their variations, synonyms, or related forms in your response: ${bannedWords}. This is a hard requirement. Check your output and remove any matches before returning.`
@@ -359,7 +379,7 @@ OUTPUT:
   // ── HIGH PRIORITY: Language enforcement (appended LAST to override everything) ──
   if (language && language !== 'same') {
     const langName = languageDescriptions[language] || language
-    basePrompt += `\n\n=== CRITICAL LANGUAGE OVERRIDE ===\nIMPORTANT: You MUST write your ENTIRE reply in ${langName}. Even if the original tweet is in a different language, your response MUST be in ${langName}. This is a hard requirement — do NOT switch to the tweet's language. Every single word of your reply must be in ${langName}.`
+    basePrompt += `\n\n=== CRITICAL LANGUAGE OVERRIDE ===\nIMPORTANT: You MUST write your ENTIRE response in ${langName}. Even if the original context is in a different language, your response MUST be in ${langName}. This is a hard requirement — do NOT switch languages. Every single word of your reply must be in ${langName}.`
   }
 
   // ── FINAL OVERRIDES: Toggle enforcement (absolute last instructions) ──
@@ -374,17 +394,19 @@ OUTPUT:
   } else {
     toggleOverrides += '\nABSOLUTE BAN: Do NOT include any hashtags. Zero hashtags allowed.'
   }
-  if (mentionAuthor) {
-    toggleOverrides += '\nCRITICAL: You MUST start the reply by tagging the author with their @handle. This is a hard requirement.'
-  } else {
-    toggleOverrides += '\nABSOLUTE BAN: Do NOT mention or reference the author\'s @handle anywhere in the reply.'
+  if (generateMode === 'reply') {
+    if (mentionAuthor) {
+      toggleOverrides += '\nCRITICAL: You MUST start the reply by tagging the author with their @handle. This is a hard requirement.'
+    } else {
+      toggleOverrides += '\nABSOLUTE BAN: Do NOT mention or reference the author\'s @handle anywhere in the reply.'
+    }
   }
   basePrompt += toggleOverrides
 
   return basePrompt
 }
 
-function buildUserPrompt(tweetData: Record<string, unknown>) {
+function buildUserPrompt(tweetData: Record<string, unknown>, generateMode: string = 'reply') {
   const text = tweetData.text as string
   const author = tweetData.author as string
   const handle = tweetData.handle as string
@@ -393,23 +415,26 @@ function buildUserPrompt(tweetData: Record<string, unknown>) {
 
   let userPrompt = ''
 
-  // Provide thread context first so the model understands the conversation flow
   if (threadContext && threadContext.length > 0) {
-    userPrompt += `Thread context (earlier messages in the conversation):\n${threadContext.map((t, i) => `  ${i + 1}. "${t}"`).join('\n')}\n\n`
+    userPrompt += `Chat history context:\n${threadContext.map((t, i) => `  ${i + 1}. "${t}"`).join('\n')}\n\n`
   }
 
-  userPrompt += `Tweet by ${author} (${handle}):\n"${text}"`
-
-  // Metrics help gauge engagement level and audience
-  if (metrics && Object.keys(metrics).length > 0) {
-    const likes = metrics.likes || '0'
-    const retweets = metrics.retweets || '0'
-    if (likes !== '0' || retweets !== '0') {
-      userPrompt += `\n[${likes} likes, ${retweets} retweets]`
+  if (generateMode === 'starter') {
+    userPrompt += `Task: Generate a natural and engaging conversation starter for this chat.\n\nReturn ONLY the message text without prefixes or explanation.`
+  } else if (generateMode === 'polish') {
+    userPrompt += `The user has drafted the following message:\n"${text}"\n\nTask: Finish their thought naturally, and polish the phrasing to fit the conversation flow and system persona.\n\nReturn ONLY the complete, final message text without prefixes or explanation.`
+  } else {
+    userPrompt += `Tweet by ${author} (${handle}):\n"${text}"`
+    if (metrics && Object.keys(metrics).length > 0) {
+      const likes = metrics.likes || '0'
+      const retweets = metrics.retweets || '0'
+      if (likes !== '0' || retweets !== '0') {
+        userPrompt += `\n[${likes} likes, ${retweets} retweets]`
+      }
     }
+    userPrompt += '\n\nWrite one reply:'
   }
-
-  userPrompt += '\n\nWrite one reply:'
 
   return userPrompt
 }
+
