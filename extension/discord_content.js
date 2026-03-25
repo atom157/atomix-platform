@@ -637,10 +637,8 @@
       // Skip hover toolbars and context menus
       if (emojiBtn.closest('[role="group"]') && emojiBtn.closest('[id^="chat-messages-"]')) continue;
 
-      // Dedup: already injected
-      const parentRow = emojiBtn.parentElement;
-      if (!parentRow) continue;
-      if (parentRow.querySelector('[data-atomix-starter-btn]')) continue;
+      // Dedup: already injected anywhere in this input area
+      if (formContainer.querySelector('[data-atomix-starter-btn]')) continue;
 
       // Surgical Single-Node Clone of the emoji button
       let targetNode = emojiBtn;
