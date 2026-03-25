@@ -650,6 +650,15 @@
       clonedBlock.removeAttribute('id');
       clonedBlock.setAttribute('data-atomix-starter-btn', 'true');
 
+      // Crucial Fix: The Emoji button is a CSS sprite, not an SVG. It doesn't inherit native gray colors.
+      // To get perfect 100% native coloring, we must copy the classes from a neighboring SVG button (like GIF/Sticker).
+      const adjacentSvgBtn = Array.from(targetNode.parentNode.children).find(
+        node => node !== targetNode && node.querySelector('svg') && !node.className?.toLowerCase().includes('emoji')
+      );
+      if (adjacentSvgBtn) {
+        clonedBlock.className = adjacentSvgBtn.className;
+      }
+
       // Update all tooltip labels
       const tooltipEls = clonedBlock.querySelectorAll('[aria-label], [title]');
       for (const el of tooltipEls) {
@@ -660,15 +669,12 @@
 
       clonedBlock.classList.add('atomix-discord-btn');
 
-      // Extract native SVG classes to inherit Discord's color variables (var(--interactive-normal))
-      const nativeSvg = clonedBlock.querySelector('svg');
-      const nativeClasses = nativeSvg ? (nativeSvg.getAttribute('class') || '') : '';
-
-      // Overwrite the inner HTML completely to replace the sticky/smiley icon
-      // Discord's native button either has inner wrapper divs or directly contains the SVG.
+      // The native button might have inner wrapper divs (e.g. .contents). We completely wipe the inside
+      // and inject our AtomiX SVG directly. Because clonedBlock now has the native SVG button classes,
+      // it will inherit the perfect light-gray color natively!
       const innerTarget = clonedBlock.querySelector('[class*="contents_"]') || clonedBlock;
       innerTarget.innerHTML = `
-        <svg class="atomix-icon ${nativeClasses}" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg class="atomix-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <ellipse class="atom-orbit orbit-1" cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
           <ellipse class="atom-orbit orbit-2" cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
           <ellipse class="atom-orbit orbit-3" cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
