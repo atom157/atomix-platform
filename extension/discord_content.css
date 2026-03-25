@@ -6,6 +6,7 @@
 .atomix-discord-btn {
   /* Only dictate the smooth color transition for our custom hover state */
   transition: background-color 0.15s ease, color 0.15s ease !important;
+  color: var(--interactive-normal);
 }
 
 .atomix-discord-btn:hover {
