@@ -1,8 +1,8 @@
 // AtomiX — Discord Content Script
-// Injects an "AtomiX" button into Discord's message hover toolbar,
-// extracts message context, triggers native Reply, generates an AI reply
-// via background.js, and injects the result into Discord's Slate.js editor
-// with a character-by-character typewriter effect.
+// 1. Injects an "AtomiX" button into Discord's message hover toolbar
+//    for AI-powered contextual replies (+ typewriter effect).
+// 2. Injects a "Conversation Starter" button into the main input toolbar
+//    for AI-generated conversation starters and message polishing.
 
 (function () {
   'use strict';
@@ -132,6 +132,19 @@
     '[aria-label="Odpovědět"]'
   ].join(', ');
 
+  // Multi-language emoji picker button aria-label selector (for main input toolbar)
+  const EMOJI_SELECTOR = [
+    '[aria-label="Pick an emoji"]',
+    '[aria-label="Додати емодзі"]',
+    '[aria-label="Emoji auswählen"]',
+    '[aria-label="Choisir un emoji"]',
+    '[aria-label="Выбрать эмодзи"]',
+    '[aria-label="Elegir un emoji"]',
+    '[aria-label="Wybierz emotikon"]',
+    '[aria-label="Scegli un\'emoji"]',
+    '[aria-label="Vybrat emoji"]'
+  ].join(', ');
+
   function pollForToolbars() {
     const replyButtons = document.querySelectorAll(REPLY_SELECTOR);
 
@@ -196,6 +209,40 @@
     }
   }
 
+
+  // ── Shared Message Node Parser ───────────────────────────────────────────
+  // Used by both extractMessageData (reply context) and extractChannelHistory (starter context)
+
+  function parseMessageNode(node) {
+    if (!node) return null;
+    if (node.querySelector('[class*="divider_"]')) return null; // skip date dividers
+    if (!node.id || !node.id.startsWith('chat-messages-')) return null;
+
+    let text = '';
+    for (const el of node.querySelectorAll('[id^="message-content-"], [class*="markup_"]')) {
+      if (el.closest('[class*="repliedMessage_"]')) continue;
+      text = el.innerText.trim();
+      if (text) break;
+    }
+    if (!text) return null;
+
+    let author = '';
+    for (const el of node.querySelectorAll('[id^="message-username-"], [class*="username_"]')) {
+      if (el.closest('[class*="repliedMessage_"]')) continue;
+      author = el.innerText.trim();
+      if (author) break;
+    }
+
+    // If continuation message, look up for author
+    if (!author) {
+      let p = node.previousElementSibling;
+      for (let i = 0; i < 15 && p; p = p.previousElementSibling, i++) {
+        const u = p.querySelector('[id^="message-username-"], [class*="username_"]');
+        if (u && !u.closest('[class*="repliedMessage_"]')) { author = u.innerText.trim(); break; }
+      }
+    }
+    return { author, text };
+  }
 
   // ── Message extraction ───────────────────────────────────────────────────
 
@@ -284,39 +331,7 @@
       }
     }
 
-    // Helper to parse sibling history nodes
-    function parseMessageNode(node) {
-      if (!node) return null;
-      if (node.querySelector('[class*="divider_"]')) return null; // skip date dividers
-      if (!node.id || !node.id.startsWith('chat-messages-')) return null;
-
-      let text = '';
-      for (const el of node.querySelectorAll('[id^="message-content-"], [class*="markup_"]')) {
-        if (el.closest('[class*="repliedMessage_"]')) continue;
-        text = el.innerText.trim();
-        if (text) break;
-      }
-      if (!text) return null;
-
-      let author = '';
-      for (const el of node.querySelectorAll('[id^="message-username-"], [class*="username_"]')) {
-        if (el.closest('[class*="repliedMessage_"]')) continue;
-        author = el.innerText.trim();
-        if (author) break;
-      }
-
-      // If continuation message, look up for author
-      if (!author) {
-        let p = node.previousElementSibling;
-        for (let i = 0; i < 15 && p; p = p.previousElementSibling, i++) {
-          const u = p.querySelector('[id^="message-username-"], [class*="username_"]');
-          if (u && !u.closest('[class*="repliedMessage_"]')) { author = u.innerText.trim(); break; }
-        }
-      }
-      return { author, text };
-    }
-
-    // 3. Conversation History (Last 3 messages)
+    // 3. Conversation History (Last 3 messages) — uses shared parseMessageNode()
     const threadContext = [];
     let sibling = listItem.previousElementSibling;
     let attempts = 0;
@@ -605,6 +620,288 @@
     }
   }
 
+  // ── Main Input Toolbar — Conversation Starter Button ─────────────────
+
+  function pollForMainInputToolbar() {
+    // Find emoji buttons in the main input area (not in hover toolbars)
+    const emojiButtons = document.querySelectorAll(EMOJI_SELECTOR);
+
+    for (const emojiBtn of emojiButtons) {
+      // Must be near the main textbox, not inside a hover toolbar or popup
+      const formContainer = emojiBtn.closest('form') || emojiBtn.closest('[class*="channelTextArea_"]');
+      if (!formContainer) continue;
+
+      // Must have a Slate editor nearby
+      if (!formContainer.querySelector('[data-slate-editor="true"], [role="textbox"][contenteditable="true"]')) continue;
+
+      // Skip hover toolbars and context menus
+      if (emojiBtn.closest('[role="group"]') && emojiBtn.closest('[id^="chat-messages-"]')) continue;
+
+      // Dedup: already injected
+      const parentRow = emojiBtn.parentElement;
+      if (!parentRow) continue;
+      if (parentRow.querySelector('[data-atomix-starter-btn]')) continue;
+
+      // Surgical Single-Node Clone of the emoji button
+      let targetNode = emojiBtn;
+      if (emojiBtn.parentElement && emojiBtn.parentElement.children.length === 1) {
+        targetNode = emojiBtn.parentElement;
+      }
+
+      const clonedBlock = targetNode.cloneNode(true);
+      clonedBlock.removeAttribute('id');
+      clonedBlock.setAttribute('data-atomix-starter-btn', 'true');
+
+      // Update all tooltip labels
+      const tooltipEls = clonedBlock.querySelectorAll('[aria-label], [title]');
+      for (const el of tooltipEls) {
+        if (el.hasAttribute('aria-label')) el.setAttribute('aria-label', 'AtomiX Generate Starter');
+        if (el.hasAttribute('title')) el.setAttribute('title', 'AtomiX Generate');
+      }
+      if (clonedBlock.hasAttribute('aria-label')) clonedBlock.setAttribute('aria-label', 'AtomiX Generate Starter');
+
+      clonedBlock.classList.add('atomix-discord-btn');
+
+      // Swap the native emoji SVG for AtomiX atom logo
+      const nativeSvg = clonedBlock.querySelector('svg');
+      if (nativeSvg) {
+        nativeSvg.outerHTML = `
+        <svg class="atomix-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ellipse class="atom-orbit orbit-1" cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+          <ellipse class="atom-orbit orbit-2" cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+          <ellipse class="atom-orbit orbit-3" cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+          <circle class="atom-core" cx="12" cy="12" r="2.5" fill="currentColor"/>
+        </svg>
+        `;
+      }
+
+      clonedBlock.addEventListener('click', handleStarterClick);
+
+      // Insert BEFORE the emoji button (leftmost in the icon group)
+      targetNode.parentNode.insertBefore(clonedBlock, targetNode);
+
+      console.log(LOG, '✅ Starter button injected into main input toolbar!');
+    }
+  }
+
+  // ── Channel History Extraction ───────────────────────────────────────
+
+  function extractChannelHistory(count) {
+    const titleParts = document.title.split(' | ');
+    const channelName = titleParts[0] || '';
+    const serverName = titleParts.length > 2 ? titleParts[1] : '';
+
+    // Get all visible chat messages
+    const allMessages = document.querySelectorAll('[id^="chat-messages-"]');
+    const history = [];
+
+    // Walk backwards from the last visible message
+    for (let i = allMessages.length - 1; i >= 0 && history.length < count; i--) {
+      const node = allMessages[i];
+      const msg = parseMessageNode(node);
+      if (msg) history.unshift(msg);
+    }
+
+    console.log(LOG, `Extracted ${history.length}/${count} channel history messages.`);
+    return { history, channelName, serverName };
+  }
+
+  // ── Atomic Single-Paste into Slate.js Editor ────────────────────────
+
+  async function atomicPasteIntoEditor(text, replaceExisting = false) {
+    const editor = document.querySelector('[role="textbox"][data-slate-editor="true"]')
+      || document.querySelector('[role="textbox"][contenteditable="true"]');
+
+    if (!editor) {
+      console.error(LOG, 'Slate.js editor not found for atomic paste');
+      return false;
+    }
+
+    try {
+      editor.focus();
+      await sleep(150);
+
+      if (replaceExisting) {
+        // Select all existing text before pasting
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        await sleep(50);
+      } else {
+        // Place cursor at end
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        await sleep(50);
+      }
+
+      // Single atomic paste — guaranteed Slate.js state sync
+      const dt = new DataTransfer();
+      dt.setData('text/plain', text);
+      const pasteEvent = new ClipboardEvent('paste', {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: dt
+      });
+      editor.dispatchEvent(pasteEvent);
+
+      await sleep(100);
+
+      if (editor.textContent.includes(text.substring(0, 10))) {
+        console.log(LOG, 'Atomic paste successful, Slate.js synced');
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+        editor.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      }
+
+      // Fallback: copy to clipboard
+      await navigator.clipboard.writeText(text);
+      console.warn(LOG, 'Atomic paste failed, copied to clipboard');
+      return false;
+
+    } catch (error) {
+      console.error(LOG, 'Atomic paste error:', error);
+      return false;
+    }
+  }
+
+  // ── Starter Button Click Handler ────────────────────────────────────
+
+  async function handleStarterClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (isGenerating) return;
+
+    const btn = event.currentTarget;
+    console.log(LOG, 'Starter button clicked');
+
+    await loadSettings();
+
+    if (!settings.extToken || !settings.userId) {
+      showNotification('Please connect your account in extension settings', 'error');
+      return;
+    }
+
+    // Check if the editor has existing text
+    const editor = document.querySelector('[role="textbox"][data-slate-editor="true"]')
+      || document.querySelector('[role="textbox"][contenteditable="true"]');
+
+    const existingText = editor ? editor.textContent.trim() : '';
+    const hasExistingText = existingText.length > 0;
+
+    isGenerating = true;
+    btn.classList.add('atomix-loading');
+
+    try {
+      let messageData;
+      let customPrompt;
+
+      if (hasExistingText) {
+        // Case B: Polish/Continue mode
+        console.log(LOG, 'Mode: POLISH — existing text detected:', existingText.substring(0, 50));
+        const { history, channelName, serverName } = extractChannelHistory(3);
+
+        const historyStr = history.map(m => `${m.author}: ${m.text}`).join('\n');
+        customPrompt = `The user has started writing: "${existingText}". Given the context of the chat:\n${historyStr}\nFinish their thought, improve the phrasing, and complete the message naturally. Return ONLY the final complete message text, without any prefixes or explanations.`;
+
+        messageData = {
+          text: existingText,
+          author: 'me',
+          handle: '',
+          metrics: {},
+          threadContext: history,
+          channelName,
+          serverName
+        };
+      } else {
+        // Case A: Conversation Starter mode
+        console.log(LOG, 'Mode: STARTER — empty editor, generating conversation starter');
+        const { history, channelName, serverName } = extractChannelHistory(5);
+
+        const historyStr = history.map(m => `${m.author}: ${m.text}`).join('\n');
+        customPrompt = `Analyze the recent conversation:\n${historyStr}\nGenerate a natural, engaging conversation starter or continuation in the style of a Discord user, matching the language of the chat. Return ONLY the message text, without any prefixes or explanations.`;
+
+        messageData = {
+          text: historyStr || 'Start a conversation',
+          author: 'me',
+          handle: '',
+          metrics: {},
+          threadContext: history,
+          channelName,
+          serverName
+        };
+      }
+
+      // Send to background with custom prompt override
+      const result = await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage(
+          {
+            type: 'GENERATE_REPLY',
+            payload: {
+              tweetData: messageData,
+              extToken: settings.extToken,
+              promptId: settings.selectedPromptId || null,
+              settings: {
+                model: 'gpt-4o-mini',
+                language: settings.language || 'same',
+                length: settings.length || 'medium',
+                bannedWords: settings.bannedWords || '',
+                includeHashtags: settings.includeHashtags || false,
+                mentionAuthor: false,
+                addEmoji: settings.addEmoji || false,
+                customPrompt: customPrompt
+              },
+            },
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error('Extension background error: ' + chrome.runtime.lastError.message));
+              return;
+            }
+            resolve(response);
+          }
+        );
+      });
+
+      if (!result.ok) {
+        if (result.status === 401) {
+          await secureStorage.remove(['extToken', 'userId']);
+          throw new Error('Session expired. Please reconnect in the extension popup.');
+        }
+        throw new Error(result.error || 'API Error');
+      }
+
+      if (result.reply) {
+        console.log(LOG, 'Starter generation received, length:', result.reply.length);
+
+        // Case B replaces existing text, Case A inserts into empty editor
+        const injected = await atomicPasteIntoEditor(result.reply, hasExistingText);
+
+        if (injected) {
+          showNotification(
+            hasExistingText ? 'Message polished!' : 'Starter generated!',
+            'success'
+          );
+        } else {
+          showNotification('Copied to clipboard! Press Ctrl+V', 'success');
+        }
+      }
+
+    } catch (error) {
+      console.error(LOG, 'Starter error:', error);
+      showNotification(error.message, 'error');
+    } finally {
+      isGenerating = false;
+      btn.classList.remove('atomix-loading');
+    }
+  }
+
   // ── Init (Brute-Force Polling) ───────────────────────────────────────
 
   function init() {
@@ -615,10 +912,14 @@
     // Poll every 500ms for reply buttons → inject AtomiX
     setInterval(pollForToolbars, 500);
 
-    // Also run once immediately
-    pollForToolbars();
+    // Poll every 500ms for main input toolbar → inject Starter button
+    setInterval(pollForMainInputToolbar, 500);
 
-    console.log(LOG, '500ms polling active — anchoring on Reply button aria-labels');
+    // Run both once immediately
+    pollForToolbars();
+    pollForMainInputToolbar();
+
+    console.log(LOG, '500ms polling active — Reply toolbar + Main input toolbar');
     console.log(LOG, 'Extension loaded ✅');
   }
 
