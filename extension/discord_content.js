@@ -660,18 +660,17 @@
 
       clonedBlock.classList.add('atomix-discord-btn');
 
-      // Swap the native emoji SVG for AtomiX atom logo
-      const nativeSvg = clonedBlock.querySelector('svg');
-      if (nativeSvg) {
-        nativeSvg.outerHTML = `
+      // Overwrite the inner HTML completely to replace the sticky/smiley icon
+      // Discord's native button either has inner wrapper divs or directly contains the SVG.
+      const innerTarget = clonedBlock.querySelector('[class*="contents_"]') || clonedBlock;
+      innerTarget.innerHTML = `
         <svg class="atomix-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <ellipse class="atom-orbit orbit-1" cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
           <ellipse class="atom-orbit orbit-2" cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
           <ellipse class="atom-orbit orbit-3" cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
           <circle class="atom-core" cx="12" cy="12" r="2.5" fill="currentColor"/>
         </svg>
-        `;
-      }
+      `;
 
       clonedBlock.addEventListener('click', handleStarterClick);
 
@@ -704,69 +703,7 @@
     return { history, channelName, serverName };
   }
 
-  // ── Atomic Single-Paste into Slate.js Editor ────────────────────────
 
-  async function atomicPasteIntoEditor(text, replaceExisting = false) {
-    const editor = document.querySelector('[role="textbox"][data-slate-editor="true"]')
-      || document.querySelector('[role="textbox"][contenteditable="true"]');
-
-    if (!editor) {
-      console.error(LOG, 'Slate.js editor not found for atomic paste');
-      return false;
-    }
-
-    try {
-      editor.focus();
-      await sleep(150);
-
-      if (replaceExisting) {
-        // Select all existing text before pasting
-        const selection = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(editor);
-        selection.removeAllRanges();
-        selection.addRange(range);
-        await sleep(50);
-      } else {
-        // Place cursor at end
-        const selection = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(editor);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-        await sleep(50);
-      }
-
-      // Single atomic paste — guaranteed Slate.js state sync
-      const dt = new DataTransfer();
-      dt.setData('text/plain', text);
-      const pasteEvent = new ClipboardEvent('paste', {
-        bubbles: true,
-        cancelable: true,
-        clipboardData: dt
-      });
-      editor.dispatchEvent(pasteEvent);
-
-      await sleep(100);
-
-      if (editor.textContent.includes(text.substring(0, 10))) {
-        console.log(LOG, 'Atomic paste successful, Slate.js synced');
-        editor.dispatchEvent(new Event('input', { bubbles: true }));
-        editor.dispatchEvent(new Event('change', { bubbles: true }));
-        return true;
-      }
-
-      // Fallback: copy to clipboard
-      await navigator.clipboard.writeText(text);
-      console.warn(LOG, 'Atomic paste failed, copied to clipboard');
-      return false;
-
-    } catch (error) {
-      console.error(LOG, 'Atomic paste error:', error);
-      return false;
-    }
-  }
 
   // ── Starter Button Click Handler ────────────────────────────────────
 
@@ -878,15 +815,58 @@
       if (result.reply) {
         console.log(LOG, 'Starter generation received, length:', result.reply.length);
 
-        // Case B replaces existing text, Case A inserts into empty editor
-        const injected = await atomicPasteIntoEditor(result.reply, hasExistingText);
+        if (editor) {
+          editor.focus();
+          await sleep(200);
 
-        if (injected) {
+          if (hasExistingText) {
+            // Select all existing text and delete it before typing
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(editor);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            document.execCommand('delete', false, null);
+            await sleep(100);
+          }
+
+          // Force Slate.js into a Composition Session
+          const compStart = new CompositionEvent('compositionstart', { bubbles: true, cancelable: true, data: '' });
+          editor.dispatchEvent(compStart);
+          await sleep(50);
+
+          let currentText = '';
+          for (let i = 0; i < result.reply.length; i++) {
+            const char = result.reply[i];
+            currentText += char;
+            document.execCommand('insertText', false, char);
+
+            // Re-sync composition state to prevent ghost text
+            const compUpdate = new CompositionEvent('compositionupdate', { bubbles: true, cancelable: true, data: currentText });
+            editor.dispatchEvent(compUpdate);
+
+            // Randomize delay and add fine-tuned buffer!
+            const baseDelay = Math.random() < 0.2 ? 40 : 15;
+            const slateBuffer = 20;
+            await sleep(baseDelay + slateBuffer);
+          }
+
+          await sleep(100);
+
+          // Close composition session
+          const compEnd = new CompositionEvent('compositionend', { bubbles: true, cancelable: true, data: currentText });
+          editor.dispatchEvent(compEnd);
+
+          const inputEvent = new Event('input', { bubbles: true });
+          editor.dispatchEvent(inputEvent);
+
           showNotification(
             hasExistingText ? 'Message polished!' : 'Starter generated!',
             'success'
           );
         } else {
+          // Fallback if editor not found
+          await navigator.clipboard.writeText(result.reply);
           showNotification('Copied to clipboard! Press Ctrl+V', 'success');
         }
       }
