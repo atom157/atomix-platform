@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "AtomiX — AI Replies for X",
-  "version": "1.0.3",
-  "description": "AI-powered writing assistant for X (Twitter) that helps you generate authentic, human-like replies in seconds.",
+  "name": "AtomiX - AI Agent for X & Discord",
+  "short_name": "AtomiX",
+  "version": "1.0.4",
+  "description": "The ultimate Web3 social agent. Generate contextual, human-like replies on X (Twitter) and Discord instantly.",
   "homepage_url": "https://atomix.guru",
   "privacy_policy": "https://atomix.guru/privacy",
   "icons": {
