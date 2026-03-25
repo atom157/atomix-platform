@@ -663,6 +663,14 @@
         if (adjSvg) {
           svgClasses = adjSvg.getAttribute('class') || '';
         }
+
+        // Absolute Bulletproof Color Sync: Read the mathematically computed RGB color
+        // of the functional native button and force it onto our wrapper via inline styles.
+        // This completely bypasses any missing Discord CSS context.
+        const nativeColor = window.getComputedStyle(adjacentSvgBtn).color;
+        if (nativeColor && nativeColor !== 'rgba(0, 0, 0, 0)') {
+          clonedBlock.style.color = nativeColor;
+        }
       }
 
       // Update all tooltip labels
