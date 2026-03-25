@@ -115,7 +115,7 @@ function loadSettings() {
     if (result.customPromptName) customPromptName.value = result.customPromptName;
     if (result.customPromptContent) {
       customPromptContent.value = result.customPromptContent;
-      charCounter.textContent = result.customPromptContent.length + ' / 500';
+      charCounter.textContent = result.customPromptContent.length + ' / 1000';
     }
 
     includeHashtagsCheckbox.checked = result.includeHashtags || false;
@@ -389,8 +389,8 @@ var editingPromptId = null; // null = create mode, string = edit mode
 
 customPromptContent.addEventListener('input', function () {
   var len = this.value.length;
-  charCounter.textContent = len + ' / 500';
-  charCounter.classList.toggle('limit-reached', len >= 500);
+  charCounter.textContent = len + ' / 1000';
+  charCounter.classList.toggle('limit-reached', len >= 1000);
 });
 
 function showSelectView() {
@@ -399,7 +399,7 @@ function showSelectView() {
   deleteConfirm.style.display = 'none';
   customPromptName.value = '';
   customPromptContent.value = '';
-  charCounter.textContent = '0 / 500';
+  charCounter.textContent = '0 / 1000';
   editingPromptId = null;
 }
 
@@ -415,7 +415,7 @@ function showEditorView(mode, id, name, content) {
     deletePromptBtn.style.display = 'flex';
     customPromptName.value = name || '';
     customPromptContent.value = content || '';
-    charCounter.textContent = (content || '').length + ' / 500';
+    charCounter.textContent = (content || '').length + ' / 1000';
   } else {
     editingPromptId = null;
     editorTitle.textContent = 'New Prompt';
@@ -423,7 +423,7 @@ function showEditorView(mode, id, name, content) {
     deletePromptBtn.style.display = 'none';
     customPromptName.value = '';
     customPromptContent.value = '';
-    charCounter.textContent = '0 / 500';
+    charCounter.textContent = '0 / 1000';
   }
 }
 
