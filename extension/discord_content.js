@@ -362,7 +362,7 @@
   // ── Trigger Discord's native Reply ───────────────────────────────────────
   //
   // Finds the Reply button in the same toolbar as our AtomiX button.
-  // Uses multi-language aria-label matching, with positional fallback.
+  // Uses multi-language array selector or previous sibling fallback.
 
   async function triggerDiscordReply(buttonElement) {
     console.log(LOG, 'Triggering Discord native Reply...');
@@ -370,38 +370,26 @@
     const container = buttonElement.parentElement;
     if (!container) return false;
 
-    // All native icon buttons in the toolbar
-    const iconButtons = Array.from(container.children).filter(child =>
-      !child.hasAttribute('data-atomix-btn') && child.querySelector('svg')
-    );
+    // 1. Precise query using the predefined REPLY_SELECTOR inside the parent container
+    let replyBtn = container.querySelector(REPLY_SELECTOR);
 
-    console.log(LOG, 'Toolbar buttons:', iconButtons.map(b =>
-      b.getAttribute('aria-label') || '(no label)'
-    ));
-
-    let replyBtn = null;
-
-    // Try 1: multi-language aria-label match
-    // UA: "Відповісти", EN: "Reply", DE: "Antworten", FR: "Répondre",
-    // ES: "Responder", RU: "Ответить", PL: "Odpowiedz"
-    for (const btn of iconButtons) {
-      const label = (btn.getAttribute('aria-label') || '').toLowerCase();
-      if (/reply|відповіс|antwort|répond|respond|ответ|odpowied/i.test(label)) {
-        replyBtn = btn;
-        break;
+    // 2. Fallback: Since AtomiX is injected exactly next to the native Reply button,
+    //    we can check the previous sibling (with or without internal wrappers).
+    if (!replyBtn) {
+      const prev = buttonElement.previousElementSibling;
+      if (prev) {
+        if (prev.matches(REPLY_SELECTOR)) {
+          replyBtn = prev;
+        } else {
+          replyBtn = prev.querySelector(REPLY_SELECTOR) || prev;
+        }
       }
-    }
-
-    // Try 2: positional fallback — Reply is typically the second-to-last
-    if (!replyBtn && iconButtons.length >= 3) {
-      replyBtn = iconButtons[iconButtons.length - 2];
-      console.log(LOG, 'Positional fallback: second-to-last button');
     }
 
     if (replyBtn) {
       replyBtn.click();
-      console.log(LOG, 'Reply triggered:', replyBtn.getAttribute('aria-label') || '(no label)');
-      await sleep(400);
+      console.log(LOG, 'Reply triggered:', replyBtn.getAttribute('aria-label') || 'via fallback');
+      await sleep(150); // Small wait to allow Discord's reply mode UI state to mount
       return true;
     }
 
