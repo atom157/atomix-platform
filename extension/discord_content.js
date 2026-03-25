@@ -483,44 +483,54 @@
       selection.addRange(range);
       await sleep(50);
 
-      // Stabilized Typewriter Effect
-      // Dispatch single-character paste events with cursor stabilization between each.
-      // Before each character, we strictly enforce the selection at the END of the
-      // editor's content so Slate.js never loses its cursor position mid-loop.
-      console.log(LOG, 'Dispatching char-by-char paste events with cursor stabilization...');
+      // ── IME Composition Session Typewriter ──────────────────────────────
+      // Slate.js has two modes:
+      //   1. Normal mode: Slate controls ALL DOM mutations via React renders
+      //   2. Composition mode: Slate DEFERS to the browser for DOM mutations
+      // By wrapping our loop in a fake composition session, Slate stands back
+      // and lets execCommand work without fighting over the DOM. When we end
+      // the composition, Slate reads the final DOM state in ONE reconciliation.
+      console.log(LOG, 'Starting composition-session typewriter...');
+
+      // Signal Slate to enter composition (hands-off) mode
+      editor.dispatchEvent(new CompositionEvent('compositionstart', {
+        bubbles: true,
+        cancelable: true,
+        data: ''
+      }));
 
       for (let i = 0; i < text.length; i++) {
         const char = text[i];
 
-        // 1. Keep Editor Focused 
         editor.focus();
 
-        // 2. Synchronous DOM Mutation
-        // Bypassing `ClipboardEvent` ("paste") entirely disables Discord's asynchronous 
-        // Markdown/Emoji parsing queues, which scramble concurrent pastes over 20ms delays.
-        // `insertText` directly mutates the physical DOM text string synchronously,
-        // and instantly advances the browser's native cursor without React's help.
+        // Synchronous DOM insert — order is guaranteed
         document.execCommand('insertText', false, char);
 
-        // 3. React Fiber Virtual DOM Sync
-        // Immediately broadcast a standard 'input' event so Slate's underlying hooks 
-        // fetch the newly modified DOM string and update the virtual component State.
-        editor.dispatchEvent(new InputEvent('input', {
+        // Update Slate's composition buffer so it tracks progress
+        editor.dispatchEvent(new CompositionEvent('compositionupdate', {
           bubbles: true,
           cancelable: true,
-          inputType: 'insertText',
-          data: char
+          data: text.substring(0, i + 1)
         }));
 
-        // 4. Typewriter Delay
-        // A small delay purely for the visual effect. React easily finishes its 
-        // asynchronous commit phase loop in this timeframe. 
+        // Typewriter visual delay
         await sleep(30 + Math.random() * 20);
       }
 
+      // Signal Slate to exit composition mode and reconcile its virtual DOM
+      // with the physical DOM in a single atomic read
+      editor.dispatchEvent(new CompositionEvent('compositionend', {
+        bubbles: true,
+        cancelable: true,
+        data: text
+      }));
+
+      // Extra input/change events to ensure React state is fully committed
+      await sleep(50);
+
       if (editor.textContent.includes(text.substring(0, 10))) {
         console.log(LOG, 'Injection complete and synced with Slate.js');
-        // Extra assurance for React state
         editor.dispatchEvent(new Event('input', { bubbles: true }));
         editor.dispatchEvent(new Event('change', { bubbles: true }));
         return true;
