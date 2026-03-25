@@ -492,23 +492,10 @@
       for (let i = 0; i < text.length; i++) {
         const char = text[i];
 
-        // CRITICAL: Deeply find the last text node to prevent Slate from swallowing spaces
-        const sel = window.getSelection();
-        if (sel) {
-          let deepest = editor;
-          while (deepest.lastChild) {
-            deepest = deepest.lastChild;
-          }
-          const endRange = document.createRange();
-          if (deepest.nodeType === Node.TEXT_NODE) {
-            endRange.setStart(deepest, deepest.nodeValue.length);
-          } else {
-            endRange.selectNodeContents(deepest);
-          }
-          endRange.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(endRange);
-        }
+        // Keep the editor active, but do NOT manually destroy/recreate ranges mid-loop.
+        // Manipulating Native DOM Selection while React is async-rendering synthetic 
+        // paste events causes the exact race condition where characters get swapped.
+        editor.focus();
 
         const dt = new DataTransfer();
         dt.setData('text/plain', char);
