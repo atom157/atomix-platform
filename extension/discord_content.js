@@ -492,38 +492,49 @@
       for (let i = 0; i < text.length; i++) {
         const char = text[i];
 
-        // Keep the editor active, but do NOT manually destroy/recreate ranges mid-loop.
-        // Manipulating Native DOM Selection while React is async-rendering synthetic 
-        // paste events causes the exact race condition where characters get swapped.
+        // Slate.js React Fiber Synchronizer
+        // If we dispatch events too fast, React's async synthetic batching scrambles the order.
+        // We MUST halt the loop and wait for React to physically commit the character to the DOM
+        // before we are allowed to dispatch the next character.
         editor.focus();
 
-        // 1. Fire modern beforeinput event (Slate.js relies heavily on this for typing)
-        const beforeInput = new InputEvent('beforeinput', {
-          inputType: 'insertText',
-          data: char,
+        const dt = new DataTransfer();
+        dt.setData('text/plain', char);
+        const pasteEvent = new ClipboardEvent('paste', {
           bubbles: true,
-          cancelable: true
+          cancelable: true,
+          clipboardData: dt
         });
 
-        // Dispatch the event. If Slate prevents default, it means Slate handled the insertion
-        // internally in its virtual DOM.
-        const canceled = !editor.dispatchEvent(beforeInput);
+        await new Promise(resolve => {
+          let hasFired = false;
 
-        // 2. If Slate didn't intercept/cancel it, we physically insert the text into the DOM
-        if (!canceled) {
-          document.execCommand('insertText', false, char);
+          const observer = new MutationObserver(() => {
+            if (hasFired) return;
+            hasFired = true;
+            observer.disconnect();
+            resolve();
+          });
 
-          // 3. Fire the standard input event to ensure React picks up the DOM mutation
-          editor.dispatchEvent(new InputEvent('input', {
-            inputType: 'insertText',
-            data: char,
-            bubbles: true,
-            cancelable: true
-          }));
-        }
+          // Watch the deepest parts of the Slate editor for any visual text updates
+          observer.observe(editor, { characterData: true, childList: true, subtree: true });
 
-        // Delay carefully so React Fiber can render the DOM and advance its caret natively
-        await sleep(40 + Math.random() * 20);
+          // Trigger Slate's internal onPaste handler
+          editor.dispatchEvent(pasteEvent);
+
+          // Failsafe: if Slate drops a zero-width character or delays a trailing space
+          setTimeout(() => {
+            if (!hasFired) {
+              hasFired = true;
+              observer.disconnect();
+              resolve();
+            }
+          }, 150);
+        });
+
+        // Add a micro-delay for pure aesthetic typewriter bounce (since the MutationObserver 
+        // usually resolves instantly within 2-5ms when React flushes).
+        await sleep(15 + Math.random() * 20);
       }
 
       if (editor.textContent.includes(text.substring(0, 10))) {
