@@ -749,13 +749,18 @@
       let messageData;
       let customPrompt;
 
+      // The User Custom Prompt block MUST be prioritized strongly
+      const userCustomPrompt = settings.customPromptContent 
+        ? `\n\nUSER'S STRICT CUSTOM INSTRUCTIONS:\n"""\n${settings.customPromptContent}\n"""\nCRITICAL: You MUST prioritize this custom instruction above all default formatting and style rules.` 
+        : '';
+
       if (hasExistingText) {
         // Case B: Polish/Continue mode
         console.log(LOG, 'Mode: POLISH — existing text detected:', existingText.substring(0, 50));
         const { history, channelName, serverName } = extractChannelHistory(3);
 
         const historyStr = history.map(m => `${m.author}: ${m.text}`).join('\n');
-        customPrompt = `The user has started writing: "${existingText}". Given the context of the chat:\n${historyStr}\nFinish their thought, improve the phrasing, and complete the message naturally. Return ONLY the final complete message text, without any prefixes or explanations.`;
+        customPrompt = `The user has started writing: "${existingText}". Given the context of the chat:\n${historyStr}\nFinish their thought, improve the phrasing, and complete the message naturally.${userCustomPrompt}\n\nReturn ONLY the final complete message text, without any prefixes or explanations.`;
 
         messageData = {
           text: existingText,
@@ -772,7 +777,7 @@
         const { history, channelName, serverName } = extractChannelHistory(5);
 
         const historyStr = history.map(m => `${m.author}: ${m.text}`).join('\n');
-        customPrompt = `Analyze the recent conversation:\n${historyStr}\nGenerate a natural, engaging conversation starter or continuation in the style of a Discord user, matching the language of the chat. Return ONLY the message text, without any prefixes or explanations.`;
+        customPrompt = `Analyze the recent conversation:\n${historyStr}\nGenerate a natural, engaging conversation starter or continuation in the style of a Discord user, matching the language of the chat.${userCustomPrompt}\n\nReturn ONLY the message text, without any prefixes or explanations.`;
 
         messageData = {
           text: historyStr || 'Start a conversation',
