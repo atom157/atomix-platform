@@ -492,49 +492,30 @@
       for (let i = 0; i < text.length; i++) {
         const char = text[i];
 
-        // Slate.js React Fiber Synchronizer
-        // If we dispatch events too fast, React's async synthetic batching scrambles the order.
-        // We MUST halt the loop and wait for React to physically commit the character to the DOM
-        // before we are allowed to dispatch the next character.
+        // 1. Keep Editor Focused 
         editor.focus();
 
-        const dt = new DataTransfer();
-        dt.setData('text/plain', char);
-        const pasteEvent = new ClipboardEvent('paste', {
+        // 2. Synchronous DOM Mutation
+        // Bypassing `ClipboardEvent` ("paste") entirely disables Discord's asynchronous 
+        // Markdown/Emoji parsing queues, which scramble concurrent pastes over 20ms delays.
+        // `insertText` directly mutates the physical DOM text string synchronously,
+        // and instantly advances the browser's native cursor without React's help.
+        document.execCommand('insertText', false, char);
+
+        // 3. React Fiber Virtual DOM Sync
+        // Immediately broadcast a standard 'input' event so Slate's underlying hooks 
+        // fetch the newly modified DOM string and update the virtual component State.
+        editor.dispatchEvent(new InputEvent('input', {
           bubbles: true,
           cancelable: true,
-          clipboardData: dt
-        });
+          inputType: 'insertText',
+          data: char
+        }));
 
-        await new Promise(resolve => {
-          let hasFired = false;
-
-          const observer = new MutationObserver(() => {
-            if (hasFired) return;
-            hasFired = true;
-            observer.disconnect();
-            resolve();
-          });
-
-          // Watch the deepest parts of the Slate editor for any visual text updates
-          observer.observe(editor, { characterData: true, childList: true, subtree: true });
-
-          // Trigger Slate's internal onPaste handler
-          editor.dispatchEvent(pasteEvent);
-
-          // Failsafe: if Slate drops a zero-width character or delays a trailing space
-          setTimeout(() => {
-            if (!hasFired) {
-              hasFired = true;
-              observer.disconnect();
-              resolve();
-            }
-          }, 150);
-        });
-
-        // Add a micro-delay for pure aesthetic typewriter bounce (since the MutationObserver 
-        // usually resolves instantly within 2-5ms when React flushes).
-        await sleep(15 + Math.random() * 20);
+        // 4. Typewriter Delay
+        // A small delay purely for the visual effect. React easily finishes its 
+        // asynchronous commit phase loop in this timeframe. 
+        await sleep(30 + Math.random() * 20);
       }
 
       if (editor.textContent.includes(text.substring(0, 10))) {
