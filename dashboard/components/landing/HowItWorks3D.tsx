@@ -7,20 +7,20 @@ import { Search, Zap, Hexagon } from 'lucide-react';
 const steps = [
     {
         id: 1,
-        title: "Context Analysis",
-        desc: "Reads the original tweet, thread, and tone before generating. Your reply always fits the conversation perfectly.",
+        title: "Deep Context Awareness",
+        desc: "Reads the room perfectly. Analyzes the X thread or Discord channel's last 3-5 messages to understand the actual vibe.",
         IconComponent: Step1Icon,
     },
     {
         id: 2,
-        title: "Custom Prompts",
-        desc: "Create your own voice and style. Define how you want to sound so every reply feels authentically yours.",
+        title: "Degen Mode Prompts",
+        desc: "Configure your AI to sound like a real Web3 user. Force lowercase, drop punctuation, and use crypto slang to bypass bot filters.",
         IconComponent: Step2Icon,
     },
     {
         id: 3,
-        title: "Lightning Speed",
-        desc: "Lightning-fast generation powered by GPT-4o. Get your perfectly-tuned reply in under 2 seconds.",
+        title: "Farm & Grow Instantly",
+        desc: "Generate lightning-fast, high-quality replies to secure whitelists, farm airdrops, and build your audience on autopilot.",
         IconComponent: Step3Icon,
     },
 ];
@@ -191,7 +191,7 @@ export function HowItWorks3D() {
                         How it <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Works</span>
                     </h2>
                     <p className="mt-6 text-lg sm:text-xl text-slate-600 font-medium max-w-2xl mx-auto">
-                        Three simple steps to generate authentic replies that feel like you.
+                        Three simple steps to farm organically and generate replies that feel like a real degen.
                     </p>
                 </div>
 

@@ -11,8 +11,8 @@ export function GlassmorphicEngine() {
     const [isHovered, setIsHovered] = useState(false)
     const [isGenerating, setIsGenerating] = useState(false)
     const [replyText, setReplyText] = useState("")
-    const fullContext = "Communism is just bureaucracy in the limit. 'Soviet' is a Russian word for 'committee'..."
-    const targetReply = "Fascinating perspective piece. The bureaucratic ceiling of historical communism often masked the original communal intent behind the nomenclature."
+    const fullContext = "Just secured another massive bag of $SOL. This bull run is going to melt faces. What are your top 3 altcoin bags right now?"
+    const targetReply = "been accumulating heavily. absolutely wild rotation happening rn, throwing it all into ai memecoins and l2s before the crowd catches on"
 
     useEffect(() => {
         let timeout: ReturnType<typeof setTimeout>

@@ -9,18 +9,18 @@ import { Pricing3D } from '@/components/landing/Pricing3D'
 import { Logo } from '@/components/ui/logo'
 /* ─── Feature data ─── */
 const features = [
-  { title: 'Custom Prompts', desc: 'Create your own voice and style. Define how you want to sound so every reply feels authentic.', icon: '✏️' },
-  { title: 'Context Analysis', desc: 'Reads the original tweet, thread, and tone before generating. Your reply always fits the conversation.', icon: '🔍' },
-  { title: 'Human-Like Replies', desc: 'No robotic text. AtomiX generates replies that match your personality and feel genuinely human.', icon: '💬' },
-  { title: 'One-Click Generation', desc: 'Just click the AtomiX button right inside the X reply box. No tab switching, no copy-pasting.', icon: '⚡' },
-  { title: 'Under 2 Seconds', desc: 'Lightning-fast generation powered by GPT-4o. Get your perfectly-tuned reply in a blink.', icon: '⏱️' },
-  { title: 'Privacy First', desc: 'Your data stays yours. We never store tweets or personal information. Fully transparent.', icon: '🔒' },
+  { title: 'Deep Context Awareness', desc: 'Reads the room in Discord and X. Knows the server, channel, and reads the last 3-5 messages to generate perfectly relevant replies.', icon: '🧠' },
+  { title: 'Anti-Bot "Degen" Mode', desc: 'Use custom prompts to write like a real human. Force lowercase, ignore apostrophes, and drop Web3 slang to bypass strict Discord moderators.', icon: '🥷' },
+  { title: 'Airdrop Farming', desc: 'Stop the manual grind. Generate hundreds of high-quality, authentic interactions daily to secure whitelists and farm airdrop multipliers.', icon: '🪂' },
+  { title: 'One-Click Generation', desc: 'Just click the AtomiX button right inside the X or Discord reply box. No tab switching, no copy-pasting.', icon: '⚡' },
+  { title: 'Under 2 Seconds', desc: 'Lightning-fast generation powered by the latest AI. Get your perfectly-tuned Web3 reply in a blink.', icon: '⏱️' },
+  { title: 'Audience Builder', desc: 'Grow your crypto Twitter (X) presence organically. Engage with communities using exactly the right tone to attract followers.', icon: '📈' },
 ]
 
 const steps = [
-  { n: '1', title: 'Install Extension', desc: 'Add AtomiX to Chrome in one click. It integrates directly into the X interface without any clunky popups.' },
-  { n: '2', title: 'Set Your Tone', desc: 'Configure custom prompts that match your personality, profession, and unique communication style.' },
-  { n: '3', title: 'Reply Instantly', desc: 'Click the AtomiX button directly on any tweet to instantly generate a context-aware, human-like reply.' },
+  { n: '1', title: 'Install Extension', desc: 'Add AtomiX to Chrome in one click. It integrates directly into X and Discord without any clunky popups.' },
+  { n: '2', title: 'Set Degen Mode', desc: 'Configure custom prompts to drop punctuation and use Web3 slang so you sound like a real user.' },
+  { n: '3', title: 'Farm Autonomously', desc: 'Click the AtomiX button directly in any chat to instantly generate context-aware replies for WLs and airdrops.' },
 ]
 
 const plans = [
@@ -29,11 +29,11 @@ const plans = [
 ]
 
 const faqs = [
-  { q: 'What is AtomiX?', a: 'AtomiX is a Chrome extension that generates human-like replies on X (Twitter) using AI and your custom prompts. It reads the tweet context and produces a perfectly-tuned response in under 2 seconds.' },
-  { q: 'Is it free to use?', a: 'Yes! The free plan includes 20 replies per month. If you need unlimited, you can upgrade to Pro for $9/month.' },
-  { q: 'Does it work with other platforms?', a: 'Currently, AtomiX works exclusively with X (Twitter). Support for LinkedIn and other platforms is on our roadmap.' },
-  { q: 'How does context analysis work?', a: 'AtomiX reads the original tweet, any conversation thread, and applies your custom prompts to generate a relevant, natural-sounding reply that fits the conversation.' },
-  { q: 'Is my data safe?', a: 'Absolutely. We never store tweets or personal information. Your custom prompts are encrypted and only accessible by you.' },
+  { q: 'What is AtomiX?', a: 'AtomiX is a Web3 social AI agent for Chrome that generates human-like replies on X and Discord. It reads the context and produces perfectly-tuned responses to help you farm airdrops and build your audience.' },
+  { q: 'Can it bypass Discord rules?', a: 'Yes! Using the Anti-Bot "Degen" Mode, you can configure custom prompts to write exactly like a human—forcing lowercase, dropping punctuation, and using Web3 slang to bypass strict Discord moderators.' },
+  { q: 'Does it work with both X and Discord?', a: 'Yes! AtomiX beautifully integrates directly into both the X timeline and Discord channels for seamless one-click generation.' },
+  { q: 'How does Deep Context Awareness work?', a: 'AtomiX reads the room. In Discord, it analyzes the server, channel topic, and the last 3-5 messages. On X, it reads the full thread so your reply makes perfect sense.' },
+  { q: 'Is my data safe?', a: 'Absolutely. We never store your social data or personal information. Your custom prompts are stored securely on your browser.' },
 ]
 
 /* ─── Main Page ─── */
@@ -102,16 +102,15 @@ export default function LandingPage() {
             <div className="flex flex-col items-start gap-8 max-w-xl animate-fade-up">
               <div className="bg-slate-100 text-slate-700 border-none px-4 py-1.5 rounded-full flex gap-2 items-center text-sm font-medium">
                 <span className="flex text-yellow-500">{'★★★★★'}</span>
-                <span>5.0 Rating | Saves 2+ hours a week</span>
+                <span>5.0 Rating | Trusted by 10,000+ Web3 Degens</span>
               </div>
               <div className="space-y-4">
                 <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.1]">
-                  Reply Like You, <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Not Like AI</span>
+                  The Ultimate Web3 <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Social AI Agent</span>
                 </h1>
                 <p className="text-lg md:text-xl text-slate-600 leading-relaxed font-medium">
-                  Custom prompts + context analysis = replies that sound human.
-                  Read the context and generate perfectly-tuned responses right inside X in under 2 seconds.
+                  Stop the manual grind. Farm airdrops, get whitelists, and build a massive audience instantly with human-like contextual AI for X and Discord.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto pt-2">
@@ -137,7 +136,7 @@ export default function LandingPage() {
           <div className="mx-auto max-w-7xl">
             <div className="text-center mb-20">
               <h2 className="text-4xl font-extrabold text-slate-900 md:text-5xl tracking-tight">Everything you need</h2>
-              <p className="mt-4 text-lg text-slate-600 font-medium max-w-2xl mx-auto">Powerful features that make your X replies stand out, engineered for speed and authenticity.</p>
+              <p className="mt-4 text-lg text-slate-600 font-medium max-w-2xl mx-auto">Powerful features that make you stand out in X and Discord, engineered for getting WLs and engaging naturally.</p>
             </div>
             <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {features.map((f) => (
