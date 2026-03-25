@@ -660,11 +660,15 @@
 
       clonedBlock.classList.add('atomix-discord-btn');
 
+      // Extract native SVG classes to inherit Discord's color variables (var(--interactive-normal))
+      const nativeSvg = clonedBlock.querySelector('svg');
+      const nativeClasses = nativeSvg ? (nativeSvg.getAttribute('class') || '') : '';
+
       // Overwrite the inner HTML completely to replace the sticky/smiley icon
       // Discord's native button either has inner wrapper divs or directly contains the SVG.
       const innerTarget = clonedBlock.querySelector('[class*="contents_"]') || clonedBlock;
       innerTarget.innerHTML = `
-        <svg class="atomix-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg class="atomix-icon ${nativeClasses}" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <ellipse class="atom-orbit orbit-1" cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
           <ellipse class="atom-orbit orbit-2" cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
           <ellipse class="atom-orbit orbit-3" cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
