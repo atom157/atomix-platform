@@ -497,20 +497,33 @@
         // paste events causes the exact race condition where characters get swapped.
         editor.focus();
 
-        const dt = new DataTransfer();
-        dt.setData('text/plain', char);
-
-        const pasteEvent = new ClipboardEvent('paste', {
+        // 1. Fire modern beforeinput event (Slate.js relies heavily on this for typing)
+        const beforeInput = new InputEvent('beforeinput', {
+          inputType: 'insertText',
+          data: char,
           bubbles: true,
-          cancelable: true,
-          clipboardData: dt
+          cancelable: true
         });
 
-        editor.dispatchEvent(pasteEvent);
+        // Dispatch the event. If Slate prevents default, it means Slate handled the insertion
+        // internally in its virtual DOM.
+        const canceled = !editor.dispatchEvent(beforeInput);
 
-        // Slightly relaxed delay — giving React Fiber the exact fraction of a second
-        // it needs to ensure absolutely zero dropped characters.
-        await sleep(45 + Math.random() * 25);
+        // 2. If Slate didn't intercept/cancel it, we physically insert the text into the DOM
+        if (!canceled) {
+          document.execCommand('insertText', false, char);
+
+          // 3. Fire the standard input event to ensure React picks up the DOM mutation
+          editor.dispatchEvent(new InputEvent('input', {
+            inputType: 'insertText',
+            data: char,
+            bubbles: true,
+            cancelable: true
+          }));
+        }
+
+        // Delay carefully so React Fiber can render the DOM and advance its caret natively
+        await sleep(40 + Math.random() * 20);
       }
 
       if (editor.textContent.includes(text.substring(0, 10))) {
