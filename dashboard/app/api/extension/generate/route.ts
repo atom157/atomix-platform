@@ -418,6 +418,11 @@ ONLY reply with a short greeting like "gm", "gn", "gm fam", or a relevant emoji.
   if (language && language !== 'same') {
     const langName = languageDescriptions[language] || language
     basePrompt += `\n\n=== CRITICAL LANGUAGE OVERRIDE ===\nIMPORTANT: You MUST write your ENTIRE response in ${langName}. Even if the original context is in a different language, your response MUST be in ${langName}. This is a hard requirement — do NOT switch languages. Every single word of your reply must be in ${langName}.`
+  } else {
+    // Auto "same" mode
+    basePrompt += `\n\n=== AUTO LANGUAGE MIRRORING ===
+DETECT LANGUAGE: Identify the primary language of the target message and the channel name. You MUST generate the response in that same language. Do not translate to English unless the input was in English.
+Secondary Rule (Channel Hint): If the language of the message is ambiguous, check the channel name (e.g., "${tweetData?.channelName || ''}"). If it contains words like ukrainian, spanish, russian, chinese, etc., use that as the target language.`
   }
 
   // ── FINAL OVERRIDES: Toggle enforcement (absolute last instructions) ──
