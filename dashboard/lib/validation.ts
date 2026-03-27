@@ -117,6 +117,11 @@ export function validateSettings(settings: unknown): Record<string, unknown> {
     safe.bannedWords = ''
   }
 
+  // generateMode - pass through
+  if (typeof s.generateMode === 'string') {
+    safe.generateMode = s.generateMode
+  }
+
   // customPrompt - pass through inline prompt from extension if present
   if (typeof s.customPrompt === 'string') {
     safe.customPrompt = sanitizeText(s.customPrompt).slice(0, MAX_PROMPT_CONTENT)

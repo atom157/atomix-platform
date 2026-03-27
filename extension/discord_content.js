@@ -371,7 +371,7 @@
       author: authorName,
       handle: '',
       metrics: {},
-      threadContext: threadContext,
+      threadContext: threadContext.map(msg => `${msg.author}: ${msg.text}`),
       quotedContext: quotedContext,
       channelName: channelName,
       serverName: serverName
@@ -734,7 +734,7 @@
     }
 
     console.log(LOG, `Extracted ${history.length}/${count} channel history messages.`);
-    return { history, channelName, serverName };
+    return { history: history.map(msg => `${msg.author}: ${msg.text}`), channelName, serverName };
   }
 
 
