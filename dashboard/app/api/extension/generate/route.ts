@@ -116,6 +116,8 @@ export async function POST(request: Request) {
       text: sanitizeText((tweetData as Record<string, unknown>).text as string),
       author: sanitizeText((tweetData as Record<string, unknown>).author as string),
       handle: sanitizeText((tweetData as Record<string, unknown>).handle as string),
+      channelName: sanitizeText((tweetData as Record<string, unknown>).channelName as string),
+      serverName: sanitizeText((tweetData as Record<string, unknown>).serverName as string),
       metrics: (tweetData as Record<string, unknown>).metrics as Record<string, string> | undefined,
       threadContext: Array.isArray((tweetData as Record<string, unknown>).threadContext)
         ? ((tweetData as Record<string, unknown>).threadContext as string[]).slice(0, 5).map(t => sanitizeText(t))
@@ -196,7 +198,7 @@ export async function POST(request: Request) {
     }
 
     // Build the system prompt
-    const systemPrompt = buildSystemPrompt(promptContent, safeSettings)
+    const systemPrompt = buildSystemPrompt(promptContent, safeSettings, safeTweetData)
     const generateMode = (safeSettings as Record<string, unknown>)?.generateMode as string || 'reply'
     const userPrompt = buildUserPrompt(safeTweetData, generateMode)
 
@@ -277,7 +279,7 @@ export async function POST(request: Request) {
   }
 }
 
-function buildSystemPrompt(customPrompt: string, settings: Record<string, unknown>) {
+function buildSystemPrompt(customPrompt: string, settings: Record<string, unknown>, tweetData?: Record<string, unknown>) {
   const toneDescriptions: Record<string, string> = {
     friendly: 'friendly and warm, like a real person chatting',
     professional: 'professional and business-like, but not stiff or corporate',
@@ -363,6 +365,26 @@ CONTENT RULES:
 
 OUTPUT:
 - Return ONLY the reply text. No quotes, no labels, no "Reply:" prefix.`
+  }
+
+  // ── ANTI-BOT & WEB3 ETIQUETTE RULES ──
+  basePrompt += `
+
+ANTI-BOT & WEB3 ETIQUETTE:
+- NEVER introduce yourself as an AI or assistant.
+- Avoid forced enthusiasm (e.g., "Absolutely!", "Great point", "I completely agree").
+- Do not answer rhetorical questions literally.
+- Never wrap your final answer in quotes.
+- If the chat implies airdrops or whitelists, be concise and use community slang (e.g., LFG, bullish).`
+
+  const channelName = (tweetData?.channelName as string)?.toLowerCase() || '';
+  if (channelName.includes('gm') || channelName.includes('gn') || channelName.includes('good-morning')) {
+    basePrompt += `
+    
+=== CRITICAL CHANNEL CONTEXT ===
+You are in a Web3 greeting channel ("${channelName}"). Users here just post short greetings.
+STRICT RULE: Do NOT start conversations. Do NOT ask questions like "How are you?" or "What do you want to talk about?".
+ONLY reply with a short greeting like "gm", "gn", "gm fam", or a relevant emoji. Scale back your response entirely to match this minimalist etiquette.`
   }
 
   if (bannedWords) {
