@@ -42,8 +42,8 @@
       'includeHashtags',
       'mentionAuthor',
       'addEmoji',
-      'selectedPromptId',
-      'customPromptContent'
+      'selectedPromptId_x',
+      'customPromptContent_x'
     ]);
 
     // Load token from LOCAL storage
@@ -192,7 +192,7 @@
           payload: {
             tweetData,
             extToken: settings.extToken,
-            promptId: settings.selectedPromptId || null,
+            promptId: settings.selectedPromptId_x || null,
             settings: {
               model: 'gpt-4o-mini',
               language: settings.language || 'same',
@@ -201,7 +201,8 @@
               includeHashtags: settings.includeHashtags || false,
               mentionAuthor: settings.mentionAuthor || false,
               addEmoji: settings.addEmoji || false,
-              customPrompt: settings.customPromptContent || null
+              customPrompt: settings.customPromptContent_x || null,
+              platform: 'x'
             },
           },
         },

@@ -38,7 +38,7 @@
     // Non-sensitive settings from sync storage (mirrors content.js exactly)
     const syncResult = await chrome.storage.sync.get([
       'language', 'length', 'bannedWords', 'includeHashtags',
-      'mentionAuthor', 'addEmoji', 'selectedPromptId', 'customPromptContent'
+      'mentionAuthor', 'addEmoji', 'selectedPromptId_discord', 'customPromptContent_discord'
     ]);
 
     // Token + userId from local storage
@@ -49,7 +49,7 @@
       hasUserId: !!secureResult.userId,
       language: syncResult.language || '(default)',
       length: syncResult.length || '(default)',
-      promptId: syncResult.selectedPromptId || '(none)',
+      promptId: syncResult.selectedPromptId_discord || '(none)',
     });
 
     settings = {
@@ -437,7 +437,7 @@
       author: messageData.author,
       language: settings.language,
       length: settings.length,
-      promptId: settings.selectedPromptId,
+      promptId: settings.selectedPromptId_discord,
     });
 
     const result = await new Promise((resolve, reject) => {
@@ -447,7 +447,7 @@
           payload: {
             tweetData: messageData, // reuses existing API shape
             extToken: settings.extToken,
-            promptId: settings.selectedPromptId || null,
+            promptId: settings.selectedPromptId_discord || null,
             settings: {
               model: 'gpt-4o-mini',
               language: settings.language || 'same',
@@ -456,7 +456,8 @@
               includeHashtags: settings.includeHashtags || false,
               mentionAuthor: settings.mentionAuthor || false,
               addEmoji: settings.addEmoji || false,
-              customPrompt: settings.customPromptContent || null
+              customPrompt: settings.customPromptContent_discord || null,
+              platform: 'discord'
             },
           },
         },

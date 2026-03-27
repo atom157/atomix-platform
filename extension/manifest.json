@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AtomiX - AI Agent for X & Discord",
   "short_name": "AtomiX",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "The ultimate Web3 social agent. Generate contextual, human-like replies on X (Twitter) and Discord instantly.",
   "homepage_url": "https://atomix.guru",
   "privacy_policy": "https://atomix.guru/privacy",

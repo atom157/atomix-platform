@@ -183,13 +183,16 @@ export async function POST(request: Request) {
       }
     }
 
-    // If no specific prompt, get the default one
+    // If no specific prompt, get the default one for the platform
     if (!promptContent) {
+      const platform = (safeSettings as Record<string, unknown>)?.platform as string || 'discord'
+      
       const { data: defaultPrompt } = await supabase
         .from('prompts')
         .select('content')
         .eq('user_id', userId)
         .eq('is_default', true)
+        .eq('platform', platform)
         .single()
 
       if (defaultPrompt) {

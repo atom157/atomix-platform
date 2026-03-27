@@ -31,11 +31,44 @@ var promptSelect = document.getElementById('promptSelect');
 var API_BASE = 'https://www.atomix.guru';
 var chrome = window.chrome;
 
+var activePlatform = 'discord'; // default platform
+var syncDataCache = {}; // holds globally fetched settings to isolate platform changes
+
 import('./posthog-api.js').then(module => {
   window.posthogTrackEvent = module.trackEvent;
 });
 
 console.log('[POPUP] Initializing...');
+
+document.querySelectorAll('.platform-tab').forEach(btn => {
+  btn.addEventListener('click', function() {
+    var p = this.getAttribute('data-platform');
+    if (activePlatform !== p) switchPlatform(p);
+  });
+});
+
+function switchPlatform(platform) {
+  activePlatform = platform;
+  chrome.storage.sync.set({ activePlatform: platform });
+  
+  // UI styling
+  document.querySelectorAll('.platform-tab').forEach(btn => {
+    if (btn.getAttribute('data-platform') === platform) {
+      btn.style.background = '#fff';
+      btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+      btn.style.color = '#0f172a';
+      btn.classList.add('active');
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.boxShadow = 'none';
+      btn.style.color = '#64748b';
+      btn.classList.remove('active');
+    }
+  });
+
+  renderPromptsDropdown();
+  showSelectView();
+}
 
 // ── Optimistic Auth: instantly show cached state to prevent flicker ──
 (function optimisticLoad() {
@@ -101,28 +134,35 @@ function clearSecureToken(callback) {
   });
 }
 
-// Load settings
 function loadSettings() {
   console.log('[POPUP] loadSettings');
   chrome.storage.sync.get([
     'language', 'length', 'bannedWords',
-    'includeHashtags', 'mentionAuthor', 'addEmoji', 'selectedPromptId',
-    'customPromptName', 'customPromptContent'
+    'includeHashtags', 'mentionAuthor', 'addEmoji', 
+    'selectedPromptId_discord', 'selectedPromptId_x',
+    'selectedPromptId', // legacy migration
+    'activePlatform'
   ], function (result) {
+    syncDataCache = result;
+    if (result.activePlatform) {
+      switchPlatform(result.activePlatform);
+    }
+    
+    // Migration for legacy users (Task 4)
+    if (result.selectedPromptId && !result.selectedPromptId_discord) {
+      syncDataCache.selectedPromptId_discord = result.selectedPromptId;
+      chrome.storage.sync.set({ selectedPromptId_discord: result.selectedPromptId });
+    }
+
     if (result.language) languageSelect.value = result.language;
     if (result.length) lengthSelect.value = result.length;
     if (result.bannedWords) bannedWordsInput.value = result.bannedWords;
-    if (result.customPromptName) customPromptName.value = result.customPromptName;
-    if (result.customPromptContent) {
-      customPromptContent.value = result.customPromptContent;
-      charCounter.textContent = result.customPromptContent.length + ' / 1000';
-    }
-
+    
     includeHashtagsCheckbox.checked = result.includeHashtags || false;
     mentionAuthorCheckbox.checked = result.mentionAuthor || false;
     addEmojiCheckbox.checked = result.addEmoji || false;
 
-    checkAuthAndShowState(result.selectedPromptId);
+    checkAuthAndShowState(syncDataCache['selectedPromptId_' + activePlatform]);
   });
 }
 
@@ -263,24 +303,10 @@ function showConnectedState(userId, extToken, selectedPromptId) {
         }
       }
 
-      promptSelect.innerHTML = '<option value="">Use default prompt</option>';
-      var defaultPromptId = null;
-      window._promptsCache = [];
       if (data.prompts) {
-        data.prompts.forEach(function (prompt) {
-          window._promptsCache.push(prompt);
-          var option = document.createElement('option');
-          option.value = prompt.id;
-          option.textContent = (prompt.is_default ? '📌 ' : '') + prompt.name;
-          if (prompt.is_default) {
-            defaultPromptId = prompt.id;
-          }
-          promptSelect.appendChild(option);
-        });
+        window._promptsCache = data.prompts; // all prompts (both platforms)
       }
-      // Use saved selection, or fall back to the default prompt
-      var activePromptId = selectedPromptId || defaultPromptId;
-      if (activePromptId) promptSelect.value = activePromptId;
+      renderPromptsDropdown();
 
       // Enable prompt form
       customPromptName.disabled = false;
@@ -291,12 +317,40 @@ function showConnectedState(userId, extToken, selectedPromptId) {
       updateStatus('Connected', 'success');
     })
     .catch(function (error) {
+//... (closing is below)
       if (error.message === 'Token expired') return;
       console.error('[POPUP] ❌ Connection failed. Error name:', error.name, '| Message:', error.message);
       console.error('[POPUP] ❌ Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       showDisconnectedState();
       updateStatus('Connection failed: ' + (error.message || 'Unknown error'), 'error');
     });
+}
+
+// Draw prompt select list based on current platform
+function renderPromptsDropdown() {
+  if (!promptSelect) return;
+  promptSelect.innerHTML = '<option value="">Use default prompt</option>';
+  var defaultPromptId = null;
+
+  var savedPromptId = syncDataCache['selectedPromptId_' + activePlatform];
+
+  if (window._promptsCache) {
+    window._promptsCache.forEach(function (prompt) {
+      if (prompt.platform === activePlatform || (!prompt.platform && activePlatform === 'discord')) {
+        var option = document.createElement('option');
+        option.value = prompt.id;
+        option.textContent = (prompt.is_default ? '📌 ' : '') + prompt.name;
+        if (prompt.is_default) {
+          defaultPromptId = prompt.id;
+        }
+        promptSelect.appendChild(option);
+      }
+    });
+  }
+
+  // Use saved selection, or fall back to the native default for this platform
+  var targetPromptId = savedPromptId || defaultPromptId;
+  if (targetPromptId) promptSelect.value = targetPromptId;
 }
 
 // Show disconnected
@@ -337,7 +391,6 @@ function updateStatus(text, type) {
   if (statusDot) statusDot.className = 'status-dot status-' + (type || 'info');
 }
 
-// Save settings
 function saveSettings() {
   var settingsToSave = {
     language: languageSelect.value,
@@ -346,8 +399,11 @@ function saveSettings() {
     includeHashtags: includeHashtagsCheckbox.checked,
     mentionAuthor: mentionAuthorCheckbox.checked,
     addEmoji: addEmojiCheckbox.checked,
-    selectedPromptId: promptSelect.value || null
+    activePlatform: activePlatform
   };
+
+  settingsToSave['selectedPromptId_' + activePlatform] = promptSelect.value || null;
+  syncDataCache['selectedPromptId_' + activePlatform] = promptSelect.value || null;
 
   chrome.storage.sync.set(settingsToSave, function () {
     if (chrome.runtime.lastError) {
@@ -474,8 +530,8 @@ saveCustomPromptBtn.addEventListener('click', function () {
     var isEdit = !!editingPromptId;
     var method = isEdit ? 'PUT' : 'POST';
     var bodyData = isEdit
-      ? { id: editingPromptId, name: name, content: content }
-      : { name: name, content: content };
+      ? { id: editingPromptId, name: name, content: content, platform: activePlatform }
+      : { name: name, content: content, platform: activePlatform };
 
     fetch(API_BASE + '/api/extension/prompts', {
       method: method,
@@ -493,7 +549,12 @@ saveCustomPromptBtn.addEventListener('click', function () {
         } else {
           saveCustomPromptBtn.textContent = '✅ Saved!';
           var newId = data.prompt ? data.prompt.id : (editingPromptId || '');
-          chrome.storage.sync.set({ selectedPromptId: newId });
+          
+          var updatePayload = {};
+          updatePayload['selectedPromptId_' + activePlatform] = newId;
+          chrome.storage.sync.set(updatePayload);
+          syncDataCache['selectedPromptId_' + activePlatform] = newId;
+
           window.posthogTrackEvent && window.posthogTrackEvent('prompt_managed', { action: isEdit ? 'edit' : 'create' });
           // Return to select view and refresh prompts
           setTimeout(function () {
@@ -628,7 +689,11 @@ if (saveDefaultBtn) {
             saveDefaultBtn.textContent = '❌';
           } else {
             saveDefaultBtn.textContent = '✅';
-            chrome.storage.sync.set({ selectedPromptId: selectedId });
+            var updateObj = {};
+            updateObj['selectedPromptId_' + activePlatform] = selectedId;
+            syncDataCache['selectedPromptId_' + activePlatform] = selectedId;
+            chrome.storage.sync.set(updateObj);
+            
             var options = promptSelect.options;
             for (var i = 0; i < options.length; i++) {
               options[i].textContent = options[i].textContent.replace('📌 ', '');

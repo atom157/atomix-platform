@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     // Get user's prompts
     const { data: prompts, error } = await supabase
       .from('prompts')
-      .select('id, name, content, is_default')
+      .select('id, name, content, is_default, platform')
       .eq('user_id', userId)
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: false })
@@ -134,11 +134,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders })
     }
 
-    const { name, content } = body as Record<string, unknown>
+    const { name, content, platform = 'discord' } = body as Record<string, unknown>
 
     if (typeof name !== 'string' || !name.trim() || typeof content !== 'string' || !content.trim()) {
       return NextResponse.json({ error: 'Prompt name and content are required' }, { status: 400, headers: corsHeaders })
     }
+
+    // Validate platform constraint
+    const safePlatform = (platform === 'x' || platform === 'discord') ? platform : 'discord';
 
     const { data: newPrompt, error } = await supabase
       .from('prompts')
@@ -146,9 +149,10 @@ export async function POST(request: Request) {
         user_id: userId,
         name: name.trim().slice(0, 100),
         content: content.trim().slice(0, 5000),
-        is_default: false
+        is_default: false,
+        platform: safePlatform
       })
-      .select('id, name, is_default')
+      .select('id, name, is_default, platform')
       .single()
 
     if (error) {
@@ -199,7 +203,7 @@ export async function PUT(request: Request) {
       .update(updateData)
       .eq('id', id)
       .eq('user_id', userId)
-      .select('id, name, is_default')
+      .select('id, name, is_default, platform')
       .single()
 
     if (error) {

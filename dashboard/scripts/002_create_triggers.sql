@@ -38,15 +38,20 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Insert default prompts for new user
-  INSERT INTO public.prompts (user_id, name, content, icon, tone, is_default, sort_order)
+  -- Insert default prompts for new user (Discord)
+  INSERT INTO public.prompts (user_id, name, content, icon, tone, is_default, sort_order, platform)
   VALUES 
-    (NEW.id, 'PRO-human', E'📌 PRO-human\nFormat: Use strictly lowercase letters.\nLength: Exactly 4 to 15 words. Ultra-short.\nPunctuation: ZERO punctuation. You are strictly forbidden from using periods, commas, question marks, or exclamation points.\nThe Apostrophe Rule: NEVER use apostrophes. You MUST intentionally misspell contractions by fusing the words (type "its" instead of "it''s", "dont" instead of "don''t", "im" instead of "I''m", "thats" instead of "that''s", "cant" instead of "can''t").\nTone: Highly informal, raw, and casual.', 'zap', 'friendly', true, 1),
-    (NEW.id, 'Friendly', 'Write a friendly and warm reply that shows genuine interest in the topic. Be supportive and positive.', 'heart', 'friendly', false, 2),
-    (NEW.id, 'Professional', 'Write a professional and business-like reply. Be concise, informative, and maintain a formal tone.', 'briefcase', 'professional', false, 3),
-    (NEW.id, 'Witty', 'Write a clever and witty reply with a touch of humor. Be creative but not offensive.', 'sparkles', 'witty', false, 4),
-    (NEW.id, 'Curious', 'Ask a thoughtful follow-up question that shows genuine curiosity about the topic.', 'help-circle', 'curious', false, 5),
-    (NEW.id, 'Supportive', 'Write an empathetic and supportive reply. Show understanding and offer encouragement.', 'thumbs-up', 'supportive', false, 6);
+    (NEW.id, 'PRO-human', E'📌 PRO-human\nFormat: Use strictly lowercase letters.\nLength: Exactly 4 to 15 words. Ultra-short.\nPunctuation: ZERO punctuation. You are strictly forbidden from using periods, commas, question marks, or exclamation points.\nThe Apostrophe Rule: NEVER use apostrophes. You MUST intentionally misspell contractions by fusing the words (type "its" instead of "it''s", "dont" instead of "don''t", "im" instead of "I''m", "thats" instead of "that''s", "cant" instead of "can''t").\nTone: Highly informal, raw, and casual.', 'zap', 'friendly', true, 1, 'discord'),
+    (NEW.id, 'Friendly', 'Write a friendly and warm reply that shows genuine interest in the topic. Be supportive and positive.', 'heart', 'friendly', false, 2, 'discord'),
+    (NEW.id, 'Professional', 'Write a professional and business-like reply. Be concise, informative, and maintain a formal tone.', 'briefcase', 'professional', false, 3, 'discord'),
+    (NEW.id, 'Witty', 'Write a clever and witty reply with a touch of humor. Be creative but not offensive.', 'sparkles', 'witty', false, 4, 'discord');
+
+  -- Insert default prompts for new user (X/Twitter)
+  INSERT INTO public.prompts (user_id, name, content, icon, tone, is_default, sort_order, platform)
+  VALUES 
+    (NEW.id, 'Viral Web3', E'Write an engaging, high-energy reply tailored for Crypto Twitter (X). Use Web3 slang where appropriate (e.g., LFG, bullish, based, anon). Formulate a strong opinion or ask a highly engaging open-ended question to drive replies.\n\nTone: Exciting, confident, somewhat provocative.', 'flame', 'friendly', true, 1, 'x'),
+    (NEW.id, 'Value Add', 'Provide a concise, highly insightful breakdown of the topic discussed in the tweet. Focus purely on facts, value, and objective analysis without excessive enthusiasm. Sound like a knowledgeable founder.', 'book-open', 'professional', false, 2, 'x'),
+    (NEW.id, 'Sarcastic Degen', 'Write a highly sarcastic and cynical reply making fun of the market conditions or the tweet''s premise. Maintain a funny, dry humor.', 'ghost', 'witty', false, 3, 'x');
 
   RETURN NEW;
 END;
