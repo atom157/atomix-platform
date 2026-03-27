@@ -123,6 +123,7 @@ export async function POST(request: Request) {
         ? ((tweetData as Record<string, unknown>).threadContext as string[]).slice(0, 5).map(t => sanitizeText(t))
         : undefined,
       isGreetingChannel: (tweetData as Record<string, unknown>).isGreetingChannel === true,
+      timeContext: sanitizeText((tweetData as Record<string, unknown>).timeContext as string) || 'morning',
     }
 
     // Get user profile
@@ -221,12 +222,17 @@ export async function POST(request: Request) {
     console.log('Generating response in:', (safeSettings as Record<string, unknown>)?.language || 'same', 'with length:', (safeSettings as Record<string, unknown>)?.length || 'medium')
 
     const isKillSwitchActive = safeTweetData.isGreetingChannel;
-    const finalMessages: any[] = isKillSwitchActive
-      ? [ { role: 'user', content: "I am in a #gm channel. Reply with 'gm' only. No punctuation. No other words." } ]
-      : [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ];
+    let finalMessages: any[] = [];
+
+    if (isKillSwitchActive) {
+      const greeting = safeTweetData.timeContext === 'night' ? 'gn' : 'gm';
+      finalMessages = [ { role: 'user', content: `I am in a greeting channel. It is currently ${safeTweetData.timeContext}. Reply with '${greeting}' only. No punctuation. No other words.` } ];
+    } else {
+      finalMessages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ];
+    }
 
     const completion = await openai.chat.completions.create({
       model: (safeSettings as Record<string, unknown>)?.model as string || 'gpt-4o-mini',

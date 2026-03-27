@@ -314,7 +314,7 @@
 
     // Phase 2: Web3 Hunter Context Matrix
     // 1. Identity & greeting detection
-    const { channelName, serverName, isGreetingChannel } = getBulletproofChannelContext();
+    const { channelName, serverName, isGreetingChannel, timeContext } = getBulletproofChannelContext();
 
     // 2. Target Message Quoted Context
     let quotedContext = null;
@@ -369,11 +369,11 @@
       author: authorName,
       handle: '',
       metrics: {},
-      threadContext: threadContext.map(msg => `${msg.author}: ${msg.text}`),
       quotedContext: quotedContext,
       channelName: channelName,
       serverName: serverName,
-      isGreetingChannel: isGreetingChannel
+      isGreetingChannel: isGreetingChannel,
+      timeContext: timeContext
     };
 
     console.log(LOG, 'Context Matrix extracted:', JSON.stringify(result, null, 2));
@@ -729,19 +729,22 @@
     const combined = `${url} ${title} ${channelsList}`;
     
     // Check if any of these target substrings exist as standalone words
-    const regex = /(?:^|[^a-zA-Z0-9])(gm|gn|hi|hello)(?:[^a-zA-Z0-9]|$)/i;
+    const regex = /(?:^|[^a-zA-Z0-9])(gm|gn|gmgn|hi|hello)(?:[^a-zA-Z0-9]|$)/i;
     const isGreetingChannel = regex.test(combined);
 
-    console.log("[AtomiX Debug] Channel Name:", channelName);
+    const hour = new Date().getHours();
+    const timeContext = (hour >= 5 && hour < 18) ? 'morning' : 'night';
+
+    console.log("[AtomiX Debug] Channel Name:", channelName, " | Time:", timeContext);
     console.log("[AtomiX Debug] isGreetingChannel detected:", isGreetingChannel);
 
-    return { channelName, serverName, isGreetingChannel };
+    return { channelName, serverName, isGreetingChannel, timeContext };
   }
 
   // ── Channel History Extraction ───────────────────────────────────────
 
   function extractChannelHistory(count) {
-    const { channelName, serverName, isGreetingChannel } = getBulletproofChannelContext();
+    const { channelName, serverName, isGreetingChannel, timeContext } = getBulletproofChannelContext();
 
     // Get all visible chat messages
     const allMessages = document.querySelectorAll('[id^="chat-messages-"]');
@@ -755,7 +758,7 @@
     }
 
     console.log(LOG, `Extracted ${history.length}/${count} channel history messages.`);
-    return { history: history.map(msg => `${msg.author}: ${msg.text}`), channelName, serverName, isGreetingChannel };
+    return { history: history.map(msg => `${msg.author}: ${msg.text}`), channelName, serverName, isGreetingChannel, timeContext };
   }
 
 
@@ -795,7 +798,7 @@
       if (hasExistingText) {
         // Case B: Polish/Continue mode
         console.log(LOG, 'Mode: POLISH — existing text detected:', existingText.substring(0, 50));
-        const { history, channelName, serverName, isGreetingChannel } = extractChannelHistory(3);
+        const { history, channelName, serverName, isGreetingChannel, timeContext } = extractChannelHistory(3);
 
         messageData = {
           text: existingText,
@@ -805,12 +808,13 @@
           threadContext: history,
           channelName,
           serverName,
-          isGreetingChannel
+          isGreetingChannel,
+          timeContext
         };
       } else {
         // Case A: Conversation Starter mode
         console.log(LOG, 'Mode: STARTER — empty editor, generating conversation starter');
-        const { history, channelName, serverName, isGreetingChannel } = extractChannelHistory(5);
+        const { history, channelName, serverName, isGreetingChannel, timeContext } = extractChannelHistory(5);
 
         messageData = {
           text: 'Start a conversation',
@@ -820,7 +824,8 @@
           threadContext: history,
           channelName,
           serverName,
-          isGreetingChannel
+          isGreetingChannel,
+          timeContext
         };
       }
 
