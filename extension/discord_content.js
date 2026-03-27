@@ -331,13 +331,35 @@
       }
     }
 
-    // 3. Conversation History (Last 3 messages) — uses shared parseMessageNode()
+    // 3. Conversation History (Targeted 1-on-1 Context)
+    // Attempt to identify the current user's name from the bottom-left account panel
+    let currentUser = '';
+    const userPanel = document.querySelector('[class*="panels_"] [class*="nameTag_"], [class*="panels_"] [class*="title_"]');
+    if (userPanel) {
+      currentUser = userPanel.innerText.split('\\n')[0].trim();
+    }
+
     const threadContext = [];
     let sibling = listItem.previousElementSibling;
     let attempts = 0;
-    while (sibling && threadContext.length < 3 && attempts < 15) {
+    
+    // Scan back 30 nodes, keeping only messages from Target User or Current User, up to 7 messages
+    while (sibling && threadContext.length < 7 && attempts < 30) {
       const msg = parseMessageNode(sibling);
-      if (msg) threadContext.unshift(msg); // Prepend to keep chronological order
+      if (msg) {
+        if (msg.author === authorName || (currentUser && msg.author.includes(currentUser)) || (!currentUser)) {
+           // Fallback: if we can't detect currentUser, just grab everything contextually relevant?
+           // The prompt requested Target User or Current User. Let's just strictly check.
+           // Since Discord DOM frequently changes, if we failed to find currentUser, we'll assume any message 
+           // that ISN'T from another actively participating third-person might be relevant, or we just stick to Target User.
+           if (msg.author === authorName || (currentUser && msg.author === currentUser)) {
+             threadContext.unshift(msg);
+           } else if (!currentUser) {
+             // Fallback if we cannot reliably determine current user
+             threadContext.unshift(msg);
+           }
+        }
+      }
       sibling = sibling.previousElementSibling;
       attempts++;
     }

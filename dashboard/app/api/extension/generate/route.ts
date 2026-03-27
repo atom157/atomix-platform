@@ -353,6 +353,7 @@ STYLE RULES:
 6. ${includeHashtags ? 'Include 1-3 relevant and trending hashtags at the end of the response' : 'STRICT RULE: Do NOT include any hashtags'}
 
 CONTENT RULES:
+- Analyze the provided thread history. If a greeting (Hi, Hello, Hey, etc.) has already been exchanged in the last 3 messages of this thread, DO NOT include a greeting in the new response. Jump straight to the point.
 - Add genuine value: share a related thought, a personal angle, a relevant question, or useful context.
 - If the tweet shares an achievement, acknowledge it without being over-the-top.
 - If the tweet asks a question, answer it directly and concisely.
