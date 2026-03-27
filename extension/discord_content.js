@@ -313,10 +313,8 @@
     }
 
     // Phase 2: Web3 Hunter Context Matrix
-    // 1. Identity (Server & Channel via document.title)
-    const titleParts = document.title.split(' | ');
-    const channelName = titleParts[0] || '';
-    const serverName = titleParts.length > 2 ? titleParts[1] : '';
+    // 1. Identity & greeting detection
+    const { channelName, serverName, isGreetingChannel } = getBulletproofChannelContext();
 
     // 2. Target Message Quoted Context
     let quotedContext = null;
@@ -374,7 +372,8 @@
       threadContext: threadContext.map(msg => `${msg.author}: ${msg.text}`),
       quotedContext: quotedContext,
       channelName: channelName,
-      serverName: serverName
+      serverName: serverName,
+      isGreetingChannel: isGreetingChannel
     };
 
     console.log(LOG, 'Context Matrix extracted:', JSON.stringify(result, null, 2));
@@ -440,26 +439,29 @@
       promptId: settings.selectedPromptId_discord,
     });
 
+    const payloadObject = {
+      tweetData: messageData, // reuses existing API shape
+      extToken: settings.extToken,
+      promptId: settings.selectedPromptId_discord || null,
+      settings: {
+        model: 'gpt-4o-mini',
+        language: settings.language || 'same',
+        length: settings.length || 'medium',
+        bannedWords: settings.bannedWords || '',
+        includeHashtags: settings.includeHashtags || false,
+        mentionAuthor: settings.mentionAuthor || false,
+        addEmoji: settings.addEmoji || false,
+        customPrompt: settings.customPromptContent_discord || null,
+        platform: 'discord'
+      },
+    };
+    console.log("[AtomiX Debug] Final Payload:", JSON.stringify(payloadObject, null, 2));
+
     const result = await new Promise((resolve, reject) => {
       chrome.runtime.sendMessage(
         {
           type: 'GENERATE_REPLY',
-          payload: {
-            tweetData: messageData, // reuses existing API shape
-            extToken: settings.extToken,
-            promptId: settings.selectedPromptId_discord || null,
-            settings: {
-              model: 'gpt-4o-mini',
-              language: settings.language || 'same',
-              length: settings.length || 'medium',
-              bannedWords: settings.bannedWords || '',
-              includeHashtags: settings.includeHashtags || false,
-              mentionAuthor: settings.mentionAuthor || false,
-              addEmoji: settings.addEmoji || false,
-              customPrompt: settings.customPromptContent_discord || null,
-              platform: 'discord'
-            },
-          },
+          payload: payloadObject,
         },
         (response) => {
           if (chrome.runtime.lastError) {
@@ -716,12 +718,30 @@
     }
   }
 
-  // ── Channel History Extraction ───────────────────────────────────────
-
-  function extractChannelHistory(count) {
+  function getBulletproofChannelContext() {
     const titleParts = document.title.split(' | ');
     const channelName = titleParts[0] || '';
     const serverName = titleParts.length > 2 ? titleParts[1] : '';
+
+    const url = window.location.href.toLowerCase();
+    const title = document.title.toLowerCase();
+    const channelsList = document.querySelector('[aria-label="Channels"]')?.innerText?.toLowerCase() || '';
+    const combined = `${url} ${title} ${channelsList}`;
+    
+    // Check if any of these target substrings exist as standalone words
+    const regex = /(?:^|[^a-zA-Z0-9])(gm|gn|hi|hello)(?:[^a-zA-Z0-9]|$)/i;
+    const isGreetingChannel = regex.test(combined);
+
+    console.log("[AtomiX Debug] Channel Name:", channelName);
+    console.log("[AtomiX Debug] isGreetingChannel detected:", isGreetingChannel);
+
+    return { channelName, serverName, isGreetingChannel };
+  }
+
+  // ── Channel History Extraction ───────────────────────────────────────
+
+  function extractChannelHistory(count) {
+    const { channelName, serverName, isGreetingChannel } = getBulletproofChannelContext();
 
     // Get all visible chat messages
     const allMessages = document.querySelectorAll('[id^="chat-messages-"]');
@@ -735,7 +755,7 @@
     }
 
     console.log(LOG, `Extracted ${history.length}/${count} channel history messages.`);
-    return { history: history.map(msg => `${msg.author}: ${msg.text}`), channelName, serverName };
+    return { history: history.map(msg => `${msg.author}: ${msg.text}`), channelName, serverName, isGreetingChannel };
   }
 
 
@@ -775,7 +795,7 @@
       if (hasExistingText) {
         // Case B: Polish/Continue mode
         console.log(LOG, 'Mode: POLISH — existing text detected:', existingText.substring(0, 50));
-        const { history, channelName, serverName } = extractChannelHistory(3);
+        const { history, channelName, serverName, isGreetingChannel } = extractChannelHistory(3);
 
         messageData = {
           text: existingText,
@@ -784,12 +804,13 @@
           metrics: {},
           threadContext: history,
           channelName,
-          serverName
+          serverName,
+          isGreetingChannel
         };
       } else {
         // Case A: Conversation Starter mode
         console.log(LOG, 'Mode: STARTER — empty editor, generating conversation starter');
-        const { history, channelName, serverName } = extractChannelHistory(5);
+        const { history, channelName, serverName, isGreetingChannel } = extractChannelHistory(5);
 
         messageData = {
           text: 'Start a conversation',
@@ -798,7 +819,8 @@
           metrics: {},
           threadContext: history,
           channelName,
-          serverName
+          serverName,
+          isGreetingChannel
         };
       }
 

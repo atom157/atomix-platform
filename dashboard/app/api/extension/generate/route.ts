@@ -122,6 +122,7 @@ export async function POST(request: Request) {
       threadContext: Array.isArray((tweetData as Record<string, unknown>).threadContext)
         ? ((tweetData as Record<string, unknown>).threadContext as string[]).slice(0, 5).map(t => sanitizeText(t))
         : undefined,
+      isGreetingChannel: (tweetData as Record<string, unknown>).isGreetingChannel === true,
     }
 
     // Get user profile
@@ -219,12 +220,17 @@ export async function POST(request: Request) {
 
     console.log('Generating response in:', (safeSettings as Record<string, unknown>)?.language || 'same', 'with length:', (safeSettings as Record<string, unknown>)?.length || 'medium')
 
+    const isKillSwitchActive = safeTweetData.isGreetingChannel;
+    const finalMessages: any[] = isKillSwitchActive
+      ? [ { role: 'user', content: "I am in a #gm channel. Reply with 'gm' only. No punctuation. No other words." } ]
+      : [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ];
+
     const completion = await openai.chat.completions.create({
       model: (safeSettings as Record<string, unknown>)?.model as string || 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
+      messages: finalMessages,
       max_tokens: 280,
       temperature: 0.8,
     })
