@@ -435,6 +435,9 @@ function buildUserPrompt(tweetData: Record<string, unknown>, generateMode: strin
   const handle = tweetData.handle as string
   const metrics = tweetData.metrics as Record<string, string> | undefined
   const threadContext = tweetData.threadContext as string[] | undefined
+  const channelName = (tweetData.channelName as string)?.toLowerCase() || ''
+
+  const isGreetingChannel = channelName.includes('gm') || channelName.includes('gn') || channelName.includes('good-morning')
 
   let userPrompt = ''
 
@@ -443,7 +446,11 @@ function buildUserPrompt(tweetData: Record<string, unknown>, generateMode: strin
   }
 
   if (generateMode === 'starter') {
-    userPrompt += `Task: Generate a natural and engaging conversation starter for this chat.\n\nReturn ONLY the message text without prefixes or explanation.`
+    if (isGreetingChannel) {
+      userPrompt += `Task: YOU ARE IN A GREETING CHANNEL. Just say a short greeting like "gm", "gn", or use an emoji. Do NOT start a conversation or ask questions.\n\nReturn ONLY the message text without prefixes or explanation.`
+    } else {
+      userPrompt += `Task: Generate a natural and engaging conversation starter for this chat.\n\nReturn ONLY the message text without prefixes or explanation.`
+    }
   } else if (generateMode === 'polish') {
     userPrompt += `The user has drafted the following message:\n"${text}"\n\nTask: Finish their thought naturally, and polish the phrasing to fit the conversation flow and system persona.\n\nReturn ONLY the complete, final message text without prefixes or explanation.`
   } else {
