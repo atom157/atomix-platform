@@ -447,23 +447,23 @@ DETECT LANGUAGE: Identify the primary language of the target message and the cha
 Secondary Rule (Channel Hint): If the language of the message is ambiguous, check the channel name (e.g., "${tweetData?.channelName || ''}"). If it contains words like ukrainian, spanish, russian, chinese, etc., use that as the target language.`
   }
 
-  // ── FINAL OVERRIDES: Toggle enforcement (absolute last instructions) ──
-  let toggleOverrides = '\n\n=== FINAL OUTPUT REQUIREMENTS (override everything above) ==='
+  // ── FINAL APPENDAGES: Toggle enforcement ──
+  let toggleOverrides = '\n\n=== APPENDED FORMATTING RULES ==='
   if (addEmoji) {
-    toggleOverrides += '\nCRITICAL: You MUST include at least 2-3 relevant emojis in this response. This is a hard requirement that overrides all other style rules.'
+    toggleOverrides += '\n- ENFORCED RULE: You must sprinkle 2-3 relevant emojis naturally into your response.'
   } else {
-    toggleOverrides += '\nABSOLUTE BAN: Do NOT include any emojis, emoticons, or Unicode symbols. Zero emojis allowed.'
+    toggleOverrides += '\n- ABSOLUTE BAN: Do NOT include any emojis, emoticons, or Unicode symbols. Zero emojis allowed.'
   }
   if (includeHashtags) {
-    toggleOverrides += '\nCRITICAL: You MUST end the response with 2-3 relevant hashtags. This is a hard requirement that overrides all other style rules.'
+    toggleOverrides += '\n- ENFORCED RULE: You must end the response with 2-3 relevant hashtags.'
   } else {
-    toggleOverrides += '\nABSOLUTE BAN: Do NOT include any hashtags. Zero hashtags allowed.'
+    toggleOverrides += '\n- ABSOLUTE BAN: Do NOT include any hashtags. Zero hashtags allowed.'
   }
   if (generateMode === 'reply') {
     if (mentionAuthor) {
-      toggleOverrides += '\nCRITICAL: You MUST start the reply by tagging the author with their @handle. This is a hard requirement.'
+      toggleOverrides += '\n- ENFORCED RULE: You must start the reply by tagging the author with their @handle.'
     } else {
-      toggleOverrides += '\nABSOLUTE BAN: Do NOT mention or reference the author\'s @handle anywhere in the reply.'
+      toggleOverrides += '\n- ABSOLUTE BAN: Do NOT mention or reference the author\'s @handle anywhere in the reply.'
     }
   }
   basePrompt += toggleOverrides
