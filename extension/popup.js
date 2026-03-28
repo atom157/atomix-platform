@@ -392,10 +392,10 @@ function updateStatus(text, type) {
   if (statusText) statusText.textContent = text;
   if (statusDot) statusDot.className = 'status-dot status-' + typeStr;
   
-  if (typeStr === 'success' && text === 'Connected') {
-    statusEl.className = 'status status-minimal';
-  } else {
+  if (typeStr === 'error' || typeStr === 'warning') {
     statusEl.className = 'status status-pill pill-' + typeStr;
+  } else {
+    statusEl.className = 'status status-minimal';
   }
 }
 
