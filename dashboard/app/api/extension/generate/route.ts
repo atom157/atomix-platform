@@ -207,41 +207,58 @@ export async function POST(request: Request) {
     const generateMode = (safeSettings as Record<string, unknown>)?.generateMode as string || 'reply'
     const userPrompt = buildUserPrompt(safeTweetData, generateMode)
 
-    // Use user's API key if available, otherwise use default
-    const apiKey = profile.openai_api_key || process.env.OPENAI_API_KEY
-
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'No API key configured. Please add your OpenAI API key in settings.' },
-        { status: 500, headers: corsHeaders }
-      )
-    }
-
-    const openai = new OpenAI({ apiKey })
-
-    console.log('Generating response in:', (safeSettings as Record<string, unknown>)?.language || 'same', 'with length:', (safeSettings as Record<string, unknown>)?.length || 'medium')
+    console.log('Generating response with Anthropic in:', (safeSettings as Record<string, unknown>)?.language || 'same', 'with length:', (safeSettings as Record<string, unknown>)?.length || 'medium')
 
     const isKillSwitchActive = safeTweetData.isGreetingChannel;
     let finalMessages: any[] = [];
+    let extractedSystemPrompt = '';
 
     if (isKillSwitchActive) {
       const greeting = safeTweetData.timeContext === 'night' ? 'gn' : 'gm';
       finalMessages = [ { role: 'user', content: `I am in a greeting channel. It is currently ${safeTweetData.timeContext}. Reply with '${greeting}' only. No punctuation. No other words.` } ];
     } else {
+      extractedSystemPrompt = systemPrompt;
       finalMessages = [
-        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ];
     }
 
-    const completion = await openai.chat.completions.create({
-      model: (safeSettings as Record<string, unknown>)?.model as string || 'gpt-4o-mini',
-      messages: finalMessages,
-      max_tokens: 280,
-      temperature: 0.8,
-    })
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
-    const reply = completion.choices[0]?.message?.content?.trim() || ''
+    if (!anthropicKey) {
+      return NextResponse.json(
+        { error: 'Anthropic API key not configured in environment variables.' },
+        { status: 500, headers: corsHeaders }
+      )
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 150,
+        temperature: 0.8,
+        system: extractedSystemPrompt || undefined,
+        messages: finalMessages
+      })
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      console.error('Anthropic API Error:', errData);
+      return NextResponse.json(
+        { error: 'Anthropic generation failed: ' + (errData.error?.message || response.statusText) },
+        { status: response.status, headers: corsHeaders }
+      )
+    }
+
+    const completion = await response.json();
+    const reply = completion.content?.[0]?.text?.trim() || '';
 
     // Update usage count
     await supabase
