@@ -453,8 +453,8 @@ var editingPromptId = null; // null = create mode, string = edit mode
 
 customPromptContent.addEventListener('input', function () {
   var len = this.value.length;
-  charCounter.textContent = len + ' / 1000';
-  charCounter.classList.toggle('limit-reached', len >= 1000);
+  charCounter.textContent = len + ' / 1500';
+  charCounter.classList.toggle('limit-reached', len >= 1500);
 });
 
 function showSelectView() {
@@ -463,7 +463,7 @@ function showSelectView() {
   deleteConfirm.style.display = 'none';
   customPromptName.value = '';
   customPromptContent.value = '';
-  charCounter.textContent = '0 / 1000';
+  charCounter.textContent = '0 / 1500';
   editingPromptId = null;
 }
 
@@ -479,7 +479,7 @@ function showEditorView(mode, id, name, content) {
     deletePromptBtn.style.display = 'flex';
     customPromptName.value = name || '';
     customPromptContent.value = content || '';
-    charCounter.textContent = (content || '').length + ' / 1000';
+    charCounter.textContent = (content || '').length + ' / 1500';
   } else {
     editingPromptId = null;
     editorTitle.textContent = 'New Prompt';
@@ -487,7 +487,7 @@ function showEditorView(mode, id, name, content) {
     deletePromptBtn.style.display = 'none';
     customPromptName.value = '';
     customPromptContent.value = '';
-    charCounter.textContent = '0 / 1000';
+    charCounter.textContent = '0 / 1500';
   }
 }
 
