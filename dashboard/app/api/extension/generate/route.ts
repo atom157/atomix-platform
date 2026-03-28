@@ -232,6 +232,17 @@ export async function POST(request: Request) {
       )
     }
 
+    const payload: any = {
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 150,
+      temperature: 0.8,
+      messages: finalMessages
+    };
+
+    if (extractedSystemPrompt) {
+      payload.system = extractedSystemPrompt;
+    }
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -239,13 +250,7 @@ export async function POST(request: Request) {
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json'
       },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 150,
-        temperature: 0.8,
-        system: extractedSystemPrompt || undefined,
-        messages: finalMessages
-      })
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
