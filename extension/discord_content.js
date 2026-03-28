@@ -597,7 +597,17 @@
     if (labelSpan) labelSpan.textContent = 'Generating...';
 
     try {
-      const reply = await generateReply(messageData);
+      let reply = null;
+
+      // Spammer Check Bypass
+      const bypassWord = getSpamBypassWord();
+      if (bypassWord) {
+        console.log(LOG, 'Spam greeting channel detected! Bypassing AI backend. Using:', bypassWord);
+        reply = bypassWord;
+        await sleep(400); // UI visual delay
+      } else {
+        reply = await generateReply(messageData);
+      }
 
       if (reply) {
         if (labelSpan) labelSpan.textContent = 'Typing...';
@@ -753,6 +763,52 @@
 
 
 
+  function getSpamBypassWord() {
+    const allMessages = document.querySelectorAll('[id^="chat-messages-"]');
+    const history = [];
+
+    // Walk backwards from the last visible message
+    for (let i = allMessages.length - 1; i >= 0 && history.length < 10; i--) {
+      const node = allMessages[i];
+      const msg = parseMessageNode(node);
+      if (msg && msg.text) {
+        history.push(msg.text.trim());
+      }
+    }
+
+    if (history.length === 0) return null;
+
+    let shortCount = 0;
+    const freq = {};
+
+    for (const text of history) {
+      if (text.length < 10) {
+        shortCount++;
+        const lower = text.toLowerCase();
+        freq[lower] = (freq[lower] || 0) + 1;
+      }
+    }
+
+    if (shortCount / history.length >= 0.7) {
+      let maxCount = 0;
+      let maxWord = null;
+      for (const [word, count] of Object.entries(freq)) {
+        if (count > maxCount) {
+          maxCount = count;
+          maxWord = word;
+        }
+      }
+
+      if (maxWord) {
+        // Return original casing found
+        const original = history.find(t => t.toLowerCase() === maxWord);
+        return original || maxWord;
+      }
+    }
+
+    return null;
+  }
+
   // ── Starter Button Click Handler ────────────────────────────────────
 
   async function handleStarterClick(event) {
@@ -782,12 +838,24 @@
     btn.classList.add('atomix-loading');
 
     try {
+      let reply = null;
       let messageData;
       const generateMode = hasExistingText ? 'polish' : 'starter';
 
-      if (hasExistingText) {
-        // Case B: Polish/Continue mode
-        console.log(LOG, 'Mode: POLISH — existing text detected:', existingText.substring(0, 50));
+      // Bypass check for empty starters
+      if (generateMode === 'starter') {
+        const bypassWord = getSpamBypassWord();
+        if (bypassWord) {
+          console.log(LOG, 'Spam channel detected (Starter)! Bypassing AI backend. Using:', bypassWord);
+          reply = bypassWord;
+          await sleep(400);
+        }
+      }
+
+      if (!reply) {
+        if (hasExistingText) {
+          // Case B: Polish/Continue mode
+          console.log(LOG, 'Mode: POLISH — existing text detected:', existingText.substring(0, 50));
         const { history, channelName, serverName, isGreetingChannel, timeContext } = extractChannelHistory(3);
 
         messageData = {
@@ -819,49 +887,51 @@
         };
       }
 
-      // Send to background
-      const result = await new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage(
-          {
-            type: 'GENERATE_REPLY',
-            payload: {
-              tweetData: messageData,
-              extToken: settings.extToken,
-              promptId: settings.selectedPromptId || null,
-              settings: {
-                generateMode: generateMode,
-                model: 'gpt-4o-mini',
-                language: settings.language || 'same',
-                length: settings.length || 'medium',
-                bannedWords: settings.bannedWords || '',
-                includeHashtags: settings.includeHashtags || false,
-                mentionAuthor: false,
-                addEmoji: settings.addEmoji || false,
-                customPrompt: settings.customPromptContent || null
+        // Send to background
+        const result = await new Promise((resolve, reject) => {
+          chrome.runtime.sendMessage(
+            {
+              type: 'GENERATE_REPLY',
+              payload: {
+                tweetData: messageData,
+                extToken: settings.extToken,
+                promptId: settings.selectedPromptId || null,
+                settings: {
+                  generateMode: generateMode,
+                  model: 'gpt-4o-mini',
+                  language: settings.language || 'same',
+                  length: settings.length || 'medium',
+                  bannedWords: settings.bannedWords || '',
+                  includeHashtags: settings.includeHashtags || false,
+                  mentionAuthor: false,
+                  addEmoji: settings.addEmoji || false,
+                  customPrompt: settings.customPromptContent || null
+                },
               },
             },
-          },
-          (response) => {
-            if (chrome.runtime.lastError) {
-              reject(new Error('Extension background error: ' + chrome.runtime.lastError.message));
-              return;
+            (response) => {
+              if (chrome.runtime.lastError) {
+                reject(new Error('Extension background error: ' + chrome.runtime.lastError.message));
+                return;
+              }
+              resolve(response);
             }
-            resolve(response);
-          }
-        );
-      });
+          );
+        });
 
-      if (!result.ok) {
-        if (result.status === 401) {
-          await secureStorage.remove(['extToken', 'userId']);
-          throw new Error('Session expired. Please reconnect in the extension popup.');
+        if (!result.ok) {
+          if (result.status === 401) {
+            await secureStorage.remove(['extToken', 'userId']);
+            throw new Error('Session expired. Please reconnect in the extension popup.');
+          }
+          throw new Error(result.error || 'API Error');
         }
-        throw new Error(result.error || 'API Error');
+
+        reply = result.reply;
+        console.log(LOG, 'Starter generation received, length:', reply.length);
       }
 
-      if (result.reply) {
-        console.log(LOG, 'Starter generation received, length:', result.reply.length);
-
+      if (reply) {
         if (editor) {
           editor.focus();
           await sleep(200);
@@ -883,8 +953,8 @@
           await sleep(50);
 
           let currentText = '';
-          for (let i = 0; i < result.reply.length; i++) {
-            const char = result.reply[i];
+          for (let i = 0; i < reply.length; i++) {
+            const char = reply[i];
             currentText += char;
             document.execCommand('insertText', false, char);
 
