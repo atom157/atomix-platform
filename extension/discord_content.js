@@ -845,7 +845,25 @@
     try {
       let reply = null;
       let messageData;
-      const generateMode = hasExistingText ? 'polish' : 'starter';
+      let generateMode = hasExistingText ? 'polish' : 'starter';
+
+      // Detect if user has an active "Replying to" bar above the input
+      const editorWrapper = btn.closest('[class*="channelTextArea_"]') || document;
+      const replyBar = editorWrapper.querySelector('[class*="replyBar_"]');
+      let repliedMessageText = null;
+      let repliedAuthor = null;
+
+      if (replyBar && !hasExistingText) {
+        const replyTextNode = replyBar.querySelector('[class*="repliedTextPreview_"]') || replyBar.querySelector('[class*="messageContent_"]');
+        const replyAuthorNode = replyBar.querySelector('[class*="repliedTextAuthor_"]') || replyBar.querySelector('[class*="name_"]');
+        if (replyTextNode) repliedMessageText = replyTextNode.textContent.trim();
+        if (replyAuthorNode) repliedAuthor = replyAuthorNode.textContent.trim();
+
+        if (repliedMessageText) {
+          generateMode = 'reply';
+          console.log(LOG, 'Active Reply Bar Detected! Extracting Target:', repliedMessageText);
+        }
+      }
 
       // Bypass check for empty starters
       if (generateMode === 'starter') {
@@ -875,21 +893,36 @@
           timeContext
         };
       } else {
-        // Case A: Conversation Starter mode
-        console.log(LOG, 'Mode: STARTER — empty editor, generating conversation starter');
+        // Case A: Conversation Starter or Targeted Reply mode
         const { history, channelName, serverName, isGreetingChannel, timeContext } = extractChannelHistory(5);
 
-        messageData = {
-          text: 'Start a conversation',
-          author: 'me',
-          handle: '',
-          metrics: {},
-          threadContext: history,
-          channelName,
-          serverName,
-          isGreetingChannel,
-          timeContext
-        };
+        if (generateMode === 'reply' && repliedMessageText) {
+          console.log(LOG, 'Mode: TARGETED REPLY — answering active Reply Bar');
+          messageData = {
+            text: repliedMessageText,
+            author: repliedAuthor || 'user',
+            handle: '',
+            metrics: {},
+            threadContext: history,
+            channelName,
+            serverName,
+            isGreetingChannel,
+            timeContext
+          };
+        } else {
+          console.log(LOG, 'Mode: STARTER — empty editor, generating conversation starter');
+          messageData = {
+            text: 'Start a conversation',
+            author: 'me',
+            handle: '',
+            metrics: {},
+            threadContext: history,
+            channelName,
+            serverName,
+            isGreetingChannel,
+            timeContext
+          };
+        }
       }
 
         // Send to background
@@ -900,7 +933,7 @@
               payload: {
                 tweetData: messageData,
                 extToken: settings.extToken,
-                promptId: settings.selectedPromptId || null,
+                promptId: settings.selectedPromptId_discord || null,
                 settings: {
                   generateMode: generateMode,
                   model: 'gpt-4o-mini',
@@ -910,7 +943,8 @@
                   includeHashtags: settings.includeHashtags || false,
                   mentionAuthor: false,
                   addEmoji: settings.addEmoji || false,
-                  customPrompt: settings.customPromptContent || null
+                  customPrompt: settings.customPromptContent_discord || null,
+                  platform: 'discord'
                 },
               },
             },

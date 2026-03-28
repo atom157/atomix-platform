@@ -370,11 +370,7 @@ ONLY reply with a short greeting like "gm", "gn", "gm fam", or a relevant emoji.
   }
 
   if (customPrompt) {
-    if (customPrompt.includes('{{tweet}}')) {
-      basePrompt = customPrompt
-    } else {
-      basePrompt += `\n\nADDITIONAL USER INSTRUCTIONS:\n${customPrompt}`
-    }
+    basePrompt += `\n\nADDITIONAL USER INSTRUCTIONS:\n${customPrompt}`
   }
 
   // ── HIGH PRIORITY: Language enforcement (appended LAST to override everything) ──
