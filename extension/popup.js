@@ -385,10 +385,18 @@ function disconnectAccount() {
 
 // Update status
 function updateStatus(text, type) {
+  var typeStr = type || 'info';
   var statusDot = statusEl.querySelector('.status-dot');
   var statusText = statusEl.querySelector('.status-text');
+  
   if (statusText) statusText.textContent = text;
-  if (statusDot) statusDot.className = 'status-dot status-' + (type || 'info');
+  if (statusDot) statusDot.className = 'status-dot status-' + typeStr;
+  
+  if (typeStr === 'success' && text === 'Connected') {
+    statusEl.className = 'status status-minimal';
+  } else {
+    statusEl.className = 'status status-pill pill-' + typeStr;
+  }
 }
 
 function saveSettings() {
