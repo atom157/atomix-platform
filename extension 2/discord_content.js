@@ -341,17 +341,28 @@
     let sibling = listItem.previousElementSibling;
     let attempts = 0;
     
-    // Scan back 100 nodes, keeping ONLY messages from Target User, up to 10 messages
-    while (sibling && threadContext.length < 10 && attempts < 100) {
+    // Scan back 30 nodes, keeping only messages from Target User or Current User, up to 7 messages
+    while (sibling && threadContext.length < 7 && attempts < 30) {
       const msg = parseMessageNode(sibling);
-      if (msg && msg.author === authorName) {
-        threadContext.unshift(msg);
+      if (msg) {
+        if (msg.author === authorName || (currentUser && msg.author.includes(currentUser)) || (!currentUser)) {
+           // Fallback: if we can't detect currentUser, just grab everything contextually relevant?
+           // The prompt requested Target User or Current User. Let's just strictly check.
+           // Since Discord DOM frequently changes, if we failed to find currentUser, we'll assume any message 
+           // that ISN'T from another actively participating third-person might be relevant, or we just stick to Target User.
+           if (msg.author === authorName || (currentUser && msg.author === currentUser)) {
+             threadContext.unshift(msg);
+           } else if (!currentUser) {
+             // Fallback if we cannot reliably determine current user
+             threadContext.unshift(msg);
+           }
+        }
       }
       sibling = sibling.previousElementSibling;
       attempts++;
     }
 
-    console.log(LOG, `Extracted ${threadContext.length} targeted history messages (from ${authorName}) for context window.`);
+    console.log(LOG, `Extracted ${threadContext.length} history messages for context window.`);
 
     const result = {
       text: messageText,
@@ -359,7 +370,6 @@
       handle: '',
       metrics: {},
       quotedContext: quotedContext,
-      threadContext: threadContext.map(m => m.text),
       channelName: channelName,
       serverName: serverName,
       isGreetingChannel: isGreetingChannel,

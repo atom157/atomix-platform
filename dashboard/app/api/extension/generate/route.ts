@@ -120,7 +120,7 @@ export async function POST(request: Request) {
       serverName: sanitizeText((tweetData as Record<string, unknown>).serverName as string),
       metrics: (tweetData as Record<string, unknown>).metrics as Record<string, string> | undefined,
       threadContext: Array.isArray((tweetData as Record<string, unknown>).threadContext)
-        ? ((tweetData as Record<string, unknown>).threadContext as string[]).slice(0, 5).map(t => sanitizeText(t))
+        ? ((tweetData as Record<string, unknown>).threadContext as string[]).slice(0, 10).map(t => sanitizeText(t))
         : undefined,
       isGreetingChannel: (tweetData as Record<string, unknown>).isGreetingChannel === true,
       timeContext: sanitizeText((tweetData as Record<string, unknown>).timeContext as string) || 'morning',

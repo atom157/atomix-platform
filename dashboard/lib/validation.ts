@@ -12,7 +12,7 @@ const MAX_HANDLE = 50
 const MAX_PROMPT_CONTENT = 5000
 const MAX_PROMPT_NAME = 100
 const MAX_BANNED_WORDS = 500
-const MAX_THREAD_ITEMS = 5
+const MAX_THREAD_ITEMS = 15
 
 const ALLOWED_MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-4', 'gpt-3.5-turbo']
 const ALLOWED_TONES = ['friendly', 'professional', 'casual', 'witty', 'supportive', 'curious']
