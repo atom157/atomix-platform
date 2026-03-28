@@ -341,8 +341,8 @@
     let sibling = listItem.previousElementSibling;
     let attempts = 0;
     
-    // Scan back 100 nodes, keeping ONLY messages from Target User, up to 10 messages
-    while (sibling && threadContext.length < 10 && attempts < 100) {
+    // Scan back 100 nodes, keeping ONLY messages from Target User, up to 5 messages
+    while (sibling && threadContext.length < 5 && attempts < 100) {
       const msg = parseMessageNode(sibling);
       if (msg && msg.author === authorName) {
         threadContext.unshift(msg);
