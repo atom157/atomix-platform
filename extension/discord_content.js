@@ -532,6 +532,11 @@
           data: text.substring(0, i + 1)
         }));
 
+        // Fix visual clipping: Force React to drop empty-state CSS on the first character
+        if (i === 0) {
+          editor.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
         // Typewriter visual delay
         await sleep(30 + Math.random() * 20);
       }
@@ -961,6 +966,11 @@
             // Re-sync composition state to prevent ghost text
             const compUpdate = new CompositionEvent('compositionupdate', { bubbles: true, cancelable: true, data: currentText });
             editor.dispatchEvent(compUpdate);
+
+            // Fix visual clipping: Force React to drop empty-state CSS on the first character
+            if (i === 0) {
+              editor.dispatchEvent(new Event('input', { bubbles: true }));
+            }
 
             // Randomize delay and add fine-tuned buffer!
             const baseDelay = Math.random() < 0.2 ? 40 : 15;
