@@ -37,8 +37,9 @@
 
     // Non-sensitive settings from sync storage (mirrors content.js exactly)
     const syncResult = await chrome.storage.sync.get([
-      'language', 'length', 'bannedWords', 'includeHashtags',
-      'mentionAuthor', 'addEmoji', 'selectedPromptId_discord', 'customPromptContent_discord'
+      'language', 'length', 'tone', 'bannedWords', 'model',
+      'mentionAuthor', 'addEmoji', 'selectedPromptId', 'customPromptContent',
+      'selectedPromptId_discord', 'customPromptContent_discord'
     ]);
 
     // Token + userId from local storage
@@ -49,11 +50,14 @@
       hasUserId: !!secureResult.userId,
       language: syncResult.language || '(default)',
       length: syncResult.length || '(default)',
-      promptId: syncResult.selectedPromptId_discord || '(none)',
+      promptId: syncResult.selectedPromptId_discord || syncResult.selectedPromptId || '(none)',
     });
 
     settings = {
       ...syncResult,
+      selectedPromptId_discord: syncResult.selectedPromptId_discord || syncResult.selectedPromptId,
+      customPromptContent_discord: syncResult.customPromptContent_discord || syncResult.customPromptContent,
+      model: syncResult.model || 'gpt-4o-mini',
       extToken: secureResult.extToken || null,
       userId: secureResult.userId || null,
     };
@@ -359,7 +363,7 @@
       handle: '',
       metrics: {},
       quotedContext: quotedContext,
-      threadContext: threadContext.map(m => m.text),
+      threadContext: [], // FORCE EXACT CONTEXT: Send empty history. AI MUST only see target message.
       channelName: channelName,
       serverName: serverName,
       isGreetingChannel: isGreetingChannel,

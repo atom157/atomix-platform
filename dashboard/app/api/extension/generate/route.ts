@@ -189,13 +189,26 @@ export async function POST(request: Request) {
     if (!promptContent) {
       const platform = (safeSettings as Record<string, unknown>)?.platform as string || 'discord'
       
-      const { data: defaultPrompt } = await supabase
+      let { data: defaultPrompt } = await supabase
         .from('prompts')
         .select('content')
         .eq('user_id', userId)
         .eq('is_default', true)
         .eq('platform', platform)
         .single()
+
+      if (!defaultPrompt) {
+        // Fallback: If no default prompt exists, grab the first available prompt to prevent Anti-Bot Shield bypass on null
+        const { data: fallbackPrompt } = await supabase
+          .from('prompts')
+          .select('content')
+          .eq('user_id', userId)
+          .eq('platform', platform)
+          .limit(1)
+          .single()
+        
+        defaultPrompt = fallbackPrompt
+      }
 
       if (defaultPrompt) {
         promptContent = defaultPrompt.content
