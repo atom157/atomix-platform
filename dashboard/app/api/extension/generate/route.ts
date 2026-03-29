@@ -211,13 +211,12 @@ export async function POST(request: Request) {
 
     const isKillSwitchActive = safeTweetData.isGreetingChannel;
     let finalMessages: any[] = [];
-    let extractedSystemPrompt = '';
+    let extractedSystemPrompt = systemPrompt; // FORCE SHIELD: System Prompt must NEVER drop out of payload.
 
     if (isKillSwitchActive) {
       const greeting = safeTweetData.timeContext === 'night' ? 'gn' : 'gm';
       finalMessages = [ { role: 'user', content: `I am in a greeting channel. It is currently ${safeTweetData.timeContext}. Reply with '${greeting}' only. No punctuation. No other words.` } ];
     } else {
-      extractedSystemPrompt = systemPrompt;
       finalMessages = [
         { role: 'user', content: userPrompt },
       ];

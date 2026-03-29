@@ -848,15 +848,30 @@
       let generateMode = hasExistingText ? 'polish' : 'starter';
 
       // Detect if user has an active "Replying to" bar above the input
-      const editorWrapper = btn.closest('[class*="channelTextArea_"]') || document;
-      const replyBar = editorWrapper.querySelector('[class*="replyBar_"]');
+      const editorWrapper = btn.closest('[class*="channelTextArea"]') || document;
+      let replyBar = editorWrapper.querySelector('[class*="replyBar"]') || editorWrapper.querySelector('[class*="stackedReply"]');
+      
+      if (!replyBar) {
+         // Fallback: Search explicitly for physical "Replying to" text overlay
+         const allDivs = editorWrapper.querySelectorAll('div');
+         for (let d of allDivs) {
+           if (d.textContent && d.textContent.startsWith('Replying to')) {
+             replyBar = d;
+             break;
+           }
+         }
+      }
+
       let repliedMessageText = null;
       let repliedAuthor = null;
 
       if (replyBar && !hasExistingText) {
-        const replyTextNode = replyBar.querySelector('[class*="repliedTextPreview_"]') || replyBar.querySelector('[class*="messageContent_"]');
-        const replyAuthorNode = replyBar.querySelector('[class*="repliedTextAuthor_"]') || replyBar.querySelector('[class*="name_"]');
-        if (replyTextNode) repliedMessageText = replyTextNode.textContent.trim();
+        const replyTextNode = replyBar.querySelector('[class*="repliedTextPreview"]') || replyBar.querySelector('[class*="messageContent"]') || replyBar;
+        const replyAuthorNode = replyBar.querySelector('[class*="repliedTextAuthor"]') || replyBar.querySelector('[class*="name"]');
+        
+        if (replyTextNode) {
+          repliedMessageText = replyTextNode.textContent.replace(/^Replying to.*?(?=\s)/, '').trim(); 
+        }
         if (replyAuthorNode) repliedAuthor = replyAuthorNode.textContent.trim();
 
         if (repliedMessageText) {
@@ -903,7 +918,7 @@
             author: repliedAuthor || 'user',
             handle: '',
             metrics: {},
-            threadContext: history,
+            threadContext: [], // FORCE EXACT CONTEXT: Send empty history. AI MUST only see target message.
             channelName,
             serverName,
             isGreetingChannel,
@@ -926,36 +941,38 @@
       }
 
         // Send to background
-        const result = await new Promise((resolve, reject) => {
-          chrome.runtime.sendMessage(
-            {
-              type: 'GENERATE_REPLY',
-              payload: {
-                tweetData: messageData,
-                extToken: settings.extToken,
-                promptId: settings.selectedPromptId_discord || null,
-                settings: {
-                  generateMode: generateMode,
-                  model: 'gpt-4o-mini',
-                  language: settings.language || 'same',
-                  length: settings.length || 'medium',
-                  bannedWords: settings.bannedWords || '',
-                  includeHashtags: settings.includeHashtags || false,
-                  mentionAuthor: false,
-                  addEmoji: settings.addEmoji || false,
-                  customPrompt: settings.customPromptContent_discord || null,
-                  platform: 'discord'
-                },
-              },
+        const finalPayload = {
+          type: 'GENERATE_REPLY',
+          payload: {
+            tweetData: messageData,
+            extToken: settings.extToken,
+            promptId: settings.selectedPromptId_discord || null,
+            settings: {
+              generateMode: generateMode,
+              model: 'gpt-4o-mini',
+              language: settings.language || 'same',
+              length: settings.length || 'medium',
+              bannedWords: settings.bannedWords || '',
+              includeHashtags: settings.includeHashtags || false,
+              mentionAuthor: false,
+              addEmoji: settings.addEmoji || false,
+              customPrompt: settings.customPromptContent_discord || null,
+              platform: 'discord'
             },
-            (response) => {
-              if (chrome.runtime.lastError) {
-                reject(new Error('Extension background error: ' + chrome.runtime.lastError.message));
-                return;
-              }
-              resolve(response);
+          },
+        };
+
+        console.log(LOG, '=== DISPATCHING BACKGROUND PAYLOAD ===');
+        console.log(LOG, JSON.stringify(finalPayload.payload, null, 2));
+
+        const result = await new Promise((resolve, reject) => {
+          chrome.runtime.sendMessage(finalPayload, (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error('Extension background error: ' + chrome.runtime.lastError.message));
+              return;
             }
-          );
+            resolve(response);
+          });
         });
 
         if (!result.ok) {
