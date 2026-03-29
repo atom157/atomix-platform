@@ -62,6 +62,8 @@
       userId: secureResult.userId || null,
     };
 
+    console.log(LOG, "Loaded Settings:", JSON.stringify(settings, null, 2));
+
     return true;
   }
 
@@ -438,7 +440,7 @@
       extToken: settings.extToken,
       promptId: settings.selectedPromptId_discord || null,
       settings: {
-        model: 'gpt-4o-mini',
+        model: 'claude-haiku-4-5-20251001',
         language: settings.language || 'same',
         length: settings.length || 'medium',
         bannedWords: settings.bannedWords || '',
@@ -945,6 +947,7 @@
       }
 
         // Send to background
+        console.log(LOG, 'Verifying storage before dispatch:', { extToken: !!settings.extToken });
         const finalPayload = {
           type: 'GENERATE_REPLY',
           payload: {
@@ -953,7 +956,7 @@
             promptId: settings.selectedPromptId_discord || null,
             settings: {
               generateMode: generateMode,
-              model: 'gpt-4o-mini',
+              model: 'claude-haiku-4-5-20251001',
               language: settings.language || 'same',
               length: settings.length || 'medium',
               bannedWords: settings.bannedWords || '',
