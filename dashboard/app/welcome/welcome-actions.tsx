@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { User } from '@supabase/supabase-js'
@@ -37,23 +37,9 @@ export function WelcomeActions({ user }: WelcomeActionsProps) {
     const [isGoogleLoading, setIsGoogleLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    const handleGoogleLogin = async () => {
-        const supabase = createClient()
+    const handleGoogleLogin = () => {
         setIsGoogleLoading(true)
-        setError(null)
-
-        try {
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: `https://atomix.guru/auth/callback?redirectTo=/dashboard`,
-                },
-            })
-            if (error) throw error
-        } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'An error occurred during authentication')
-            setIsGoogleLoading(false)
-        }
+        window.location.href = 'https://www.atomix.guru/auth/direct-google?redirectTo=/auth/extension-connected&source=extension'
     }
 
     if (user) {
