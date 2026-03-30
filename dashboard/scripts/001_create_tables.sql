@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   email TEXT,
   full_name TEXT,
   avatar_url TEXT,
-  plan TEXT DEFAULT 'trial' CHECK (plan IN ('trial', 'free', 'pro', 'unlimited', 'active', 'expired', 'cancelled')),
+  plan TEXT DEFAULT 'free' CHECK (plan IN ('free', 'pro', 'ultra')),
   subscription_status TEXT,
   trial_ends_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '3 days'),
   openai_api_key TEXT,
