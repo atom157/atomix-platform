@@ -293,7 +293,7 @@ export async function POST(request: Request) {
       model: (safeSettings as Record<string, unknown>).model as string || 'claude-haiku-4-5-20251001',
       max_tokens: maxTokens,
       temperature: 0.8,
-      stop_sequences: ['\n\n', 'Note:', 'P.S.', '---', 'Yeah,', 'Yeah ', 'Actually,', 'Actually ', 'The '],
+      stop_sequences: ['Note:', 'P.S.', '---', 'Yeah,', 'Yeah ', 'Actually,', 'Actually ', 'The '],
       messages: finalMessages
     };
 
