@@ -71,7 +71,7 @@ async function handleGenerateReply({ tweetData, settings, extToken, promptId }, 
       return;
     }
 
-    sendResponse({ ok: true, reply: data.reply });
+    sendResponse({ ok: true, reply: data.reply, usage: data.usage || null });
 
     // Background async tracking
     trackEvent('reply_generated', {

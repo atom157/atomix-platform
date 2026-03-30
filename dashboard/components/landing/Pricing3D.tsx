@@ -36,34 +36,88 @@ export function Pricing3D() {
     const posthog = usePostHog();
     const router = useRouter();
     const supabase = createClient();
-    const [isLoading, setIsLoading] = useState(false);
+    const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-    const handleProCheckout = async () => {
-        setIsLoading(true);
-        posthog?.capture('pricing_clicked', { plan: 'pro' });
+    const handleCheckout = async (plan: 'pro' | 'ultra') => {
+        setLoadingPlan(plan);
+        posthog?.capture('pricing_clicked', { plan });
+
+        if (plan === 'ultra') {
+            // Direct Lava.top link for ULTRA
+            window.open(
+                'https://app.lava.top/products/7f0b7bdd-1d52-4d18-9c30-6c57c5978415/5844220a-5811-4a3b-a15d-f2f735570b4b',
+                '_blank'
+            );
+            setLoadingPlan(null);
+            return;
+        }
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
-
             if (session?.user?.email) {
-                // User is authenticated and has an email, redirect to dashboard with checkout trigger
                 router.push('/dashboard?checkout=pro');
             } else {
-                // Unauthenticated (or no email), trigger Google Sign-In with redirect back to checkout flow
                 const { error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
                         redirectTo: `${window.location.origin}/auth/callback?redirectTo=/dashboard?checkout=pro`,
                     },
                 });
-
                 if (error) throw error;
             }
         } catch (error) {
             console.error('Checkout error:', error);
-            setIsLoading(false);
+            setLoadingPlan(null);
         }
     };
+
+    const tiers = [
+        {
+            name: 'Free',
+            price: '$0',
+            period: '/month',
+            description: 'Perfect for getting started',
+            features: [
+                '20 one-time signup replies',
+                '5 free replies daily',
+                'Standard AI generation',
+                'Basic prompts',
+            ],
+            cta: 'free',
+            badge: null,
+        },
+        {
+            name: 'PRO',
+            price: '$9',
+            period: '/month',
+            description: 'For power users on X & Discord',
+            features: [
+                '2,000 replies per month',
+                '5 free replies daily',
+                'Custom prompts',
+                'Advanced context analysis',
+                'Priority support',
+            ],
+            cta: 'pro',
+            badge: 'MOST POPULAR',
+        },
+        {
+            name: 'ULTRA',
+            price: '$24',
+            period: '/month',
+            description: 'Maximum volume for pros',
+            features: [
+                '7,000 replies per month',
+                '5 free replies daily',
+                'Custom prompts',
+                'Advanced context analysis',
+                'Priority support',
+            ],
+            cta: 'ultra',
+            badge: 'BEST VALUE',
+        },
+    ];
+
     return (
         <section id="pricing" className="px-6 py-32 bg-white relative overflow-hidden">
             {/* Background elements */}
@@ -80,105 +134,120 @@ export function Pricing3D() {
                     </p>
                 </div>
 
-                <div className="grid gap-8 md:grid-cols-2 max-w-4xl mx-auto perspective-[1200px]">
-                    {/* Free Plan */}
-                    <div className="relative rounded-3xl p-8 flex flex-col h-full bg-white/50 border border-slate-200 shadow-sm backdrop-blur-sm transition-all duration-300 hover:shadow-lg">
-                        <div className="mb-6">
-                            <h3 className="text-2xl font-bold text-slate-900 mb-2">Free</h3>
-                            <p className="text-slate-500 font-medium text-sm">Perfect for getting started</p>
-                        </div>
-                        <div className="mb-8">
-                            <span className="text-4xl font-extrabold text-slate-900">$0</span>
-                            <span className="text-slate-500 font-medium">/month</span>
-                        </div>
-                        <ul className="space-y-4 mb-8 flex-1">
-                            <li className="flex items-center text-slate-600 font-medium">
-                                <Check className="w-5 h-5 text-blue-500 mr-3" />
-                                20 replies/month
-                            </li>
-                            <li className="flex items-center text-slate-600 font-medium">
-                                <Check className="w-5 h-5 text-blue-500 mr-3" />
-                                Standard generation
-                            </li>
-                            <li className="flex items-center text-slate-600 font-medium">
-                                <Check className="w-5 h-5 text-blue-500 mr-3" />
-                                Basic prompts
-                            </li>
-                        </ul>
-                        <a
-                            href="https://chromewebstore.google.com/detail/atomix-%E2%80%94-ai-replies-for-x/jajfflglndpaipninocbcaphhkgaapog"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() => posthog?.capture('pricing_clicked', { plan: 'free' })}
-                            className="group w-full rounded-xl py-6 border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-base transition-colors flex items-center justify-center gap-3"
-                        >
-                            <ChromeIcon className="w-[18px] h-[18px] transition-transform duration-300 group-hover:scale-[1.15]" />
-                            Add to Chrome — Free
-                        </a>
-                    </div>
+                <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto perspective-[1200px]">
+                    {tiers.map((tier) => {
+                        const isPro = tier.cta === 'pro';
+                        const isUltra = tier.cta === 'ultra';
+                        const isPaid = isPro || isUltra;
 
-                    {/* PRO Plan */}
-                    <div className="relative rounded-3xl p-[2px] flex flex-col h-full bg-gradient-to-b from-blue-500 to-purple-600 shadow-2xl shadow-purple-500/15 transform md:scale-105 z-10 transition-all duration-300 hover:shadow-purple-500/25 group">
-                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full border border-white/20 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-1 text-xs font-black tracking-wide text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] z-20">
-                            MOST POPULAR
-                        </div>
-
-                        <div className="relative rounded-[22px] p-8 flex flex-col h-full bg-white/95 backdrop-blur-xl">
-                            {/* Subtle internal glow matching HowItWorks */}
-                            <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 to-transparent rounded-[22px] pointer-events-none" />
-
-                            <div className="relative z-10 mb-6">
-                                <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-2">PRO Unlimited</h3>
-                                <p className="text-slate-600 font-medium text-sm">For power users on X</p>
-                            </div>
-                            <div className="relative z-10 mb-8 flex items-baseline gap-2">
-                                <span className="text-4xl font-extrabold text-slate-900">$9</span>
-                                <span className="text-slate-500 font-medium">/month</span>
-                            </div>
-                            <ul className="relative z-10 space-y-4 mb-8 flex-1">
-                                <li className="flex items-center text-slate-700 font-semibold">
-                                    <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-3 flex-shrink-0">
-                                        <Check className="w-4 h-4 text-purple-600" />
-                                    </div>
-                                    Unlimited AI Replies ✨
-                                </li>
-                                <li className="flex items-center text-slate-700 font-semibold">
-                                    <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-3 flex-shrink-0">
-                                        <Check className="w-4 h-4 text-purple-600" />
-                                    </div>
-                                    Unlimited Custom Prompts
-                                </li>
-                                <li className="flex items-center text-slate-700 font-semibold">
-                                    <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-3 flex-shrink-0">
-                                        <Check className="w-4 h-4 text-purple-600" />
-                                    </div>
-                                    Advanced Context Analysis
-                                </li>
-                                <li className="flex items-center text-slate-700 font-semibold">
-                                    <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-3 flex-shrink-0">
-                                        <Check className="w-4 h-4 text-purple-600" />
-                                    </div>
-                                    Priority Support
-                                </li>
-                            </ul>
-                            <div className="relative z-10">
-                                <Button
-                                    onClick={handleProCheckout}
-                                    disabled={isLoading}
-                                    className="w-full rounded-xl py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-base shadow-lg shadow-purple-500/25 transition-all hover:scale-[1.02] border-0 flex items-center justify-center gap-2"
+                        if (isPaid) {
+                            return (
+                                <div
+                                    key={tier.name}
+                                    className={`relative rounded-3xl p-[2px] flex flex-col h-full shadow-2xl transform z-10 transition-all duration-300 group ${
+                                        isPro
+                                            ? 'bg-gradient-to-b from-blue-500 to-purple-600 shadow-purple-500/15 md:scale-105 hover:shadow-purple-500/25'
+                                            : 'bg-gradient-to-b from-amber-400 to-orange-500 shadow-orange-400/15 hover:shadow-orange-400/25'
+                                    }`}
                                 >
-                                    {isLoading ? (
-                                        <>
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                            Connecting...
-                                        </>
-                                    ) : (
-                                        'Get Started with PRO'
+                                    {tier.badge && (
+                                        <div className={`absolute -top-4 left-1/2 -translate-x-1/2 rounded-full border border-white/20 px-6 py-1 text-xs font-black tracking-wide text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] z-20 ${
+                                            isPro
+                                                ? 'bg-gradient-to-r from-blue-600 to-purple-600'
+                                                : 'bg-gradient-to-r from-amber-500 to-orange-500'
+                                        }`}>
+                                            {tier.badge}
+                                        </div>
                                     )}
-                                </Button>
+
+                                    <div className="relative rounded-[22px] p-8 flex flex-col h-full bg-white/95 backdrop-blur-xl">
+                                        <div className={`absolute inset-0 rounded-[22px] pointer-events-none ${
+                                            isPro ? 'bg-gradient-to-b from-purple-500/5 to-transparent' : 'bg-gradient-to-b from-amber-500/5 to-transparent'
+                                        }`} />
+
+                                        <div className="relative z-10 mb-6">
+                                            <h3 className={`text-2xl font-bold mb-2 text-transparent bg-clip-text ${
+                                                isPro
+                                                    ? 'bg-gradient-to-r from-blue-600 to-purple-600'
+                                                    : 'bg-gradient-to-r from-amber-500 to-orange-600'
+                                            }`}>
+                                                {tier.name}
+                                            </h3>
+                                            <p className="text-slate-600 font-medium text-sm">{tier.description}</p>
+                                        </div>
+                                        <div className="relative z-10 mb-8 flex items-baseline gap-2">
+                                            <span className="text-4xl font-extrabold text-slate-900">{tier.price}</span>
+                                            <span className="text-slate-500 font-medium">{tier.period}</span>
+                                        </div>
+                                        <ul className="relative z-10 space-y-4 mb-8 flex-1">
+                                            {tier.features.map((feature, i) => (
+                                                <li key={i} className="flex items-center text-slate-700 font-semibold">
+                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0 ${
+                                                        isPro ? 'bg-purple-100' : 'bg-amber-100'
+                                                    }`}>
+                                                        <Check className={`w-4 h-4 ${isPro ? 'text-purple-600' : 'text-amber-600'}`} />
+                                                    </div>
+                                                    {feature}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <div className="relative z-10">
+                                            <Button
+                                                onClick={() => handleCheckout(tier.cta as 'pro' | 'ultra')}
+                                                disabled={loadingPlan === tier.cta}
+                                                className={`w-full rounded-xl py-6 text-white font-bold text-base shadow-lg transition-all hover:scale-[1.02] border-0 flex items-center justify-center gap-2 ${
+                                                    isPro
+                                                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-purple-500/25'
+                                                        : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-orange-400/25'
+                                                }`}
+                                            >
+                                                {loadingPlan === tier.cta ? (
+                                                    <>
+                                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                                        Connecting...
+                                                    </>
+                                                ) : (
+                                                    `Get Started with ${tier.name}`
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        // Free tier
+                        return (
+                            <div key={tier.name} className="relative rounded-3xl p-8 flex flex-col h-full bg-white/50 border border-slate-200 shadow-sm backdrop-blur-sm transition-all duration-300 hover:shadow-lg">
+                                <div className="mb-6">
+                                    <h3 className="text-2xl font-bold text-slate-900 mb-2">{tier.name}</h3>
+                                    <p className="text-slate-500 font-medium text-sm">{tier.description}</p>
+                                </div>
+                                <div className="mb-8">
+                                    <span className="text-4xl font-extrabold text-slate-900">{tier.price}</span>
+                                    <span className="text-slate-500 font-medium">{tier.period}</span>
+                                </div>
+                                <ul className="space-y-4 mb-8 flex-1">
+                                    {tier.features.map((feature, i) => (
+                                        <li key={i} className="flex items-center text-slate-600 font-medium">
+                                            <Check className="w-5 h-5 text-blue-500 mr-3" />
+                                            {feature}
+                                        </li>
+                                    ))}
+                                </ul>
+                                <a
+                                    href="https://chromewebstore.google.com/detail/atomix-%E2%80%94-ai-replies-for-x/jajfflglndpaipninocbcaphhkgaapog"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={() => posthog?.capture('pricing_clicked', { plan: 'free' })}
+                                    className="group w-full rounded-xl py-6 border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-base transition-colors flex items-center justify-center gap-3"
+                                >
+                                    <ChromeIcon className="w-[18px] h-[18px] transition-transform duration-300 group-hover:scale-[1.15]" />
+                                    Add to Chrome — Free
+                                </a>
                             </div>
-                        </div>
-                    </div>
+                        );
+                    })}
                 </div>
             </div>
         </section>

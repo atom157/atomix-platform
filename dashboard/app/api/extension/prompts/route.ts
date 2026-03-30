@@ -57,7 +57,7 @@ export async function GET(request: Request) {
     // Get user profile for usage info
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, plan, subscription_status, generations_count, generations_limit, daily_free_quota, monthly_quota, initial_quota, last_daily_reset, cancel_at_period_end, current_period_end')
       .eq('id', userId)
       .single()
 
@@ -75,25 +75,47 @@ export async function GET(request: Request) {
       await supabase
         .from('profiles')
         .update({
-          plan: 'trial',
+          plan: 'free',
           subscription_status: 'expired',
-          generations_limit: 20,
+          monthly_quota: 0,
           cancel_at_period_end: false,
         })
         .eq('id', userId)
 
-      profile.plan = 'trial'
-      profile.generations_limit = 20
+      profile.plan = 'free'
+      profile.monthly_quota = 0
     }
+
+    // Daily quota reset check
+    if (profile) {
+      const now = new Date()
+      const lastReset = profile.last_daily_reset ? new Date(profile.last_daily_reset) : new Date(0)
+      if (now.toDateString() !== lastReset.toDateString()) {
+        profile.daily_free_quota = 5
+        profile.last_daily_reset = now.toISOString()
+        await supabase
+          .from('profiles')
+          .update({ daily_free_quota: 5, last_daily_reset: now.toISOString() })
+          .eq('id', userId)
+      }
+    }
+
+    const dailyRemaining = profile?.daily_free_quota ?? 0
+    const monthlyRemaining = profile?.monthly_quota ?? 0
+    const initialRemaining = profile?.initial_quota ?? 0
 
     return NextResponse.json(
       {
         prompts: prompts || [],
         usage: profile
           ? {
-            tier: profile.plan || 'trial',
-            used: profile.generations_count || 0,
-            limit: profile.generations_limit || 20,
+            tier: profile.plan || 'free',
+            daily_remaining: dailyRemaining,
+            daily_limit: 5,
+            monthly_remaining: monthlyRemaining,
+            monthly_limit: profile.plan === 'ultra' ? 7000 : profile.plan === 'pro' ? 2000 : 0,
+            initial_remaining: initialRemaining,
+            total_remaining: dailyRemaining + monthlyRemaining + initialRemaining,
           }
           : null,
       },

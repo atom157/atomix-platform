@@ -7,6 +7,7 @@ var bannedWordsInput = document.getElementById('bannedWords');
 var includeHashtagsCheckbox = document.getElementById('includeHashtags');
 var mentionAuthorCheckbox = document.getElementById('mentionAuthor');
 var addEmojiCheckbox = document.getElementById('addEmoji');
+
 var saveBtn = document.getElementById('saveBtn');
 var statusEl = document.getElementById('status');
 
@@ -22,8 +23,7 @@ var disconnectBtn = document.getElementById('disconnectBtn');
 var notConnectedSection = document.getElementById('notConnected');
 var connectedSection = document.getElementById('connected');
 var tierBadge = document.getElementById('tierBadge');
-var usageText = document.getElementById('usageText');
-var usageFill = document.getElementById('usageFill');
+
 var promptCard = document.getElementById('promptCard');
 var promptSelect = document.getElementById('promptSelect');
 
@@ -72,30 +72,84 @@ function switchPlatform(platform) {
 
 // ── Optimistic Auth: instantly show cached state to prevent flicker ──
 (function optimisticLoad() {
-  chrome.storage.local.get(['extToken', 'userId', 'cachedPlan', 'cachedUsed', 'cachedLimit'], function (c) {
+  chrome.storage.local.get(['extToken', 'userId', 'cachedPlan', 'cachedDaily', 'cachedMonthly', 'cachedInitial', 'cachedTotal'], function (c) {
     if (c.extToken && c.userId) {
       // User was logged in last time — show connected section immediately
       notConnectedSection.style.display = 'none';
       connectedSection.style.display = 'block';
-      // Restore cached tier/usage if available
-      if (c.cachedPlan) {
-        var plan = c.cachedPlan;
-        tierBadge.className = 'tier-badge tier-' + plan;
-        if (plan === 'pro') {
-          tierBadge.textContent = '✨ PRO';
-          tierBadge.style.background = 'linear-gradient(135deg, #8B5CF6, #D946EF)';
-          tierBadge.style.color = '#fff';
-          tierBadge.style.border = 'none';
-          tierBadge.style.boxShadow = '0 2px 8px rgba(139,92,246,0.3)';
-          tierBadge.style.animation = 'proBadgeShimmer 2.5s ease-in-out infinite';
-        } else {
-          tierBadge.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
-        }
+
+      // Restore cached tier badge
+      var plan = c.cachedPlan || 'free';
+      tierBadge.className = 'tier-badge tier-' + plan;
+      if (plan === 'pro') {
+        tierBadge.textContent = '✨ PRO';
+        tierBadge.style.background = 'linear-gradient(135deg, #8B5CF6, #D946EF)';
+        tierBadge.style.color = '#fff';
+        tierBadge.style.border = 'none';
+        tierBadge.style.boxShadow = '0 2px 8px rgba(139,92,246,0.3)';
+        tierBadge.style.animation = 'proBadgeShimmer 2.5s ease-in-out infinite';
+      } else if (plan === 'ultra') {
+        tierBadge.textContent = '⚡ ULTRA';
+        tierBadge.style.background = 'linear-gradient(135deg, #f59e0b, #ea580c)';
+        tierBadge.style.color = '#fff';
+        tierBadge.style.border = 'none';
+        tierBadge.style.boxShadow = '0 2px 8px rgba(245,158,11,0.3)';
+        tierBadge.style.animation = 'proBadgeShimmer 2.5s ease-in-out infinite';
+      } else {
+        tierBadge.textContent = 'Free';
       }
-      if (c.cachedUsed !== undefined && c.cachedLimit) {
-        usageText.textContent = c.cachedUsed + ' / ' + c.cachedLimit + ' replies';
-        var pct = Math.min((c.cachedUsed / c.cachedLimit) * 100, 100);
-        usageFill.style.width = pct + '%';
+
+      // Restore cached daily quota bar
+      var cachedDaily = c.cachedDaily || 0;
+      var dailyText = document.getElementById('dailyQuotaText');
+      var dailyFill = document.getElementById('dailyQuotaFill');
+      if (dailyText) dailyText.textContent = cachedDaily + '/5';
+      if (dailyFill) {
+        var dailyPct = (cachedDaily / 5) * 100;
+        dailyFill.style.width = dailyPct + '%';
+      }
+
+      // Restore cached monthly quota bar
+      var cachedMonthly = c.cachedMonthly || 0;
+      var monthlyLimit = (plan === 'ultra') ? 7000 : (plan === 'pro') ? 2000 : 0;
+      var monthlyRow = document.getElementById('monthlyQuotaRow');
+      if (monthlyLimit > 0) {
+        if (monthlyRow) monthlyRow.style.display = 'block';
+        var monthlyText = document.getElementById('monthlyQuotaText');
+        var monthlyFill = document.getElementById('monthlyQuotaFill');
+        if (monthlyText) monthlyText.textContent = cachedMonthly.toLocaleString() + '/' + monthlyLimit.toLocaleString();
+        if (monthlyFill) {
+          monthlyFill.style.width = ((cachedMonthly / monthlyLimit) * 100) + '%';
+          monthlyFill.style.background = 'linear-gradient(90deg, #3b82f6, #8b5cf6)';
+        }
+      } else {
+        if (monthlyRow) monthlyRow.style.display = 'none';
+      }
+
+      // Restore cached bonus quota
+      var cachedInitial = c.cachedInitial || 0;
+      var bonusText = document.getElementById('bonusQuotaText');
+      var bonusRow = document.getElementById('bonusQuotaRow');
+      if (bonusText) bonusText.textContent = cachedInitial + ' left';
+      if (bonusRow) bonusRow.style.display = cachedInitial > 0 ? 'block' : 'none';
+
+      // Restore cached total remaining
+      var cachedTotal = c.cachedTotal || 0;
+      var totalEl = document.getElementById('totalRemainingText');
+      if (totalEl) {
+        totalEl.textContent = cachedTotal.toLocaleString();
+        totalEl.style.color = cachedTotal <= 3 ? '#ef4444' : '#7c3aed';
+      }
+
+      // Show upgrade button if quota is low
+      var upgradeBtn = document.getElementById('upgradeBtn');
+      var manageSubLink = document.getElementById('manageSubLink');
+      if (plan === 'pro' || plan === 'ultra') {
+        if (upgradeBtn) upgradeBtn.style.display = 'none';
+        if (manageSubLink) manageSubLink.style.display = 'block';
+      } else {
+        if (upgradeBtn) upgradeBtn.style.display = (cachedTotal <= 3) ? 'block' : 'none';
+        if (manageSubLink) manageSubLink.style.display = 'none';
       }
     } else {
       // Not logged in — show connect
@@ -126,7 +180,7 @@ function setSecureToken(token, userId, callback) {
 
 function clearSecureToken(callback) {
   console.log('[POPUP] clearSecureToken');
-  chrome.storage.local.remove(['extToken', 'userId', 'cachedPlan', 'cachedUsed', 'cachedLimit'], function () {
+  chrome.storage.local.remove(['extToken', 'userId', 'cachedPlan', 'cachedDaily', 'cachedMonthly', 'cachedInitial', 'cachedTotal'], function () {
     chrome.storage.sync.remove(['userId', 'extToken', 'selectedPromptId', 'isConnected'], function () {
       console.log('[POPUP] ✅ Token + cache cleared');
       if (callback) callback();
@@ -157,6 +211,7 @@ function loadSettings() {
     if (result.language) languageSelect.value = result.language;
     if (result.length) lengthSelect.value = result.length;
     if (result.bannedWords) bannedWordsInput.value = result.bannedWords;
+
     
     includeHashtagsCheckbox.checked = result.includeHashtags || false;
     mentionAuthorCheckbox.checked = result.mentionAuthor || false;
@@ -238,21 +293,19 @@ function showConnectedState(userId, extToken, selectedPromptId) {
       promptCard.style.display = 'block';
 
       if (data.usage) {
-        var userPlan = data.usage.tier || 'trial';
-        var isUnlimited = (data.usage.limit >= 999999);
-
-        var displayLimit = data.usage.limit || 20;
+        var userPlan = data.usage.tier || 'free';
 
         // Cache for instant load next time
         chrome.storage.local.set({
           cachedPlan: userPlan,
-          cachedUsed: data.usage.used || 0,
-          cachedLimit: displayLimit
+          cachedDaily: data.usage.daily_remaining || 0,
+          cachedMonthly: data.usage.monthly_remaining || 0,
+          cachedInitial: data.usage.initial_remaining || 0,
+          cachedTotal: data.usage.total_remaining || 0,
         });
 
+        // ── Tier Badge ──
         tierBadge.className = 'tier-badge tier-' + userPlan;
-
-        // PRO badge: shimmer + gradient styling
         if (userPlan === 'pro') {
           tierBadge.textContent = '✨ PRO';
           tierBadge.style.background = 'linear-gradient(135deg, #8B5CF6, #D946EF)';
@@ -260,8 +313,15 @@ function showConnectedState(userId, extToken, selectedPromptId) {
           tierBadge.style.border = 'none';
           tierBadge.style.boxShadow = '0 2px 8px rgba(139,92,246,0.3)';
           tierBadge.style.animation = 'proBadgeShimmer 2.5s ease-in-out infinite';
+        } else if (userPlan === 'ultra') {
+          tierBadge.textContent = '⚡ ULTRA';
+          tierBadge.style.background = 'linear-gradient(135deg, #f59e0b, #ea580c)';
+          tierBadge.style.color = '#fff';
+          tierBadge.style.border = 'none';
+          tierBadge.style.boxShadow = '0 2px 8px rgba(245,158,11,0.3)';
+          tierBadge.style.animation = 'proBadgeShimmer 2.5s ease-in-out infinite';
         } else {
-          tierBadge.textContent = userPlan.charAt(0).toUpperCase() + userPlan.slice(1);
+          tierBadge.textContent = 'Free';
           tierBadge.style.background = '';
           tierBadge.style.color = '';
           tierBadge.style.border = '';
@@ -269,37 +329,62 @@ function showConnectedState(userId, extToken, selectedPromptId) {
           tierBadge.style.animation = '';
         }
 
-        if (isUnlimited) {
-          usageText.textContent = data.usage.used + ' replies · Unlimited ∞';
-          usageFill.style.width = '100%';
-          usageFill.classList.remove('usage-warning');
-          usageFill.style.background = 'linear-gradient(90deg, #3b82f6, #8b5cf6)';
-        } else {
-          var prefix = (userPlan === 'trial' || userPlan === 'free') ? 'TRIAL: ' : '';
-          usageText.textContent = prefix + data.usage.used + ' / ' + displayLimit + ' replies';
-          var percentage = Math.min((data.usage.used / displayLimit) * 100, 100);
-          usageFill.style.width = percentage + '%';
-          usageFill.classList.remove('usage-warning');
-
-          // Urgency colors to drive upgrades
-          if (percentage > 90) {
-            usageFill.style.background = 'linear-gradient(90deg, #ef4444, #dc2626)';
-          } else if (percentage > 75) {
-            usageFill.style.background = 'linear-gradient(90deg, #f59e0b, #ef4444)';
-          } else {
-            usageFill.style.background = '';
-          }
+        // ── Daily Quota Bar ──
+        var dailyRemaining = data.usage.daily_remaining || 0;
+        var dailyLimit = data.usage.daily_limit || 5;
+        var dailyText = document.getElementById('dailyQuotaText');
+        var dailyFill = document.getElementById('dailyQuotaFill');
+        if (dailyText) dailyText.textContent = dailyRemaining + '/' + dailyLimit;
+        if (dailyFill) {
+          var dailyPct = (dailyRemaining / dailyLimit) * 100;
+          dailyFill.style.width = dailyPct + '%';
+          dailyFill.style.background = dailyPct <= 20 ? 'linear-gradient(90deg, #ef4444, #dc2626)' : '';
         }
 
-        // Show "Manage Subscription" for Pro, "Upgrade to PRO" for trial/free
-        var manageSubLink = document.getElementById('manageSubLink');
-        var upgradeProBtn = document.getElementById('upgradeProBtn');
-        if (userPlan === 'pro') {
-          if (manageSubLink) manageSubLink.style.display = 'block';
-          if (upgradeProBtn) upgradeProBtn.style.display = 'none';
+        // ── Monthly Quota Bar (PRO/ULTRA only) ──
+        var monthlyRow = document.getElementById('monthlyQuotaRow');
+        var monthlyRemaining = data.usage.monthly_remaining || 0;
+        var monthlyLimit = data.usage.monthly_limit || 0;
+        if (monthlyLimit > 0) {
+          if (monthlyRow) monthlyRow.style.display = 'block';
+          var monthlyText = document.getElementById('monthlyQuotaText');
+          var monthlyFill = document.getElementById('monthlyQuotaFill');
+          if (monthlyText) monthlyText.textContent = monthlyRemaining.toLocaleString() + '/' + monthlyLimit.toLocaleString();
+          if (monthlyFill) {
+            var monthlyPct = (monthlyRemaining / monthlyLimit) * 100;
+            monthlyFill.style.width = monthlyPct + '%';
+            monthlyFill.style.background = monthlyPct <= 10
+              ? 'linear-gradient(90deg, #ef4444, #dc2626)'
+              : 'linear-gradient(90deg, #3b82f6, #8b5cf6)';
+          }
         } else {
+          if (monthlyRow) monthlyRow.style.display = 'none';
+        }
+
+        // ── Bonus Quota ──
+        var initialRemaining = data.usage.initial_remaining || 0;
+        var bonusText = document.getElementById('bonusQuotaText');
+        var bonusRow = document.getElementById('bonusQuotaRow');
+        if (bonusText) bonusText.textContent = initialRemaining + ' left';
+        if (bonusRow) bonusRow.style.display = initialRemaining > 0 ? 'block' : 'none';
+
+        // ── Total Remaining ──
+        var totalRemaining = data.usage.total_remaining || 0;
+        var totalText = document.getElementById('totalRemainingText');
+        if (totalText) {
+          totalText.textContent = totalRemaining.toLocaleString();
+          totalText.style.color = totalRemaining <= 3 ? '#ef4444' : '#7c3aed';
+        }
+
+        // ── Upgrade / Manage buttons ──
+        var upgradeBtn = document.getElementById('upgradeBtn');
+        var manageSubLink = document.getElementById('manageSubLink');
+        if (userPlan === 'pro' || userPlan === 'ultra') {
+          if (upgradeBtn) upgradeBtn.style.display = 'none';
+          if (manageSubLink) manageSubLink.style.display = 'block';
+        } else {
+          if (upgradeBtn) upgradeBtn.style.display = (totalRemaining <= 3) ? 'block' : 'none';
           if (manageSubLink) manageSubLink.style.display = 'none';
-          if (upgradeProBtn) upgradeProBtn.style.display = 'block';
         }
       }
 
@@ -403,6 +488,7 @@ function saveSettings() {
   var settingsToSave = {
     language: languageSelect.value,
     length: lengthSelect.value,
+    model: 'claude-haiku-4-5-20251001',
     bannedWords: bannedWordsInput.value.trim(),
     includeHashtags: includeHashtagsCheckbox.checked,
     mentionAuthor: mentionAuthorCheckbox.checked,

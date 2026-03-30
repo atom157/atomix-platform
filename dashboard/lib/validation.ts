@@ -14,7 +14,7 @@ const MAX_PROMPT_NAME = 100
 const MAX_BANNED_WORDS = 500
 const MAX_THREAD_ITEMS = 15
 
-const ALLOWED_MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-4', 'gpt-3.5-turbo']
+const ALLOWED_MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-4', 'gpt-3.5-turbo', 'claude-haiku-4-5-20251001', 'claude-sonnet-4-20250514']
 const ALLOWED_TONES = ['friendly', 'professional', 'casual', 'witty', 'supportive', 'curious']
 const ALLOWED_LENGTHS = ['short', 'medium', 'long']
 const ALLOWED_LANGUAGES = ['same', 'uk', 'en', 'ru']
@@ -105,9 +105,9 @@ export function validateSettings(settings: unknown): Record<string, unknown> {
     safe.language = 'same'
   }
 
-  // Boolean flags
-  safe.mentionAuthor = s.mentionAuthor !== false
-  safe.addEmoji = s.addEmoji !== false
+  // Boolean flags — default to OFF to prevent contradicting brutalist prompt rules
+  safe.mentionAuthor = s.mentionAuthor === true
+  safe.addEmoji = s.addEmoji === true
   safe.includeHashtags = s.includeHashtags === true
 
   // bannedWords - sanitize and limit length

@@ -1,21 +1,22 @@
-// X Reply Generator - Content Script
+// AtomiX — X (Twitter) Content Script
+// Injects an "AtomiX" button into every reply toolbar
+// for AI-powered contextual replies (+ typewriter effect).
 
 (function () {
   'use strict';
 
+  const LOG = '[AtomiX X]';
   let settings = {};
   let isGenerating = false;
-  const API_BASE = 'https://atomix.guru';
-  const chrome = window.chrome; // Declare the chrome variable
+  const chrome = window.chrome;
 
-  // --- Client-side rate limiting ---
-  const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-  const RATE_LIMIT_MAX = 15; // max requests per window
+  // ── Client-side rate limiting ────────────────────────────────────────────
+  const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+  const RATE_LIMIT_MAX = 15;
   const requestTimestamps = [];
 
   function isRateLimited() {
     const now = Date.now();
-    // Remove timestamps outside the window
     while (requestTimestamps.length > 0 && now - requestTimestamps[0] > RATE_LIMIT_WINDOW_MS) {
       requestTimestamps.shift();
     }
@@ -26,36 +27,36 @@
     requestTimestamps.push(Date.now());
   }
 
-  // --- Storage helpers ---
-  // Content scripts can ONLY use local storage (not session)
+  // ── Storage helpers ──────────────────────────────────────────────────────
   const secureStorage = chrome.storage.local;
 
-  // Load settings from storage
   async function loadSettings() {
-    console.log('[CONTENT] Loading settings...');
+    console.log(LOG, 'Loading settings...');
 
-    // Load non-sensitive settings from sync
+    // Non-sensitive settings from sync storage (mirrors discord_content.js exactly)
     const syncResult = await chrome.storage.sync.get([
-      'language',
-      'length',
-      'bannedWords',
-      'includeHashtags',
-      'mentionAuthor',
-      'addEmoji',
-      'selectedPromptId_x',
-      'customPromptContent_x'
+      'language', 'length', 'tone', 'bannedWords', 'model',
+      'includeHashtags', 'mentionAuthor', 'addEmoji',
+      'selectedPromptId', 'customPromptContent',
+      'selectedPromptId_x', 'customPromptContent_x'
     ]);
 
-    // Load token from LOCAL storage
+    // Token + userId from local storage
     const secureResult = await secureStorage.get(['extToken', 'userId']);
 
-    console.log('[CONTENT] Token loaded:', {
+    console.log(LOG, 'Settings loaded:', {
       hasToken: !!secureResult.extToken,
-      hasUserId: !!secureResult.userId
+      hasUserId: !!secureResult.userId,
+      language: syncResult.language || '(default)',
+      length: syncResult.length || '(default)',
+      promptId: syncResult.selectedPromptId_x || syncResult.selectedPromptId || '(none)',
     });
 
     settings = {
       ...syncResult,
+      selectedPromptId_x: syncResult.selectedPromptId_x || syncResult.selectedPromptId,
+      customPromptContent_x: syncResult.customPromptContent_x || syncResult.customPromptContent,
+      model: syncResult.model || 'claude-haiku-4-5-20251001',
       extToken: secureResult.extToken || null,
       userId: secureResult.userId || null,
     };
@@ -63,7 +64,8 @@
     return true;
   }
 
-  // Create generate button — AtomiX branded with atom icon
+  // ── UI helpers ───────────────────────────────────────────────────────────
+
   function createGenerateButton() {
     const btn = document.createElement('button');
     btn.className = 'xrg-generate-btn';
@@ -75,15 +77,11 @@
             <stop offset="100%" stop-color="#93C5FD"/>
           </linearGradient>
         </defs>
-        <!-- Orbital ring 1 -->
         <ellipse cx="12" cy="12" rx="9" ry="3.5" stroke="url(#xrg-orb)" stroke-width="1.3" fill="none"/>
-        <!-- Orbital ring 2 -->
         <ellipse cx="12" cy="12" rx="9" ry="3.5" stroke="url(#xrg-orb)" stroke-width="1.3" fill="none"
           transform="rotate(60 12 12)"/>
-        <!-- Orbital ring 3 -->
         <ellipse cx="12" cy="12" rx="9" ry="3.5" stroke="url(#xrg-orb)" stroke-width="1.3" fill="none"
           transform="rotate(-60 12 12)"/>
-        <!-- Nucleus -->
         <circle cx="12" cy="12" r="2.5" fill="white"/>
       </svg>
       <span class="xrg-text">AtomiX</span>
@@ -92,7 +90,6 @@
     return btn;
   }
 
-  // Create loading spinner
   function createSpinner() {
     return `
       <svg class="xrg-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -102,68 +99,159 @@
     `;
   }
 
-  // Extract tweet data from the page
-  function extractTweetData(tweetElement) {
-    // Try multiple selectors for the tweet article
-    const article = tweetElement.closest('article') ||
-      tweetElement.closest('[data-testid="tweet"]') ||
-      tweetElement.closest('[data-testid="tweetDetail"]') ||
-      document.querySelector('article[data-testid="tweet"]');
+  function showNotification(message, type = 'info') {
+    const existing = document.querySelector('.xrg-notification');
+    if (existing) existing.remove();
 
-    if (!article) {
-      console.warn('[XRG] No article element found near button');
-      return null;
+    const notification = document.createElement('div');
+    notification.className = `xrg-notification xrg-notification-${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.classList.add('xrg-notification-hide');
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // ── Clean Author Extraction ──────────────────────────────────────────────
+  // X's [data-testid="User-Name"] contains the display name AND the @handle
+  // in a multi-line layout. We extract both cleanly from the structured DOM.
+
+  function extractAuthorInfo(article) {
+    const userNameEl = article.querySelector('[data-testid="User-Name"]');
+    if (!userNameEl) return { author: '', handle: '' };
+
+    // The User-Name element contains structured spans:
+    // First line = display name, somewhere inside = @handle
+    const allText = userNameEl.innerText || '';
+    const lines = allText.split('\n').map(l => l.trim()).filter(Boolean);
+
+    // Display name is the first non-@ line
+    let author = '';
+    let handle = '';
+
+    for (const line of lines) {
+      if (line.startsWith('@')) {
+        if (!handle) handle = line;
+      } else if (!author && !line.startsWith('·') && !/^\d+[smhd]?$/.test(line)) {
+        // Skip relative timestamps like "2h", "5m" and the · separator
+        author = line;
+      }
     }
 
-    // Tweet text — try multiple selectors
-    const tweetTextEl = article.querySelector('[data-testid="tweetText"]') ||
-      article.querySelector('[lang]') ||
-      article.querySelector('div[dir="auto"]');
+    // Fallback: regex for handle if not found in lines
+    if (!handle) {
+      const handleMatch = allText.match(/@[\w]+/);
+      if (handleMatch) handle = handleMatch[0];
+    }
+
+    return {
+      author: author.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim(),
+      handle: handle.trim()
+    };
+  }
+
+  // ── Smart Sniper: Context Extraction ─────────────────────────────────────
+  // Extracts the target tweet text + immediate parent tweet for thread context.
+  //
+  // X's DOM on a tweet detail page:
+  //   - All tweets are <article data-testid="tweet">
+  //   - In a thread view, the tweet being replied to is ABOVE the target tweet
+  //   - We grab only the immediate parent (1 tweet up), not the entire thread
+  //
+  // On a feed/timeline:
+  //   - Each tweet is isolated — no parent context available
+  //   - threadContext stays empty, which is correct
+
+  function extractTweetData(tweetArticle) {
+    console.log(LOG, 'Extracting tweet context...');
+
+    // ── 1. Target tweet text (data-testid only) ──
+    const tweetTextEl = tweetArticle.querySelector('[data-testid="tweetText"]');
     const tweetText = tweetTextEl ? tweetTextEl.innerText.trim() : '';
 
-    // Author name
-    const authorEl = article.querySelector('[data-testid="User-Name"]');
-    const authorName = authorEl ? authorEl.innerText.split('\n')[0] : '';
+    // ── 2. Author info ──
+    const { author, handle } = extractAuthorInfo(tweetArticle);
 
-    // Author handle
-    const handleMatch = authorEl ? authorEl.innerText.match(/@[\w]+/) : null;
-    const authorHandle = handleMatch ? handleMatch[0] : '';
-
-    // Engagement metrics
+    // ── 3. Engagement metrics (data-testid only) ──
     const metrics = {};
-    const replyCount = article.querySelector('[data-testid="reply"]');
-    const retweetCount = article.querySelector('[data-testid="retweet"]');
-    const likeCount = article.querySelector('[data-testid="like"]');
+    const replyBtn = tweetArticle.querySelector('[data-testid="reply"]');
+    const retweetBtn = tweetArticle.querySelector('[data-testid="retweet"]');
+    const likeBtn = tweetArticle.querySelector('[data-testid="like"]') ||
+      tweetArticle.querySelector('[data-testid="unlike"]');
 
-    if (replyCount) metrics.replies = replyCount.innerText || '0';
-    if (retweetCount) metrics.retweets = retweetCount.innerText || '0';
-    if (likeCount) metrics.likes = likeCount.innerText || '0';
+    if (replyBtn) metrics.replies = replyBtn.innerText || '0';
+    if (retweetBtn) metrics.retweets = retweetBtn.innerText || '0';
+    if (likeBtn) metrics.likes = likeBtn.innerText || '0';
 
-    // Thread context
-    let threadContext = [];
-    const conversationThread = document.querySelectorAll('article[data-testid="tweet"]');
-    conversationThread.forEach((tweet, index) => {
-      const text = tweet.querySelector('[data-testid="tweetText"]');
-      if (text && index < 5) {
-        threadContext.push(text.innerText);
+    // ── 4. Smart Sniper: Thread parent context ──
+    // On a tweet detail page, all tweets are <article data-testid="tweet">.
+    // We find all articles on the page, locate the target, and grab the one above it.
+    const threadContext = [];
+    const allArticles = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
+    const targetIndex = allArticles.indexOf(tweetArticle);
+
+    if (targetIndex > 0) {
+      // Grab the immediate parent tweet (one above)
+      const parentArticle = allArticles[targetIndex - 1];
+      const parentTextEl = parentArticle.querySelector('[data-testid="tweetText"]');
+      const parentText = parentTextEl ? parentTextEl.innerText.trim() : '';
+
+      if (parentText) {
+        const { author: parentAuthor } = extractAuthorInfo(parentArticle);
+        threadContext.push({
+          author: parentAuthor,
+          text: parentText
+        });
+        console.log(LOG, 'Parent tweet captured:', parentText.substring(0, 80));
       }
-    });
+    }
+
+    // ── 5. Substance check ──
+    // If the target tweet has no real substance (just emoji, "lol", a GIF, etc.),
+    // and we have parent context, merge the parent text into the main text
+    // so the AI has enough context to generate a meaningful reply.
+    let finalText = tweetText;
+    const hasSubstance = tweetText.length > 15 ||
+      /\?|how|what|why|who|where|when|як|що|чому|хто|где|как|зачем|почему/.test(tweetText.toLowerCase());
+
+    if (!hasSubstance && threadContext.length > 0) {
+      // Low-substance target — merge parent context into the main text
+      const parentParts = threadContext.map(m => `${m.author}: ${m.text}`);
+      parentParts.push(tweetText || '[media/emoji]');
+      finalText = parentParts.join(' \n ');
+      console.log(LOG, 'Low-substance tweet detected — context merged:', finalText.substring(0, 120));
+    }
+
+    // Phantom content detection: media-only tweets
+    if (!finalText) {
+      const hasImage = tweetArticle.querySelector('[data-testid="tweetPhoto"]');
+      const hasVideo = tweetArticle.querySelector('[data-testid="videoPlayer"]');
+      const hasCard = tweetArticle.querySelector('[data-testid="card.wrapper"]');
+
+      if (hasImage) finalText = '[image]';
+      else if (hasVideo) finalText = '[video]';
+      else if (hasCard) finalText = '[link card]';
+    }
 
     const result = {
-      text: tweetText,
-      author: authorName,
-      handle: authorHandle,
-      metrics,
-      threadContext: threadContext.slice(0, -1)
+      text: finalText,
+      author: author,
+      handle: handle,
+      metrics: metrics,
+      threadContext: threadContext
     };
 
-    console.log('[XRG] Scraped Tweet Data:', JSON.stringify(result, null, 2));
-    console.log('[XRG] Text found:', !!tweetText, '| Author:', authorName, '| Handle:', authorHandle);
-
+    console.log(LOG, 'Context extracted:', JSON.stringify(result, null, 2));
     return result;
   }
 
-  // Generate reply — delegates fetch to the background Service Worker.
+  // ── Generate reply via background.js ─────────────────────────────────────
   //
   // [CHROME WEB STORE REVIEWER NOTE]
   // 1. Architecture: Content scripts run in the x.com page context and are subject to
@@ -172,43 +260,46 @@
   // 2. Payments: Monetization (PRO tier) is processed strictly through a secure third-party
   //    payment provider (Lava.top). Billing logic runs entirely on the backend API.
   //    The extension only sends the user's secure token (`extToken`) to authenticate.
+
   async function generateReply(tweetData) {
     if (!settings.extToken || !settings.userId) {
       throw new Error('Please connect your account in extension settings');
     }
 
-    // Client-side rate limiting
     if (isRateLimited()) {
       throw new Error('Too many requests. Please wait a moment.');
     }
 
     recordRequest();
 
-    // Send message to background.js — it performs the actual fetch()
+    const payloadObject = {
+      tweetData,
+      extToken: settings.extToken,
+      promptId: settings.selectedPromptId_x || null,
+      settings: {
+        model: settings.model,
+        language: settings.language || 'same',
+        length: settings.length || 'medium',
+        tone: settings.tone || 'friendly',
+        bannedWords: settings.bannedWords || '',
+        includeHashtags: settings.includeHashtags || false,
+        mentionAuthor: settings.mentionAuthor || false,
+        addEmoji: settings.addEmoji || false,
+        customPrompt: settings.customPromptContent_x || null,
+        platform: 'x'
+      },
+    };
+
+    console.log('[AtomiX Debug] Final Payload:', JSON.stringify(payloadObject, null, 2));
+
     const result = await new Promise((resolve, reject) => {
       chrome.runtime.sendMessage(
         {
           type: 'GENERATE_REPLY',
-          payload: {
-            tweetData,
-            extToken: settings.extToken,
-            promptId: settings.selectedPromptId_x || null,
-            settings: {
-              model: 'gpt-4o-mini',
-              language: settings.language || 'same',
-              length: settings.length || 'medium',
-              bannedWords: settings.bannedWords || '',
-              includeHashtags: settings.includeHashtags || false,
-              mentionAuthor: settings.mentionAuthor || false,
-              addEmoji: settings.addEmoji || false,
-              customPrompt: settings.customPromptContent_x || null,
-              platform: 'x'
-            },
-          },
+          payload: payloadObject,
         },
         (response) => {
           if (chrome.runtime.lastError) {
-            // Service worker not running / crashed — ask user to reload the tab
             reject(new Error('Extension background error: ' + chrome.runtime.lastError.message));
             return;
           }
@@ -225,23 +316,44 @@
       throw new Error(result.error || 'API Error');
     }
 
+    // ── Sync updated quotas to chrome.storage so popup reflects real-time state ──
+    if (result.usage) {
+      chrome.storage.local.set({
+        cachedPlan: result.usage.tier || 'free',
+        cachedDaily: result.usage.daily_remaining || 0,
+        cachedMonthly: result.usage.monthly_remaining || 0,
+        cachedInitial: result.usage.initial_remaining || 0,
+        cachedTotal: result.usage.total_remaining || 0,
+      });
+    }
+
+    console.log(LOG, 'Generation received, length:', result.reply?.length);
     return result.reply;
   }
 
-  // ── Insert reply into X's Draft.js editor ────────────────────────────────────
+  // ── Insert reply into X's Draft.js editor ────────────────────────────────
   //
-  // LESSON LEARNED (after 5 iterations):
-  //   Draft.js CANNOT accept character-by-character programmatic input.
-  //   Each execCommand('insertText', char) causes Draft.js to re-render and
-  //   desync its internal EditorState. The ONLY method that works is a
-  //   SINGLE-SHOT execCommand('insertText', false, fullText).
+  // IMPLEMENTATION (iteration 7 — Native Typewriter):
+  //   Uses per-character execCommand('insertText', false, char) with a
+  //   randomized 20-50ms delay between each character. This mimics real
+  //   human typing speed directly inside Draft.js's native text handling.
   //
-  // SOLUTION: Visual typewriter + single-shot inject.
-  //   1. Show a floating overlay with the text appearing char-by-char
-  //   2. After the animation, inject the full text in one atomic operation
-  //   3. Draft.js handles the single insertion correctly: placeholder hides,
-  //      Reply button activates, Backspace works.
+  //   Each character insertion fires input + change events to keep Draft.js
+  //   EditorState synced in real-time (Reply button activates, cursor moves).
   //
+  //   An interruption guard watches for user keydown/mousedown on the editor.
+  //   If the user starts typing or clicks, the AI typing loop immediately
+  //   aborts to prevent state corruption. Whatever was typed so far stays.
+  //
+  //   CRITICAL: cursor must be collapsed to END before starting.
+  //   selectNodeContents without collapse selects the entire Draft.js node
+  //   tree, and the first insertText would REPLACE it rather than appending.
+  //
+  //   FALLBACK CHAIN (if char-by-char fails):
+  //     1. Single-shot execCommand('insertText', false, fullText)
+  //     2. Synthetic paste via ClipboardEvent + DataTransfer
+  //     3. Copy to clipboard for manual Ctrl+V
+
   async function insertReply(text) {
     const editor = document.querySelector('[data-testid="tweetTextarea_0"]') ||
       document.querySelector('[contenteditable="true"][role="textbox"]');
@@ -251,181 +363,111 @@
     }
 
     try {
-      // ── Step 1: Show visual typewriter animation ──
-      await showTypewriterOverlay(editor, text);
-
-      // ── Step 2: Focus editor and clear any existing content ──
       editor.focus();
-      await sleep(100);
+      await sleep(150);
 
+      // ── Collapse cursor to end of editor ──
       const selection = window.getSelection();
       const range = document.createRange();
       range.selectNodeContents(editor);
+      range.collapse(false);
       selection.removeAllRanges();
       selection.addRange(range);
-
       await sleep(50);
 
-      // ── Step 3: Single-shot insert (the ONLY method Draft.js accepts) ──
-      const inserted = document.execCommand('insertText', false, text);
+      // ── Interruption guard ──
+      // If the user clicks or types during AI typing, abort immediately.
+      let interrupted = false;
+      const onInterrupt = () => { interrupted = true; };
+      editor.addEventListener('keydown', onInterrupt, { once: false });
+      editor.addEventListener('mousedown', onInterrupt, { once: false });
 
-      if (inserted && editor.textContent.includes(text.substring(0, 10))) {
-        // Move cursor to end
-        const endRange = document.createRange();
-        endRange.selectNodeContents(editor);
-        endRange.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(endRange);
+      // ── Char-by-char native typewriter ──
+      let charsFailed = false;
+      for (let i = 0; i < text.length; i++) {
+        if (interrupted) {
+          console.log(LOG, 'Typing interrupted by user at char', i);
+          break;
+        }
+
+        const ok = document.execCommand('insertText', false, text[i]);
+        if (!ok) {
+          console.warn(LOG, 'execCommand failed at char', i, '— falling back to single-shot');
+          charsFailed = true;
+          break;
+        }
+
+        // Sync Draft.js state after each character
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+
+        // Dynamic delay: 20-50ms randomized to mimic human typing
+        const delay = Math.floor(Math.random() * 30) + 20;
+        await sleep(delay);
+      }
+
+      // Cleanup listeners
+      editor.removeEventListener('keydown', onInterrupt);
+      editor.removeEventListener('mousedown', onInterrupt);
+
+      // If char-by-char succeeded (or was just interrupted mid-way), we're done
+      if (!charsFailed) {
+        // Final event flush to ensure Reply button activates
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+        editor.dispatchEvent(new Event('change', { bubbles: true }));
+        console.log(LOG, interrupted
+          ? 'Typewriter interrupted — partial text kept'
+          : 'Typewriter insertion complete');
         return true;
       }
 
-      // Fallback: clipboard
+      // ── FALLBACK 1: Single-shot insert ──
+      // Clear whatever partial chars were inserted, then do atomic insert
+      console.log(LOG, 'Falling back to single-shot insert...');
+      range.selectNodeContents(editor);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      const inserted = document.execCommand('insertText', false, text);
+
+      if (inserted && editor.textContent.includes(text.substring(0, 10))) {
+        console.log(LOG, 'Single-shot fallback successful');
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+        editor.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      }
+
+      // ── FALLBACK 2: Synthetic paste via ClipboardEvent ──
+      console.log(LOG, 'Single-shot failed, trying synthetic paste...');
+      try {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.setData('text/plain', text);
+        const pasteEvent = new ClipboardEvent('paste', {
+          bubbles: true,
+          cancelable: true,
+          clipboardData: dataTransfer
+        });
+        editor.dispatchEvent(pasteEvent);
+        await sleep(100);
+
+        if (editor.textContent.includes(text.substring(0, 10))) {
+          console.log(LOG, 'Synthetic paste successful');
+          return true;
+        }
+      } catch (pasteErr) {
+        console.warn(LOG, 'Synthetic paste failed:', pasteErr);
+      }
+
+      // ── FALLBACK 3: Clipboard for manual Ctrl+V ──
       await navigator.clipboard.writeText(text);
       return false;
     } catch (error) {
-      console.error('[XRG] Insert error:', error);
+      console.error(LOG, 'Insert error:', error);
       try { await navigator.clipboard.writeText(text); } catch (_) { }
       return false;
     }
   }
 
-  // ── Visual typewriter overlay ──────────────────────────────────────────────
-  // Shows the reply text appearing character-by-character in a div that
-  // perfectly matches the editor's native styling (transparent background,
-  // same font/color/padding). Hides the placeholder and auto-expands the
-  // editor box as text wraps — indistinguishable from real typing.
-  function showTypewriterOverlay(editor, text) {
-    return new Promise(resolve => {
-      // Read the editor's actual computed styles so the overlay matches exactly
-      const editorStyles = getComputedStyle(editor);
+  // ── Button click handler ─────────────────────────────────────────────────
 
-      // Create the overlay — no bottom:0 so it can grow naturally with content
-      const overlay = document.createElement('div');
-      overlay.className = 'xrg-typewriter-overlay';
-      overlay.style.cssText = `
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 9999;
-        background: transparent;
-        color: ${editorStyles.color};
-        font-family: ${editorStyles.fontFamily};
-        font-size: ${editorStyles.fontSize};
-        font-weight: ${editorStyles.fontWeight};
-        line-height: ${editorStyles.lineHeight};
-        letter-spacing: ${editorStyles.letterSpacing};
-        padding: ${editorStyles.padding};
-        pointer-events: none;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-        box-sizing: border-box;
-      `;
-
-      // ── Hide the placeholder text ("Post your reply") ──
-      // The placeholder is inside the <label> wrapper, not the editor's direct parent.
-      // Search broadly: walk up from the editor to find the label, then look inside.
-      const labelContainer = editor.closest('[data-testid="tweetTextarea_0_label"]')
-        || editor.closest('[data-contents]')?.parentElement
-        || editor.parentElement?.parentElement;
-
-      let placeholder = null;
-      if (labelContainer) {
-        // Try X's known test-id first
-        placeholder = labelContainer.querySelector('[data-testid="tweetTextarea_0_placeholder"]');
-        // Fallback: any element with "placeholder" in class or data attributes
-        if (!placeholder) {
-          placeholder = labelContainer.querySelector('[class*="placeholder" i]');
-        }
-        // Fallback: the pointer-events:none div that overlaps the editor
-        if (!placeholder) {
-          for (const child of labelContainer.children) {
-            if (child !== editor.parentElement && child !== editor
-              && getComputedStyle(child).pointerEvents === 'none') {
-              placeholder = child;
-              break;
-            }
-          }
-        }
-      }
-
-      const placeholderPrevDisplay = placeholder ? placeholder.style.display : null;
-      if (placeholder) {
-        placeholder.style.display = 'none';
-      }
-
-      // Position the overlay relative to the editor's parent
-      const parent = editor.parentElement;
-      const prevPosition = parent.style.position;
-      parent.style.position = 'relative';
-      parent.appendChild(overlay);
-
-      // Save the editor's original minHeight so we can restore it
-      const prevMinHeight = editor.style.minHeight;
-
-      // Add blink keyframe if not yet present
-      if (!document.getElementById('xrg-typewriter-style')) {
-        const style = document.createElement('style');
-        style.id = 'xrg-typewriter-style';
-        style.textContent = `@keyframes xrg-blink { 50% { opacity: 0; } }`;
-        document.head.appendChild(style);
-      }
-
-      // Typing cursor element (thin blinking line like X's native cursor)
-      const cursor = document.createElement('span');
-      cursor.style.cssText = `
-        display: inline-block;
-        width: 1px;
-        height: 1.2em;
-        background: ${editorStyles.caretColor || editorStyles.color};
-        margin-left: 1px;
-        vertical-align: text-bottom;
-        animation: xrg-blink 0.53s step-end infinite;
-      `;
-
-      const textNode = document.createTextNode('');
-      overlay.appendChild(textNode);
-      overlay.appendChild(cursor);
-
-      let i = 0;
-
-      function typeNext() {
-        if (i < text.length) {
-          textNode.textContent += text[i];
-          i++;
-
-          // ── Auto-expand: sync editor height to overlay content ──
-          const overlayHeight = overlay.scrollHeight;
-          if (overlayHeight > editor.offsetHeight) {
-            editor.style.minHeight = overlayHeight + 'px';
-          }
-
-          const delay = Math.floor(Math.random() * 30) + 15;
-          setTimeout(typeNext, delay);
-        } else {
-          // Animation done — clean up and resolve
-          setTimeout(() => {
-            overlay.remove();
-            parent.style.position = prevPosition;
-            editor.style.minHeight = prevMinHeight;
-            // Restore placeholder (Draft.js will re-hide it after single-shot insert)
-            if (placeholder) {
-              placeholder.style.display = placeholderPrevDisplay || '';
-            }
-            resolve();
-          }, 150);
-        }
-      }
-
-      typeNext();
-    });
-  }
-
-  function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  // Handle generate button click
   async function handleGenerateClick(event) {
     event.preventDefault();
     event.stopPropagation();
@@ -433,8 +475,9 @@
     if (isGenerating) return;
 
     const btn = event.currentTarget;
+    console.log(LOG, 'AtomiX button clicked');
 
-    // Walk up from the button's toolbar to find the relevant tweet
+    // Walk up from the button's toolbar to find the relevant tweet article
     // The toolbar lives inside the tweet article, or near a reply box
     let tweetArticle = btn.closest('article[data-testid="tweet"]') ||
       btn.closest('article');
@@ -442,12 +485,10 @@
     // If button is in a reply box (not inside any article), find the tweet being replied to
     if (!tweetArticle) {
       // On a single-tweet page, grab the main (first) tweet
-      tweetArticle = document.querySelector('[data-testid="tweet"]') ||
-        document.querySelector('article[role="article"]') ||
-        document.querySelector('article');
+      tweetArticle = document.querySelector('article[data-testid="tweet"]');
     }
 
-    console.log('[XRG] Tweet article found:', !!tweetArticle, tweetArticle?.getAttribute?.('data-testid'));
+    console.log(LOG, 'Tweet article found:', !!tweetArticle);
 
     if (!tweetArticle) {
       showNotification('Could not find tweet', 'error');
@@ -456,19 +497,19 @@
 
     let tweetData = extractTweetData(tweetArticle);
 
-    // Fallback: if scraper got no text, try grabbing any visible tweet text on the page
+    // Fallback: if scraper got no text at all, try grabbing any visible tweetText on the page
     if (!tweetData || !tweetData.text) {
-      console.warn('[XRG] Primary scrape failed, trying fallback...');
-      const fallbackText = document.querySelector('[data-testid="tweetText"]');
-      if (fallbackText && fallbackText.innerText.trim()) {
+      console.warn(LOG, 'Primary scrape failed, trying fallback...');
+      const fallbackTextEl = document.querySelector('[data-testid="tweetText"]');
+      if (fallbackTextEl && fallbackTextEl.innerText.trim()) {
         tweetData = {
-          text: fallbackText.innerText.trim(),
+          text: fallbackTextEl.innerText.trim(),
           author: 'Unknown',
           handle: '',
           metrics: {},
           threadContext: []
         };
-        console.log('[XRG] Fallback tweet data:', tweetData.text.substring(0, 80));
+        console.log(LOG, 'Fallback tweet data:', tweetData.text.substring(0, 80));
       } else {
         showNotification('Could not read tweet text', 'error');
         return;
@@ -485,20 +526,21 @@
       const reply = await generateReply(tweetData);
 
       if (reply) {
-        // Show "Typing..." state while the typewriter effect runs
         btn.innerHTML = `${createSpinner()}<span class="xrg-text">Typing...</span>`;
 
         const inserted = await insertReply(reply);
 
         if (inserted) {
           showNotification('Reply generated!', 'success');
+          console.log(LOG, 'Reply workflow complete');
         } else {
           await navigator.clipboard.writeText(reply);
           showNotification('Copied to clipboard! Press Ctrl+V', 'success');
+          console.log(LOG, 'Clipboard fallback used');
         }
       }
     } catch (error) {
-      console.error('[XRG] Error:', error);
+      console.error(LOG, 'Error:', error);
       showNotification(error.message, 'error');
     } finally {
       isGenerating = false;
@@ -507,23 +549,9 @@
     }
   }
 
-  // Show notification
-  function showNotification(message, type = 'info') {
-    const existing = document.querySelector('.xrg-notification');
-    if (existing) existing.remove();
+  // ── Toolbar injection ────────────────────────────────────────────────────
+  // Uses data-testid="toolBar" exclusively — no class selectors.
 
-    const notification = document.createElement('div');
-    notification.className = `xrg-notification xrg-notification-${type}`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-      notification.classList.add('xrg-notification-hide');
-      setTimeout(() => notification.remove(), 300);
-    }, 3000);
-  }
-
-  // Inject button into reply boxes
   function injectButtons() {
     const replyToolbars = document.querySelectorAll('[data-testid="toolBar"]');
 
@@ -536,7 +564,8 @@
     });
   }
 
-  // Initialize
+  // ── Initialize ───────────────────────────────────────────────────────────
+
   async function init() {
     await loadSettings();
     injectButtons();
@@ -562,7 +591,7 @@
       subtree: true
     });
 
-    console.log('[XRG] Extension loaded');
+    console.log(LOG, 'Extension loaded');
   }
 
   if (document.readyState === 'loading') {

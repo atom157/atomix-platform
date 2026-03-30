@@ -142,19 +142,52 @@
 
         <div id="connected" class="account-section" style="display: none;">
           <div class="account-info">
-            <div class="account-tier">
-              <span class="usage-text" id="usageText">0 / 20 replies</span>
+
+            <!-- Daily Quota Row -->
+            <div style="margin-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                <span style="font-size:11px; font-weight:600; color:#64748b;">Daily Free</span>
+                <span id="dailyQuotaText" style="font-size:11px; font-weight:700; color:#0f172a;">5/5</span>
+              </div>
+              <div class="usage-bar" style="height:6px;">
+                <div id="dailyQuotaFill" class="usage-fill" style="width:100%; height:100%;"></div>
+              </div>
             </div>
-            <div class="usage-bar">
-              <div class="usage-fill" id="usageFill" style="width: 0%"></div>
+
+            <!-- Monthly Quota Row (PRO/ULTRA only) -->
+            <div id="monthlyQuotaRow" style="display:none; margin-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                <span style="font-size:11px; font-weight:600; color:#64748b;">Monthly</span>
+                <span id="monthlyQuotaText" style="font-size:11px; font-weight:700; color:#0f172a;">0/0</span>
+              </div>
+              <div class="usage-bar" style="height:6px;">
+                <div id="monthlyQuotaFill" class="usage-fill" style="width:0%; height:100%;"></div>
+              </div>
             </div>
+
+            <!-- Bonus Quota Row -->
+            <div id="bonusQuotaRow" style="margin-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:11px; font-weight:600; color:#64748b;">Signup Bonus</span>
+                <span id="bonusQuotaText" style="font-size:11px; font-weight:700; color:#0f172a;">20 left</span>
+              </div>
+            </div>
+
+            <!-- Total Remaining -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding-top:6px; border-top:1px solid #f1f5f9;">
+              <span style="font-size:12px; font-weight:700; color:#0f172a;">Total Remaining</span>
+              <span id="totalRemainingText" style="font-size:12px; font-weight:800; color:#7c3aed;">25</span>
+            </div>
+
+            <!-- Upgrade Button (FREE tier or zero quota) -->
             <a href="https://www.atomix.guru/dashboard/billing" target="_blank" rel="noopener noreferrer"
-              id="upgradeProBtn"
+              id="upgradeBtn"
               style="display:none; margin-top:8px; width:100%; padding:10px 0; border:none; border-radius:12px; background:linear-gradient(135deg,#8B5CF6,#D946EF); color:#fff; font-size:13px; font-weight:700; text-align:center; text-decoration:none; cursor:pointer; transition:all 0.2s ease; box-shadow:0 2px 12px rgba(139,92,246,0.3);"
               onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 20px rgba(217,70,239,0.45)';"
               onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 12px rgba(139,92,246,0.3)';">
               🚀 Upgrade to PRO
             </a>
+            <!-- Manage Subscription (PRO/ULTRA) -->
             <a href="https://app.lava.top/my-purchases" target="_blank" rel="noopener noreferrer" id="manageSubLink"
               style="display:none; margin-top:6px; font-size:11px; color:#7c3aed; text-decoration:none; opacity:0.85;"
               onmouseover="this.style.opacity='1'; this.style.textDecoration='underline';"
@@ -237,6 +270,7 @@
           <button id="toggleBannedWords" title="Word filter" class="mini-btn"
             style="margin-left:auto;font-size:13px;width:26px;height:26px;">&#128737;&#65039;</button>
         </div>
+
         <div class="settings-grid">
           <div class="setting-col">
             <label class="setting-label"><span class="setting-icon">🌍</span> Language</label>

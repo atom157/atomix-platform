@@ -57,7 +57,7 @@
       ...syncResult,
       selectedPromptId_discord: syncResult.selectedPromptId_discord || syncResult.selectedPromptId,
       customPromptContent_discord: syncResult.customPromptContent_discord || syncResult.customPromptContent,
-      model: syncResult.model || 'gpt-4o-mini',
+      model: syncResult.model || 'claude-haiku-4-5-20251001',
       extToken: secureResult.extToken || null,
       userId: secureResult.userId || null,
     };
@@ -216,8 +216,68 @@
   }
 
 
+  // ── Clean Author Extraction ────────────────────────────────────────────
+  // Discord username elements contain child spans for clan tags, bot badges,
+  // role icons, and timestamps. Using `.innerText` on the parent scoops up
+  // all of that garbage (e.g., "Slime Shady [FRMN], FRMN\nmisty").
+  //
+  // This helper reads ONLY the direct text nodes of the username element,
+  // ignoring all child elements, then sanitizes newlines and whitespace.
+
+  function extractCleanAuthor(containerNode) {
+    if (!containerNode) return '';
+
+    // Prefer the highly specific [id^="message-username-"] element
+    let usernameEl = null;
+    const idCandidates = containerNode.querySelectorAll('[id^="message-username-"]');
+    for (const el of idCandidates) {
+      if (!el.closest('[class*="repliedMessage_"]')) {
+        usernameEl = el;
+        break;
+      }
+    }
+
+    // Fallback: target only <span> with username_ class (not wrapper divs)
+    if (!usernameEl) {
+      for (const el of containerNode.querySelectorAll('span[class*="username_"]')) {
+        if (el.closest('[class*="repliedMessage_"]')) continue;
+        usernameEl = el;
+        break;
+      }
+    }
+
+    if (!usernameEl) return '';
+
+    // Extract ONLY direct text nodes — ignore child spans (clan tags, badges, etc.)
+    let name = '';
+    for (const child of usernameEl.childNodes) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        name += child.textContent;
+      }
+    }
+
+    // If no direct text nodes found (some themes wrap the name in a child span),
+    // fall back to the first child element's text that isn't a tag/badge
+    if (!name.trim()) {
+      for (const child of usernameEl.children) {
+        const cls = (child.className || '').toLowerCase();
+        if (cls.includes('tag') || cls.includes('clan') || cls.includes('badge') ||
+            cls.includes('bot') || cls.includes('icon') || cls.includes('role')) continue;
+        name = child.textContent || '';
+        break;
+      }
+    }
+
+    // Final sanitization: collapse newlines, extra spaces, trim
+    return name.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
   // ── Shared Message Node Parser ───────────────────────────────────────────
   // Used by both extractMessageData (reply context) and extractChannelHistory (starter context)
+  //
+  // IMPORTANT: Returns author: '' for continuation messages (no username span).
+  // The consecutive walk treats empty-author messages as same-author continuations,
+  // which matches Discord's visual grouping behavior.
 
   function parseMessageNode(node) {
     if (!node) return null;
@@ -230,23 +290,28 @@
       text = el.innerText.trim();
       if (text) break;
     }
-    if (!text) return null;
 
-    let author = '';
-    for (const el of node.querySelectorAll('[id^="message-username-"], [class*="username_"]')) {
-      if (el.closest('[class*="repliedMessage_"]')) continue;
-      author = el.innerText.trim();
-      if (author) break;
+    // Phantom Content Detection: media-only messages would silently break
+    // the consecutive-author walk. Return a descriptor so the chain stays intact.
+    if (!text) {
+      const hasImage = node.querySelector('[class*="imageWrapper_"], img[class*="embedMedia"]');
+      const hasVideo = node.querySelector('video, [class*="videoWrapper_"]');
+      const hasGif = node.querySelector('[class*="gifFavoriteButton_"]')
+        || node.querySelector('img[src*="tenor.com"], img[src*="giphy.com"]');
+      const hasSticker = node.querySelector('[class*="sticker_"], [class*="stickerAsset_"]');
+      const hasEmbed = node.querySelector('[class*="embedWrapper_"], [class*="embed_"]');
+
+      if (hasImage) text = '[image]';
+      else if (hasVideo) text = '[video]';
+      else if (hasGif) text = '[gif]';
+      else if (hasSticker) text = '[sticker]';
+      else if (hasEmbed) text = '[embed]';
+      else return null; // Truly empty node
     }
 
-    // If continuation message, look up for author
-    if (!author) {
-      let p = node.previousElementSibling;
-      for (let i = 0; i < 15 && p; p = p.previousElementSibling, i++) {
-        const u = p.querySelector('[id^="message-username-"], [class*="username_"]');
-        if (u && !u.closest('[class*="repliedMessage_"]')) { author = u.innerText.trim(); break; }
-      }
-    }
+    // Use clean extraction — returns '' for continuation messages (no username span)
+    const author = extractCleanAuthor(node);
+
     return { author, text };
   }
 
@@ -298,21 +363,16 @@
       }
     }
 
-    // Extract author
-    let authorName = '';
-    const allUsernameEls = listItem.querySelectorAll('[id^="message-username-"]');
-    for (const el of allUsernameEls) {
-      if (el.closest('[class*="repliedMessage_"]')) continue;
-      authorName = el.innerText.trim();
-      if (authorName) break;
-    }
+    // Extract author — use clean extraction to avoid clan tags, badges, newlines
+    let authorName = extractCleanAuthor(listItem);
 
+    // If this is a continuation message (no username span), walk back to find the author
     if (!authorName) {
       let sibling = listItem.previousElementSibling;
       let attempts = 0;
       while (sibling && attempts < 10) {
-        const h = sibling.querySelector('[id^="message-username-"]');
-        if (h) { authorName = h.innerText.trim(); break; }
+        authorName = extractCleanAuthor(sibling);
+        if (authorName) break;
         sibling = sibling.previousElementSibling;
         attempts++;
       }
@@ -347,25 +407,48 @@
     let sibling = listItem.previousElementSibling;
     let attempts = 0;
     
-    // Scan back 100 nodes, keeping ONLY messages from Target User, up to 5 messages
-    while (sibling && threadContext.length < 5 && attempts < 100) {
+    // Scan back for CONSECUTIVE messages from Target User only (their current visual block).
+    // Stop as soon as we hit a message from a DIFFERENT author. Cap at 4 messages.
+    //
+    // Discord DOM grouping: The username span only appears on the FIRST message
+    // of a visual block. Subsequent messages from the same author have NO username
+    // span, so parseMessageNode returns author === ''. We treat '' as "same author"
+    // (continuation) rather than breaking the chain.
+    while (sibling && threadContext.length < 4 && attempts < 50) {
       const msg = parseMessageNode(sibling);
-      if (msg && msg.author === authorName) {
-        threadContext.unshift(msg);
+      if (msg) {
+        // '' = continuation message (no username span) → same author block
+        if (msg.author === '' || msg.author === authorName) {
+          threadContext.unshift(msg);
+        } else {
+          break; // Explicit DIFFERENT author = end of this user's consecutive block
+        }
       }
       sibling = sibling.previousElementSibling;
       attempts++;
     }
 
-    console.log(LOG, `Extracted ${threadContext.length} targeted history messages (from ${authorName}) for context window.`);
+    console.log(LOG, `Extracted ${threadContext.length} consecutive messages (from ${authorName}) for context merge.`);
+
+    // ── Same-Author Context Merge ─────────────────────────────────────
+    // ALWAYS merge consecutive same-author messages into `text`.
+    // The backend heavily prioritizes `tweetData.text` over `threadContext`,
+    // so this ensures the LLM sees the full logical premise.
+    let finalText = messageText;
+    if (threadContext.length > 0) {
+      const chainedParts = threadContext.map(m => m.text);
+      chainedParts.push(messageText); // target message goes last (chronological order)
+      finalText = chainedParts.join(' \n ');
+      console.log(LOG, 'Context merged into text:', finalText.substring(0, 120));
+    }
 
     const result = {
-      text: messageText,
+      text: finalText,
       author: authorName,
       handle: '',
       metrics: {},
       quotedContext: quotedContext,
-      threadContext: [], // FORCE EXACT CONTEXT: Send empty history. AI MUST only see target message.
+      threadContext: [], // All context lives in text — no duplication
       channelName: channelName,
       serverName: serverName,
       isGreetingChannel: isGreetingChannel,
@@ -440,7 +523,7 @@
       extToken: settings.extToken,
       promptId: settings.selectedPromptId_discord || null,
       settings: {
-        model: 'claude-haiku-4-5-20251001',
+        model: settings.model,
         language: settings.language || 'same',
         length: settings.length || 'medium',
         bannedWords: settings.bannedWords || '',
@@ -475,6 +558,17 @@
         throw new Error('Session expired. Please reconnect in the extension popup.');
       }
       throw new Error(result.error || 'API Error');
+    }
+
+    // ── Sync updated quotas to chrome.storage so popup reflects real-time state ──
+    if (result.usage) {
+      chrome.storage.local.set({
+        cachedPlan: result.usage.tier || 'free',
+        cachedDaily: result.usage.daily_remaining || 0,
+        cachedMonthly: result.usage.monthly_remaining || 0,
+        cachedInitial: result.usage.initial_remaining || 0,
+        cachedTotal: result.usage.total_remaining || 0,
+      });
     }
 
     console.log(LOG, 'Generation received, length:', result.reply?.length);
@@ -610,12 +704,25 @@
     try {
       let reply = null;
 
-      // Spammer Check Bypass
+      // Spammer Check Bypass — only if the TARGET message (including chained context) is genuinely just a greeting.
+      // If the same-author chain contains real substance (questions, longer text), always call the API.
       const bypassWord = getSpamBypassWord();
       if (bypassWord) {
-        console.log(LOG, 'Spam greeting channel detected! Bypassing AI backend. Using:', bypassWord);
-        reply = bypassWord;
-        await sleep(400); // UI visual delay
+        // Combine the target message text with any chained same-author context
+        const chainedTexts = (messageData.threadContext || []).map(m => m.text || m).join(' ');
+        const fullContext = (messageData.text + ' ' + chainedTexts).trim();
+
+        // Only bypass if the entire chained context is still just short greeting-level noise
+        const hasSubstance = fullContext.length > 20 || /\?|how|what|why|who|where|when|як|що|чому|хто|где|как|зачем|почему/.test(fullContext.toLowerCase());
+
+        if (hasSubstance) {
+          console.log(LOG, 'Spam channel detected BUT chained context has substance — calling API.', { fullContext: fullContext.substring(0, 80) });
+          reply = await generateReply(messageData);
+        } else {
+          console.log(LOG, 'Spam greeting channel detected! Bypassing AI backend. Using:', bypassWord);
+          reply = bypassWord;
+          await sleep(400); // UI visual delay
+        }
       } else {
         reply = await generateReply(messageData);
       }
@@ -772,7 +879,31 @@
     return { history: history.map(msg => `${msg.author}: ${msg.text}`), channelName, serverName, isGreetingChannel, timeContext };
   }
 
+  // ── Same-Author Message Extraction ──────────────────────────────────
+  // Scans all visible messages for recent messages from a specific author.
+  // Returns {author, text} objects (same shape as parseMessageNode output).
+  // Used by the Starter handler's reply mode where we don't have a direct
+  // DOM reference to walk siblings from.
 
+  function extractSameAuthorMessages(authorName, count) {
+    const allMessages = document.querySelectorAll('[id^="chat-messages-"]');
+    const results = [];
+
+    // Walk backwards, collecting only CONSECUTIVE messages from this author.
+    // Stop at the first message from a different author.
+    for (let i = allMessages.length - 1; i >= 0 && results.length < count; i--) {
+      const msg = parseMessageNode(allMessages[i]);
+      if (msg) {
+        if (msg.author === authorName) {
+          results.unshift(msg);
+        } else {
+          break; // Different author = end of consecutive block
+        }
+      }
+    }
+
+    return results;
+  }
 
   function getSpamBypassWord() {
     const allMessages = document.querySelectorAll('[id^="chat-messages-"]');
@@ -919,17 +1050,32 @@
 
         if (generateMode === 'reply' && repliedMessageText) {
           console.log(LOG, 'Mode: TARGETED REPLY — answering active Reply Bar');
+
+          // Collect recent messages from the SAME author to handle fragmented messages
+          const targetAuthor = repliedAuthor || 'user';
+          const sameAuthorContext = extractSameAuthorMessages(targetAuthor, 5);
+          console.log(LOG, `Same-author context for ${targetAuthor}:`, sameAuthorContext.length, 'messages');
+
           messageData = {
             text: repliedMessageText,
-            author: repliedAuthor || 'user',
+            author: targetAuthor,
             handle: '',
             metrics: {},
-            threadContext: [], // FORCE EXACT CONTEXT: Send empty history. AI MUST only see target message.
+            threadContext: [], // All context merged into text
             channelName,
             serverName,
             isGreetingChannel,
             timeContext
           };
+
+          // ── Same-Author Context Merge (Starter Reply) ──────────────
+          // Always merge consecutive same-author messages into text.
+          if (sameAuthorContext.length > 0) {
+            const chainedParts = sameAuthorContext.map(m => m.text || m);
+            chainedParts.push(repliedMessageText);
+            messageData.text = chainedParts.join(' \n ');
+            console.log(LOG, 'Context merged (starter reply):', messageData.text.substring(0, 120));
+          }
         } else {
           console.log(LOG, 'Mode: STARTER — empty editor, generating conversation starter');
           messageData = {
@@ -956,7 +1102,7 @@
             promptId: settings.selectedPromptId_discord || null,
             settings: {
               generateMode: generateMode,
-              model: 'claude-haiku-4-5-20251001',
+              model: settings.model,
               language: settings.language || 'same',
               length: settings.length || 'medium',
               bannedWords: settings.bannedWords || '',
@@ -988,6 +1134,17 @@
             throw new Error('Session expired. Please reconnect in the extension popup.');
           }
           throw new Error(result.error || 'API Error');
+        }
+
+        // ── Sync updated quotas to chrome.storage ──
+        if (result.usage) {
+          chrome.storage.local.set({
+            cachedPlan: result.usage.tier || 'free',
+            cachedDaily: result.usage.daily_remaining || 0,
+            cachedMonthly: result.usage.monthly_remaining || 0,
+            cachedInitial: result.usage.initial_remaining || 0,
+            cachedTotal: result.usage.total_remaining || 0,
+          });
         }
 
         reply = result.reply;
