@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     // Send the user to the login page; the login page's Google OAuth button
     // already calls signInWithOAuth on the client side (where PKCE cookies
     // are set correctly by the browser Supabase client).
-    const loginUrl = new URL('/auth/login', appUrl)
+    const loginUrl = new URL('/auth/direct-google', appUrl)
     loginUrl.searchParams.set('redirectTo', '/auth/extension-connected')
     loginUrl.searchParams.set('source', 'extension')
 

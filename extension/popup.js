@@ -455,7 +455,7 @@ function showDisconnectedState() {
 // Connect
 function connectAccount() {
   console.log('[POPUP] Connect clicked');
-  chrome.tabs.create({ url: API_BASE + '/api/extension/auth' });
+  chrome.tabs.create({ url: API_BASE + '/auth/direct-google?redirectTo=/auth/extension-connected&source=extension' });
 }
 
 // Disconnect
