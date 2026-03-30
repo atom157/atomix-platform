@@ -57,10 +57,11 @@ export function Pricing3D() {
             if (session?.user?.email) {
                 router.push('/dashboard?checkout=pro');
             } else {
+                document.cookie = `auth_redirect=${encodeURIComponent('/dashboard?checkout=pro')}; path=/; max-age=3600; SameSite=Lax`
                 const { error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
-                        redirectTo: `${window.location.origin}/auth/callback?redirectTo=/dashboard?checkout=pro`,
+                        redirectTo: `https://atomix.guru/auth/callback`,
                     },
                 });
                 if (error) throw error;

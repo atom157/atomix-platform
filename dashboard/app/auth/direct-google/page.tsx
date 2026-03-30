@@ -17,12 +17,14 @@ function DirectGoogleAuthLogic() {
 
     const signIn = async () => {
       const supabase = createClient()
-      const origin = window.location.origin
+
+      // Store redirect in cookie to bypass Supabase URI strict-matching dropping query params
+      document.cookie = `auth_redirect=${encodeURIComponent(redirectTo)}; path=/; max-age=3600; SameSite=Lax`
 
       await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+          redirectTo: `https://atomix.guru/auth/callback`,
         },
       })
     }

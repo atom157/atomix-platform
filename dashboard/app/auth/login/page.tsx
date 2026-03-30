@@ -88,10 +88,11 @@ function LoginForm() {
     setError(null)
 
     try {
+      document.cookie = `auth_redirect=${encodeURIComponent(redirectTo)}; path=/; max-age=3600; SameSite=Lax`
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `https://atomix.guru/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+          redirectTo: `https://atomix.guru/auth/callback`,
         },
       })
       if (error) throw error

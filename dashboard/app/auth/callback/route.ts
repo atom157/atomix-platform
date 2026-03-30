@@ -5,7 +5,14 @@ import { logger } from '@/lib/logger'
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard'
+  
+  // Try searchParams first, then fallback to cookie to appease Supabase strict matching
+  let redirectTo = searchParams.get('redirectTo')
+  if (!redirectTo) {
+    const cookieHeader = request.headers.get('cookie') || ''
+    const match = cookieHeader.match(/auth_redirect=([^;]+)/)
+    redirectTo = match ? decodeURIComponent(match[1]) : '/dashboard'
+  }
 
   // Use NEXT_PUBLIC_APP_URL to avoid proxy/origin mismatches on Vercel
   const appUrl =
